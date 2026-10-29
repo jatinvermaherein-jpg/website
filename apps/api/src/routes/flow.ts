@@ -20,6 +20,7 @@ import { prisma } from '../lib/prisma.js';
 import { requireUser } from '../lib/auth.js';
 import { decryptSecret } from '../lib/vault.js';
 import { TEXT_PROVIDERS, upstreamBase } from '../lib/upstream.js';
+import { keyWindows, isSpendable, urgency, exhaustion } from '../lib/quota.js';
 
 const UPSTREAM_TIMEOUT_MS = 10 * 60_000;
 const COOLDOWN_MS = 60_000;
@@ -83,12 +84,28 @@ export async function flowRoutes(app: FastifyInstance) {
       return reply.code(409).send({ error: `no active ${provider} key on this account — add one in the dashboard` });
     }
 
+    // Phase 3 — use-it-or-lose-it: rank the pool by urgency (headroom vs
+    // time-to-reset, measured from the ledger). The key whose quota dies
+    // soonest is spent first.
+    const ranked = (
+      await Promise.all(pool.map(async (c) => ({ c, windows: await keyWindows(prisma, c.id) })))
+    ).sort((a, b) => urgency(b.windows) - urgency(a.windows));
+    const spendable = ranked.filter((r) => isSpendable(r.windows));
+    if (!spendable.length) {
+      const reasons = [...new Set(ranked.map((r) => exhaustion(r.windows)).filter(Boolean))] as string[];
+      const soonestMs = Math.min(...ranked.flatMap((r) => r.windows.map((w) => w.msUntilReset)));
+      return reply.code(429).send({
+        error: `all ${provider} keys are at their quota limit — ${reasons.join(' · ')}`,
+        retry_after_s: Math.max(1, Math.ceil(soonestMs / 1000)),
+      });
+    }
+
     const baseIdempotency = (req.headers['idempotency-key'] as string) || randomUUID();
     const startedAt = Date.now();
     let lastError = `all ${provider} keys failed`;
 
-    for (let attempt = 0; attempt < pool.length; attempt++) {
-      const credential = pool[attempt]!;
+    for (let attempt = 0; attempt < spendable.length; attempt++) {
+      const credential = spendable[attempt]!.c;
       const requestId = randomUUID();
       await prisma.request.create({
         data: {
@@ -283,6 +300,20 @@ export async function flowRoutes(app: FastifyInstance) {
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
-    return { requests };
+    // the scheduler's live numbers, per key — measured, not estimated
+    const creds = await prisma.providerCredential.findMany({
+      where: { orgId: membership.orgId, projectId: null, provider: { in: TEXT_PROVIDERS } },
+    });
+    const keys = await Promise.all(
+      creds.map(async (c) => ({
+        id: c.id,
+        provider: c.provider,
+        label: c.label,
+        keyMask: c.keyMask,
+        status: c.status,
+        windows: await keyWindows(prisma, c.id),
+      })),
+    );
+    return { requests, keys };
   });
 }
