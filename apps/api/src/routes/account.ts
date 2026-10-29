@@ -134,6 +134,19 @@ export async function accountRoutes(app: FastifyInstance) {
     return { id, status: 'revoked' };
   });
 
+  app.get('/projects', async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    const membership = await orgOf(user.id);
+    if (!membership) return reply.code(404).send({ error: 'no org' });
+    const projects = await prisma.project.findMany({
+      where: { orgId: membership.orgId },
+      orderBy: { createdAt: 'asc' },
+      select: { slug: true, name: true, status: true, createdAt: true },
+    });
+    return { projects };
+  });
+
   // Phase 4 — org aliases: an ordered list of provider targets the gateway
   // walks when the model is requested by alias (≤4 hops).
   const aliasTargetSchema = z.object({
