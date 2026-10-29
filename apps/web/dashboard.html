@@ -129,6 +129,27 @@
       <div class="runs" id="runs"></div>
     </section>
 
+    <section class="dash-sec panel panel--feed">
+      <svg class="panel-ripple" viewBox="0 0 140 140" aria-hidden="true"><circle cx="70" cy="140" r="118"/><circle cx="70" cy="140" r="78"/><circle cx="70" cy="140" r="40"/></svg>
+      <p class="eyebrow" style="margin-bottom:10px">Feed</p>
+      <p class="fine">The live project stream. Post a line &mdash; a malformed one is refused at post and
+        the refusal appears here within seconds. The stream never blocks on a bad line.</p>
+      <form id="feed-post" class="crew-start" autocomplete="off">
+        <select id="feed-project" required><option value="">project&hellip;</option></select>
+        <select name="type">
+          <option value="message">message</option>
+          <option value="answer">answer</option>
+          <option value="correction">correction</option>
+          <option value="system">system</option>
+        </select>
+        <input name="text" placeholder="say it" style="flex:1" maxlength="500">
+        <label class="inline"><input type="checkbox" name="raw" style="width:auto"> raw</label>
+        <button class="btn" type="submit">Post</button>
+      </form>
+      <p class="fine" id="feed-note"></p>
+      <div class="feed" id="feed"><p class="empty">pick a project</p></div>
+    </section>
+
     <section class="dash-sec" id="desk-sec" hidden>
       <p class="eyebrow">Operator desk</p>
       <p class="fine">Accounts waiting for a decision. You are the only person
@@ -243,6 +264,67 @@
     if (ok) setTimeout(loadCrewRuns, 500);
   });
   loadCrewProjects().then(loadCrewRuns);
+
+  // ── live feed ───────────────────────────────────────────────────────────
+  let feedCursor = "0";
+  async function loadFeedProjects() {
+    const { ok, data } = await api("/api/account/projects");
+    if (!ok) return;
+    const sel = $("feed-project");
+    const cur = sel.value;
+    sel.innerHTML = (data.projects || [])
+      .map((p) => `<option value="${esc(p.slug)}">${esc(p.name)}</option>`)
+      .join("") || '<option value="">no projects</option>';
+    if (cur) sel.value = cur;
+  }
+  function feedSummary(type, body) {
+    if (!body || typeof body !== "object") return String(body).slice(0, 140);
+    if (body.rejection) return `refused a ${esc(body.type)} line — ${esc((body.violations || []).join("; "))}`;
+    if (typeof body.text === "string") return esc(body.text.slice(0, 140));
+    if (body.rowId) return `${esc(body.rowId)} → ${esc(body.status ?? body.verdict ?? "")}`;
+    return esc(JSON.stringify(body).slice(0, 140));
+  }
+  async function loadFeed() {
+    const slug = $("feed-project").value;
+    if (!slug) return;
+    const { ok, data } = await api(`/api/projects/${encodeURIComponent(slug)}/stream?afterSeq=${encodeURIComponent(feedCursor)}`);
+    if (!ok) return;
+    if (!data.events.length) return;
+    feedCursor = data.nextCursor;
+    const box = $("feed");
+    box.classList.remove("empty");
+    for (const e of data.events.reverse()) {
+      const rejected = e.type === "system" && e.body?.rejection;
+      const div = document.createElement("div");
+      div.className = "feed-line" + (rejected ? " rejected" : "") + (e.corrupt ? " corrupt" : "");
+      div.innerHTML =
+        `<span class="badge ${rejected ? "err" : ""}">${rejected ? "rejected" : esc(e.type)}</span>` +
+        `<span class="key-mask">${esc(e.actor)}</span>` +
+        `<span class="fine feed-text">${feedSummary(e.type, e.body)}</span>` +
+        `<span class="fine feed-ts">${new Date(e.ts).toLocaleTimeString()}</span>`;
+      box.prepend(div);
+    }
+    while (box.children.length > 40) box.lastElementChild.remove();
+  }
+  $("feed-project").addEventListener("change", () => { feedCursor = "0"; loadFeed(); });
+  $("feed-post").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    const text = f.text.value.trim();
+    if (!f.project.value || !text) return;
+    const payload = { type: f.type.value, body: f.raw.checked ? text : { text } };
+    const { ok, data } = await api(`/api/projects/${encodeURIComponent(f.project.value)}/stream`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    $("feed-note").textContent = ok
+      ? `✓ posted — seq ${data.seq}`
+      : `✗ ${data.error ?? "rejected"}${data.violations ? " — " + data.violations.join("; ") : ""}`;
+    f.text.value = "";
+    setTimeout(loadFeed, 120);
+  });
+  loadFeedProjects();
+  setInterval(loadFeed, 2000);
 
   function windowChips(windows) {
     if (!windows?.length) return `<span class="badge">no limits</span>`;

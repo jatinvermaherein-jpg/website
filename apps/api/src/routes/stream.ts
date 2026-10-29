@@ -162,6 +162,18 @@ export async function streamRoutes(app: FastifyInstance) {
     const actor = typeof b.actor === 'string' && b.actor.trim() ? b.actor : user.username;
     const violations = validateEvent(String(type), actor, b.body);
     if (violations.length) {
+      // the bad line is NEVER written — but the refusal is telemetry
+      // (law: rejections are visible; the same refusal reason twice =
+      // schema defect, which needs the record to be counted). The system
+      // event describing the refusal is a WELL-FORMED line about the
+      // malformed one.
+      await appendEvent(project.id, 'system', 'stream-gate', {
+        rejection: true,
+        type: String(type),
+        actor,
+        violations,
+        at: new Date().toISOString(),
+      }).catch((e) => console.error('[stream] rejection telemetry failed', e));
       return reply.code(422).send({ error: 'rejected at post — the line is malformed and was not written', violations });
     }
 

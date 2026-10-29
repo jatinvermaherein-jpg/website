@@ -53,12 +53,13 @@ test('Phase 6: typed stream — post validation, verdict demotion, fail-open rea
   assert.equal(res.statusCode, 201);
   assert.equal(res.json().seq, '1');
 
-  // MALFORMED LINE — rejected at post, never written, seq does not advance
+  // MALFORMED LINE — rejected at post, never written as itself. The refusal
+  // IS written as `system` telemetry (Phase 9), so it consumes a seq.
   res = await post({ type: 'nonsense', body: {} });
   assert.equal(res.statusCode, 422);
   assert.match(res.json().error, /not written/);
-  res = await post({ type: 'message', body: { text: 'still seq 2' } });
-  assert.equal(res.json().seq, '2');
+  res = await post({ type: 'message', body: { text: 'still flowing' } });
+  assert.equal(res.json().seq, '3');
 
   // a malformed VERDICT line — also rejected (direction out of vocabulary)
   res = await post({
@@ -104,28 +105,31 @@ test('Phase 6: typed stream — post validation, verdict demotion, fail-open rea
     ['unproven', 'unproven', 'pass'],
   );
 
-  // FAIL-OPEN READ: a line the reader cannot parse is flagged, not fatal
-  await prisma.event.create({ data: { scopeId: project.id, projectId: project.id, seq: 6n, type: 'message', actor: 'corrupt', body: 'garbage-string' } });
+  // FAIL-OPEN READ: a line the reader cannot parse is flagged, not fatal.
+  // (seqs so far: 1 message, 2 refusal, 3 message, 4 refusal, 5-7 verdicts)
+  await prisma.event.create({ data: { scopeId: project.id, projectId: project.id, seq: 8n, type: 'message', actor: 'corrupt', body: 'garbage-string' } });
   res = await post({ type: 'message', body: { text: 'after the corrupt line' } });
-  assert.equal(res.json().seq, '7');
+  assert.equal(res.json().seq, '9');
 
   res = await read('?afterSeq=0');
   assert.equal(res.statusCode, 200);
   const stream = res.json();
-  assert.equal(stream.events.length, 7);
+  assert.equal(stream.events.length, 9);
   const corrupt = stream.events.find((e: { corrupt?: boolean }) => e.corrupt);
   assert.ok(corrupt, 'the corrupt line is visible and flagged');
-  assert.equal(stream.events[6]!.type, 'message');
-  assert.equal(stream.events[6]!.body.text, 'after the corrupt line');
+  const refusals = stream.events.filter((e: { type: string; body: { rejection?: boolean } }) => e.type === 'system' && e.body.rejection);
+  assert.equal(refusals.length, 2, 'the two refusals ride the stream as telemetry');
+  assert.equal(stream.events[8]!.type, 'message');
+  assert.equal(stream.events[8]!.body.text, 'after the corrupt line');
 
   // CURSOR: resuming without afterSeq picks up where this seat left off
-  assert.equal(stream.nextCursor, '7');
+  assert.equal(stream.nextCursor, '9');
   await post({ type: 'message', body: { text: 'cursor check' } });
   res = await read();
   const resumed = res.json();
   assert.equal(resumed.events.length, 1);
   assert.equal(resumed.events[0].body.text, 'cursor check');
-  assert.equal(resumed.nextCursor, '8');
+  assert.equal(resumed.nextCursor, '10');
   res = await read(); // nothing new — cursor holds
   assert.equal(res.json().events.length, 0);
 });
