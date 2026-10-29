@@ -150,6 +150,15 @@
       <div class="feed" id="feed"><p class="empty">pick a project</p></div>
     </section>
 
+    <section class="dash-sec panel panel--flow">
+      <svg class="panel-ripple" viewBox="0 0 140 140" aria-hidden="true"><circle cx="0" cy="0" r="118"/><circle cx="0" cy="0" r="78"/><circle cx="0" cy="0" r="40"/></svg>
+      <p class="eyebrow" style="margin-bottom:10px">Portfolio</p>
+      <p class="fine">Every project in this account &mdash; and the next human decision each one is waiting on.
+        Open work outranks green.</p>
+      <p id="pf-next" class="fine"></p>
+      <div class="runs" id="portfolio"><p class="empty">loading&hellip;</p></div>
+    </section>
+
     <section class="dash-sec" id="desk-sec" hidden>
       <p class="eyebrow">Operator desk</p>
       <p class="fine">Accounts waiting for a decision. You are the only person
@@ -325,6 +334,35 @@
   });
   loadFeedProjects();
   setInterval(loadFeed, 2000);
+
+  // ── portfolio ───────────────────────────────────────────────────────────
+  async function loadPortfolio() {
+    const { ok, data } = await api("/api/portfolio");
+    if (!ok) return;
+    const box = $("portfolio");
+    box.innerHTML = (data.projects || [])
+      .map(
+        (p) => `
+      <div class="run-row">
+        <span class="key-id">${esc(p.name)}</span>
+        <span class="badge">${esc(p.status)}</span>
+        <span class="key-limits">${
+          (p.rows || [])
+            .map((r) => `${esc(r.rowId)} <b>${esc(r.resolved)}</b>${r.witnessedBy ? " ✓" : ""}`)
+            .join(" · ") || "no rows"
+        }</span>
+        ${p.nextDecision
+          ? `<span class="badge ${p.nextDecision.kind === "ship" ? "" : "live"}">${esc(p.nextDecision.kind)}</span><span class="fine">${esc(p.nextDecision.prompt)}</span>`
+          : '<span class="fine">nothing to decide</span>'}
+      </div>`
+      )
+      .join("") || `<p class="empty">no projects yet</p>`;
+    const nd = data.nextDecision;
+    $("pf-next").innerHTML = nd
+      ? `Next for this account: <span class="badge live">${esc(nd.project)}</span> <span class="badge">${esc(nd.kind)}</span> ${esc(nd.prompt)} &mdash; ${nd.options.map((o) => `<span class="badge">${esc(o)}</span>`).join(" ")}`
+      : "Nothing is waiting on a human — the crew has the wheel.";
+  }
+  loadPortfolio();
 
   function windowChips(windows) {
     if (!windows?.length) return `<span class="badge">no limits</span>`;

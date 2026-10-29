@@ -49,8 +49,9 @@ function runCommand(command: string, cwd: string): Promise<{ exitCode: number | 
   });
 }
 
-// the cross-check resolution (derived, never typed)
-function resolveRow(
+// the cross-check resolution (derived, never typed) — also used by the
+// portfolio, which reads every project through the same law
+export function resolveRow(
   ledgerStatus: string,
   verdicts: { verdict: string; attestedNotWitnessed: boolean; falsification: unknown; instrumentControl: unknown; seat: string }[],
 ): { resolved: string; witnessedBy: string | null; builderClaim: string | null } {
