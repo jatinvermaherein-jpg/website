@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { requireUser } from '../lib/auth.js';
 import { encryptSecret } from '../lib/vault.js';
+import { TEXT_PROVIDERS } from '../lib/upstream.js';
 
 // Operator's provider stack (2026-10-29, supersedes D1's "Big Five"):
 //   text/reasoning: google (Gemini) · groq · openrouter (free models —
@@ -116,6 +117,78 @@ export async function accountRoutes(app: FastifyInstance) {
       });
     }
     return reply.code(201).send({ id: cred.id, provider, label, keyMask, projectId: projectId ?? null });
+  });
+
+  // Phase 4 — org aliases: an ordered list of provider targets the gateway
+  // walks when the model is requested by alias (≤4 hops).
+  const aliasTargetSchema = z.object({
+    provider: z.enum(TEXT_PROVIDERS),
+    providerModelId: z.string().min(1).max(200),
+    priority: z.number().int().min(0).max(10000).optional(),
+    priceInPerM: z.number().min(0).max(1e6).optional(),
+    priceOutPerM: z.number().min(0).max(1e6).optional(),
+    ctxWindow: z.number().int().min(1).max(10_000_000).optional(),
+  });
+  const aliasSchema = z.object({
+    alias: z.string().regex(/^[a-z0-9][a-z0-9_-]{2,31}$/),
+    targets: z.array(aliasTargetSchema).min(1).max(4),
+  });
+
+  app.post('/aliases', async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    const membership = await orgOf(user.id);
+    if (!membership) return reply.code(404).send({ error: 'no org' });
+    const parsed = aliasSchema.safeParse(req.body ?? {});
+    if (!parsed.success) return reply.code(422).send({ error: parsed.error.issues[0]?.message ?? 'invalid alias' });
+    const { alias, targets } = parsed.data;
+
+    // replace-on-write: the alias's previous targets go away atomically-ish
+    await prisma.modelAlias.deleteMany({ where: { orgId: membership.orgId, alias } });
+    const created: unknown[] = [];
+    for (const [i, t] of targets.entries()) {
+      const model = await prisma.model.upsert({
+        where: { provider_providerModelId: { provider: t.provider, providerModelId: t.providerModelId } },
+        update: {
+          ...(t.priceInPerM !== undefined ? { priceInPerM: t.priceInPerM } : {}),
+          ...(t.priceOutPerM !== undefined ? { priceOutPerM: t.priceOutPerM } : {}),
+          ...(t.ctxWindow !== undefined ? { ctxWindow: t.ctxWindow } : {}),
+        },
+        create: {
+          provider: t.provider,
+          providerModelId: t.providerModelId,
+          priceInPerM: t.priceInPerM ?? 0,
+          priceOutPerM: t.priceOutPerM ?? 0,
+          ctxWindow: t.ctxWindow ?? 8192,
+        },
+      });
+      const row = await prisma.modelAlias.create({
+        data: { orgId: membership.orgId, alias, modelId: model.id, priority: t.priority ?? i * 10 },
+      });
+      created.push({ priority: row.priority, provider: t.provider, providerModelId: t.providerModelId });
+    }
+    return reply.code(201).send({ alias, targets: created });
+  });
+
+  app.get('/aliases', async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    const membership = await orgOf(user.id);
+    if (!membership) return reply.code(404).send({ error: 'no org' });
+    const aliases = await prisma.modelAlias.findMany({
+      where: { orgId: membership.orgId },
+      orderBy: [{ alias: 'asc' }, { priority: 'asc' }],
+    });
+    const models = await prisma.model.findMany({ where: { id: { in: aliases.map((a) => a.modelId) } } });
+    const byId = new Map(models.map((m) => [m.id, m]));
+    const grouped = new Map<string, { alias: string; targets: { priority: number; provider: string; providerModelId: string }[] }>();
+    for (const a of aliases) {
+      const m = byId.get(a.modelId);
+      if (!m) continue;
+      if (!grouped.has(a.alias)) grouped.set(a.alias, { alias: a.alias, targets: [] });
+      grouped.get(a.alias)!.targets.push({ priority: a.priority, provider: m.provider, providerModelId: m.providerModelId });
+    }
+    return { aliases: [...grouped.values()] };
   });
 
   app.patch('/keys/:id/limits', async (req, reply) => {
