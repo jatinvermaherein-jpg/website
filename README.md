@@ -11,11 +11,21 @@ Plan: [`PLAN.md`](PLAN.md) — the build baseline. The Operator's crew's plan (c
 
 ```bash
 npm install
-npm run db:dev        # embedded Postgres on :5432 (keep it running)
-npm run db:migrate    # first migration carries project_id (Phase 0 law)
+cp .env.example .env  # then set:
+#   MASTER_KEY     = $(openssl rand -base64 32)
+#   JWT_SECRET     = $(openssl rand -hex 32)
+#   ADMIN_PASSWORD = $(openssl rand -hex 12)   # your operator login (O3)
+
+npm run db:dev        # embedded Postgres on 127.0.0.1:5432 (keep it running)
+npm run db:migrate    # 0001 DDL + 0002 immutable grants (one history, V4 §13)
 npm run db:seed       # operator from ADMIN_USERNAME/ADMIN_PASSWORD, org, project, law book v1
 npm run dev           # API on :8080 — landing + preloader at /
+
+npm test              # O3 loop + vault law 6.3 (node:test)
+npx tsx scripts/check-grants.mts   # the append-only law, verified against the live DB
 ```
+
+**Two-tier database access** (law 2.2, structural): `DATABASE_URL` is the *owner* role — migrations, seed, tooling. `APP_DATABASE_URL` is the restricted runtime role `jatin_app` — the API hot path connects here, so the append-only grants in migration 0002 bind production behaviour, not just a promise. `Event`, `Verdict`, `LedgerRow`, `Handover`, `Ruleset`, `EnvVersion`, `Breach`, `AuditLog` cannot be UPDATEd or DELETEd by the app.
 
 Auth (O3): `POST /api/auth/register` creates a **pending** account; the operator (env-seeded) verifies from `/api/admin/*`; only then does login work.
 
