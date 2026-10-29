@@ -33,6 +33,8 @@ export async function staticRoutes(app: FastifyInstance) {
   app.get('/', (req, reply) => sendFile(reply, 'index.html'));
   app.get('/index.html', (req, reply) => sendFile(reply, 'index.html'));
   app.get('/login.html', (req, reply) => sendFile(reply, 'login.html'));
+  app.get('/dashboard', (req, reply) => sendFile(reply, 'dashboard.html'));
+  app.get('/dashboard.html', (req, reply) => sendFile(reply, 'dashboard.html'));
   app.get('/preloader.css', (req, reply) => sendFile(reply, 'preloader.css'));
   app.get('/preloader.js', (req, reply) => sendFile(reply, 'preloader.js'));
   app.get('/site.css', (req, reply) => sendFile(reply, 'site.css'));

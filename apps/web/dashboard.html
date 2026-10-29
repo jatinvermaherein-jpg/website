@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JATIN — Your dashboard</title>
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0B0E1A">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/preloader.css">
+<link rel="stylesheet" href="/site.css">
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="jt-bar">
+  <div class="jt-bar-in">
+    <a class="jt-brand" href="/" aria-label="Jatin, home">
+      <svg class="jt-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true" focusable="false">
+        <circle cx="16" cy="16" r="11" opacity="0.25"/>
+        <circle cx="16" cy="16" r="7" opacity="0.5"/>
+        <circle class="jt-mark-core" cx="16" cy="16" r="3.4"/>
+      </svg>
+      <span>Jatin<i></i></span>
+    </a>
+    <nav class="jt-nav" aria-label="Account">
+      <a class="jt-cta" href="/dashboard.html" id="who">&nbsp;</a>
+    </nav>
+  </div>
+</header>
+
+<main class="dash-main">
+  <div class="wrap dash-in">
+    <section class="dash-id">
+      <p class="eyebrow">Your account</p>
+      <h1 class="dash-hello" id="hello">Loading&hellip;</h1>
+      <div class="marks" id="status-marks"></div>
+      <p class="fine" id="pending-note" hidden>
+        Your account is pending verification by the operator &mdash; you can use
+        the dashboard once it is verified.
+      </p>
+    </section>
+
+    <section class="dash-sec">
+      <p class="eyebrow">Your keys</p>
+      <p class="fine">Provider keys for this account. Stored encrypted, write-only
+        &mdash; no screen, endpoint, or log ever shows the secret again.</p>
+      <div class="keys" id="keys"><p class="empty">loading&hellip;</p></div>
+
+      <form id="add-key" class="panel panel--flow add-key">
+        <svg class="panel-ripple" viewBox="0 0 140 140" aria-hidden="true"><circle cx="140" cy="0" r="118"/><circle cx="140" cy="0" r="78"/><circle cx="140" cy="0" r="40"/></svg>
+        <h2 class="panel-h" style="font-size:clamp(18px,2vw,22px)">Add a key</h2>
+        <div class="row2">
+          <label>Provider
+            <select name="provider" required>
+              <optgroup label="AI · text · reasoning">
+                <option value="google">Google Gemini</option>
+                <option value="groq">Groq</option>
+                <option value="openrouter">OpenRouter · free models (DeepSeek R1)</option>
+                <option value="mistral">Mistral</option>
+              </optgroup>
+              <optgroup label="Web search">
+                <option value="tavily">Tavily</option>
+                <option value="serper">Serper.dev</option>
+              </optgroup>
+              <optgroup label="Image">
+                <option value="pollinations">Pollinations · no key needed</option>
+              </optgroup>
+            </select>
+          </label>
+          <label>Label
+            <input name="label" placeholder="workhorse" maxlength="64" required>
+          </label>
+        </div>
+        <label>Secret
+          <input name="secret" type="password" placeholder="sk-…" autocomplete="off" minlength="8" required>
+        </label>
+        <div class="row2">
+          <label>Requests / min
+            <input name="rpm" type="number" min="1" max="100000" placeholder="e.g. 60">
+          </label>
+          <label>Tokens / min
+            <input name="tpm" type="number" min="1" max="1000000000" placeholder="e.g. 100000">
+          </label>
+        </div>
+        <div class="cta">
+          <button class="btn" type="submit">Add key</button>
+          <span class="hint" id="add-note">&nbsp;</span>
+        </div>
+      </form>
+    </section>
+
+    <section class="dash-sec" id="desk-sec" hidden>
+      <p class="eyebrow">Operator desk</p>
+      <p class="fine">Accounts waiting for a decision. You are the only person
+        who sees this.</p>
+      <div id="desk"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  async function api(url, opts) {
+    const res = await fetch(url, { headers: { "content-type": "application/json" }, ...opts });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, data };
+  }
+
+  const provSel = document.querySelector("#add-key select[name=provider]");
+  const secretIn = document.querySelector("#add-key input[name=secret]");
+  function syncSecret() {
+    const noKey = provSel.value === "pollinations";
+    secretIn.required = !noKey;
+    secretIn.placeholder = noKey ? "not needed" : "sk-…";
+  }
+  provSel.addEventListener("change", syncSecret);
+  syncSecret();
+
+  function limitChips(limits) {
+    if (!limits?.length) return "";
+    return limits.map((l) => `<span class="badge">${esc(l.kind)} ${l.limit ?? "∞"}${l.reservePct ? ` · keep ${l.reservePct}%` : ""}</span>`).join("");
+  }
+
+  async function loadKeys() {
+    const { ok, data } = await api("/api/account/keys");
+    if (!ok) { $("keys").innerHTML = `<p class="empty">could not load keys</p>`; return; }
+    if (!data.keys.length) {
+      $("keys").innerHTML = `<p class="empty">no keys yet — add your first one below. It is encrypted the moment it arrives.</p>`;
+      return;
+    }
+    $("keys").innerHTML = data.keys.map((k) => `
+      <div class="key-row">
+        <span class="key-id">${esc(k.provider)} &middot; ${esc(k.label)}</span>
+        <span class="badge">${esc(k.category)}</span>
+        <span class="key-mask">${esc(k.keyMask)}</span>
+        <span class="key-limits">${limitChips(k.limits)}</span>
+      </div>`).join("");
+  }
+
+  async function loadDesk() {
+    const { ok, data } = await api("/api/admin/pending");
+    if (!ok) { $("desk").innerHTML = `<p class="empty">desk unavailable</p>`; return; }
+    if (!data.pending.length) {
+      $("desk").innerHTML = `<p class="empty">no one is waiting</p>`;
+      return;
+    }
+    $("desk").innerHTML = data.pending.map((u) => `
+      <div class="desk-row">
+        <span class="key-id">${esc(u.username)}</span>
+        <span class="key-mask">waiting ${Math.max(0, Math.round((Date.now() - new Date(u.createdAt).getTime()) / 60000))} min</span>
+        <span class="key-limits">
+          <button class="btn-ghost" data-act="verify" data-id="${esc(u.id)}">Verify</button>
+          <button class="btn-ghost danger" data-act="suspend" data-id="${esc(u.id)}">Suspend</button>
+        </span>
+      </div>`).join("");
+    $("desk").querySelectorAll("button[data-act]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        b.disabled = true;
+        const { ok: done } = await api(`/api/admin/users/${b.dataset.id}/${b.dataset.act}`, { method: "POST" });
+        if (done) loadDesk(); else b.disabled = false;
+      }));
+  }
+
+  $("add-key").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const limits = [];
+    if (fd.get("rpm")) limits.push({ kind: "rpm", limit: Number(fd.get("rpm")), reservePct: 5 });
+    if (fd.get("tpm")) limits.push({ kind: "tpm", limit: Number(fd.get("tpm")), reservePct: 5 });
+    const { ok, status, data } = await api("/api/account/keys", {
+      method: "POST",
+      body: JSON.stringify({
+        provider: fd.get("provider"),
+        label: fd.get("label"),
+        secret: fd.get("secret") || undefined,
+        limits,
+      }),
+    });
+    $("add-note").textContent = ok
+      ? `✓ added — ${data.keyMask}`
+      : status === 409 ? "label exists" : (data.error || "could not add key");
+    if (ok) { e.target.reset(); loadKeys(); }
+  });
+
+  (async function main() {
+    const { ok, status, data } = await api("/api/auth/me");
+    if (!ok || status === 401) { location.replace("/login.html"); return; }
+    $("who").textContent = data.username;
+    $("hello").textContent = `Hello, ${data.username}.`;
+    $("status-marks").innerHTML =
+      `<span class="badge live">● ${esc(data.status)}</span>` +
+      (data.operator ? `<span class="badge">operator</span>` : `<span class="badge">member</span>`);
+    await loadKeys();
+    if (data.operator) { $("desk-sec").hidden = false; loadDesk(); }
+  })();
+</script>
+</body>
+</html>

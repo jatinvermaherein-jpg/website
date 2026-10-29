@@ -83,7 +83,7 @@
     const data = await res.json().catch(() => ({}));
     if (res.ok) {
       say("Signed in — taking you in.", true);
-      setTimeout(() => (location.href = "/"), 500);
+      setTimeout(() => (location.href = "/dashboard.html"), 500);
     } else {
       say(data.error || "sign-in failed", false);
     }

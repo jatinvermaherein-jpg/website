@@ -106,7 +106,7 @@ test('law 6.3: an added key is write-only — no read path returns the secret', 
     method: 'POST',
     url: '/api/account/keys',
     headers: { authorization: `Bearer ${token}` },
-    payload: { provider: 'openai', label: 'demo', secret, limits: [{ kind: 'rpm', limit: 50, reservePct: 5 }] },
+    payload: { provider: 'groq', label: 'demo', secret, limits: [{ kind: 'rpm', limit: 50, reservePct: 5 }] },
   });
   assert.equal(res.statusCode, 201);
   assert.ok(!JSON.stringify(res.json()).includes(secret), 'the response must not echo the secret');

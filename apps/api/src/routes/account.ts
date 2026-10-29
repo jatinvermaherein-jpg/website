@@ -7,7 +7,24 @@ import { prisma } from '../lib/prisma.js';
 import { requireUser } from '../lib/auth.js';
 import { encryptSecret } from '../lib/vault.js';
 
-const PROVIDERS = ['openai', 'anthropic', 'google', 'groq', 'openrouter'] as const;
+// Operator's provider stack (2026-10-29, supersedes D1's "Big Five"):
+//   text/reasoning: google (Gemini) · groq · openrouter (free models —
+//     DeepSeek R1 reachable here via :free, no separate key — DeepSeek's
+//     own API has no free tier as of Oct 2026) · mistral
+//   web search:     tavily · serper
+//   image:          pollinations (legacy no-key endpoint)
+const PROVIDERS = ['google', 'groq', 'openrouter', 'mistral', 'tavily', 'serper', 'pollinations'] as const;
+type Provider = (typeof PROVIDERS)[number];
+export const PROVIDER_CATEGORY: Record<Provider, 'text' | 'search' | 'image'> = {
+  google: 'text',
+  groq: 'text',
+  openrouter: 'text',
+  mistral: 'text',
+  tavily: 'search',
+  serper: 'search',
+  pollinations: 'image',
+};
+
 const LIMIT_KINDS = ['rpm', 'tpm', 'rpd', 'monthly_tokens', 'monthly_cost_cents'] as const;
 
 const limitSchema = z.object({
@@ -16,14 +33,21 @@ const limitSchema = z.object({
   reservePct: z.number().int().min(0).max(50).default(5),
 });
 
-const addKeySchema = z.object({
-  provider: z.enum(PROVIDERS),
-  label: z.string().min(1).max(64),
-  secret: z.string().min(8).max(512),
-  // O1: projectId set → the project's own key (not the org's Flow pool)
-  projectId: z.string().cuid().nullable().optional(),
-  limits: z.array(limitSchema).max(10).default([]),
-});
+const addKeySchema = z
+  .object({
+    provider: z.enum(PROVIDERS),
+    label: z.string().min(1).max(64),
+    // pollinations' legacy endpoint needs no key
+    secret: z.string().min(1).max(512).optional(),
+    // O1: projectId set → the project's own key (not the org's Flow pool)
+    projectId: z.string().cuid().nullable().optional(),
+    limits: z.array(limitSchema).max(10).default([]),
+  })
+  .superRefine((v, ctx) => {
+    if (v.provider !== 'pollinations' && !v.secret) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['secret'], message: 'secret required for this provider' });
+    }
+  });
 
 async function orgOf(userId: string) {
   return prisma.membership.findFirst({ where: { userId }, include: { org: true } });
@@ -42,6 +66,7 @@ function publicView(cred: {
   return {
     id: cred.id,
     provider: cred.provider,
+    category: PROVIDER_CATEGORY[cred.provider as Provider] ?? 'text',
     label: cred.label,
     keyMask: cred.keyMask,
     status: cred.status,
@@ -79,7 +104,7 @@ export async function accountRoutes(app: FastifyInstance) {
       if (!project) return reply.code(404).send({ error: 'project not found in your org' });
     }
 
-    const { stored, keyMask } = encryptSecret(secret);
+    const { stored, keyMask } = secret ? encryptSecret(secret) : { stored: '', keyMask: 'no-key' };
     const cred = await prisma.providerCredential.create({
       data: { orgId: membership.orgId, projectId: projectId ?? null, provider, label, secretStored: stored, keyMask },
     });

@@ -62,8 +62,10 @@ html.jt-locked body {
 .jt-bar {
   position: relative;
   z-index: 90;
-  border-bottom: 1px solid var(--jt-line);
-  background: var(--jt-bg);
+  border-bottom: 0;
+  background: color-mix(in srgb, var(--jt-bg) 76%, transparent);
+  backdrop-filter: blur(10px) saturate(1.15);
+  -webkit-backdrop-filter: blur(10px) saturate(1.15);
   animation: jt-bar-drop 0.6s cubic-bezier(0.62, 0.05, 0.01, 0.99) both;
 }
 .jt-bar--cover {
