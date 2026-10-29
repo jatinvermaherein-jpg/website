@@ -12,12 +12,24 @@ import { crosscheckRoutes } from './routes/crosscheck.js';
 import { benchRoutes } from './routes/bench.js';
 import { portfolioRoutes } from './routes/portfolio.js';
 import { staticRoutes } from './static.js';
+import { prisma } from './lib/prisma.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: false });
   await app.register(cookie);
 
   app.get('/health', healthRoutes);
+
+  // public pulse — the landing page's live badge. AGGREGATE telemetry only:
+  // system uptime and totals, never tenant data, never a secret.
+  app.get('/api/pulse', async () => {
+    const since = new Date(Date.now() - 24 * 3600 * 1000);
+    const [requests24h, crewsRunning] = await Promise.all([
+      prisma.request.count({ where: { createdAt: { gte: since } } }),
+      prisma.task.count({ where: { status: 'in_progress' } }),
+    ]);
+    return { up: true, version: '1.0.0', uptimeS: Math.round(process.uptime()), requests24h, crewsRunning };
+  });
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(adminRoutes, { prefix: '/api/admin' });
   await app.register(accountRoutes, { prefix: '/api/account' });

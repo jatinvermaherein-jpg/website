@@ -111,6 +111,7 @@ a { color: inherit; text-decoration: none; transition: color 160ms ease; }
   cursor: pointer;
 }
 .btn:hover { background: var(--jt-pearl); box-shadow: 0 6px 28px rgba(212, 175, 106, 0.28); }
+.btn:active { transform: scale(0.97); }
 .hint {
   font-family: var(--jt-mono);
   font-style: italic;
@@ -200,6 +201,29 @@ a { color: inherit; text-decoration: none; transition: color 160ms ease; }
 .panel--feed { --beam: rgba(120, 170, 214, 0.14); --beam-x: 50%; }
 @media (min-width: 880px) {
   .panel--crew { margin-top: 54px; }
+}
+.panel-ripple {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: clamp(96px, 13vw, 160px);
+  height: auto;
+  pointer-events: none;
+}
+.panel-ripple circle { fill: none; stroke: var(--jt-line); stroke-width: 1; }
+.panel-h {
+  font-family: var(--jt-disp);
+  font-weight: 800;
+  font-size: clamp(24px, 3vw, 34px);
+  text-transform: uppercase;
+  letter-spacing: -0.03em;
+  margin-bottom: 12px;
+}
+.panel-p { color: var(--jt-slate); font-size: 15.5px; }
+.panel-p em { color: var(--jt-gold); font-style: italic; }
+.fine { margin-top: 26px; color: var(--jt-faint); font-size: 14.5px; max-width: 70ch; }
+
+/* ── feed (the live stream) ──────────────────────────────────── */
 .feed { display: grid; gap: 8px; margin-top: 16px; }
 .feed-line {
   display: flex;
@@ -223,27 +247,6 @@ a { color: inherit; text-decoration: none; transition: color 160ms ease; }
 .feed-line.corrupt { box-shadow: inset 0 0 0 1px rgba(245, 241, 232, 0.2); }
 .feed-text { flex: 1; min-width: 180px; }
 .feed-ts { color: var(--jt-faint); opacity: 0.7; font-size: 10.5px; }
-}
-.panel-ripple {
-  position: absolute;
-  top: -1px;
-  right: -1px;
-  width: clamp(96px, 13vw, 160px);
-  height: auto;
-  pointer-events: none;
-}
-.panel-ripple circle { fill: none; stroke: var(--jt-line); stroke-width: 1; }
-.panel-h {
-  font-family: var(--jt-disp);
-  font-weight: 800;
-  font-size: clamp(24px, 3vw, 34px);
-  text-transform: uppercase;
-  letter-spacing: -0.03em;
-  margin-bottom: 12px;
-}
-.panel-p { color: var(--jt-slate); font-size: 15.5px; }
-.panel-p em { color: var(--jt-gold); font-style: italic; }
-.fine { margin-top: 26px; color: var(--jt-faint); font-size: 14.5px; max-width: 70ch; }
 
 /* ── foot ────────────────────────────────────────────────────── */
 .foot-in {
@@ -253,6 +256,23 @@ a { color: inherit; text-decoration: none; transition: color 160ms ease; }
   flex-wrap: wrap;
   padding-top: 28px;
   padding-bottom: 28px;
+}
+/* the refusal list — what Jatin will never do, in the smallest type,
+   because it is the spine, not the show */
+.refusals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  padding-bottom: 34px;
+  border-top: 1px solid rgba(245, 241, 232, 0.06);
+  padding-top: 20px;
+}
+.refusals span {
+  font-family: var(--jt-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--jt-faint);
+  opacity: 0.75;
 }
 .mono-faint {
   font-family: var(--jt-mono);
@@ -270,7 +290,31 @@ a { color: inherit; text-decoration: none; transition: color 160ms ease; }
   padding: clamp(32px, 6vw, 72px) 20px;
   background: radial-gradient(52% 42% at 50% 36%, var(--jt-beam-gold), transparent 70%);
 }
-.login-card { width: 100%; max-width: 400px; }
+.login-main { position: relative; overflow: hidden; }
+.login-ripple {
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(420px, 90vw);
+  pointer-events: none;
+  opacity: 0.5;
+}
+.login-ripple circle { fill: none; stroke: var(--jt-line); stroke-width: 1; }
+.login-mark {
+  display: block;
+  margin: 0 auto 18px;
+  width: 44px;
+  height: 44px;
+  animation: jt-drop 3.2s ease-in-out infinite;
+}
+.login-mark circle { fill: currentColor; color: var(--jt-gold); }
+.login-mark .jt-mark-core { fill: var(--jt-pearl); }
+@keyframes jt-drop {
+  0%, 100% { transform: translateY(0); opacity: 0.85; }
+  50% { transform: translateY(4px); opacity: 1; }
+}
+.login-card { position: relative; width: 100%; max-width: 400px; }
 .login-title {
   font-weight: 800;
   text-transform: uppercase;
@@ -337,6 +381,13 @@ a { color: inherit; text-decoration: none; transition: color 160ms ease; }
   border-radius: 18px;
   background: rgba(245, 241, 232, 0.028);
   box-shadow: inset 0 0 0 1px rgba(245, 241, 232, 0.07);
+  transition: transform 200ms ease, box-shadow 200ms ease, background 200ms ease;
+}
+.key-row:hover, .desk-row:hover,
+.run-row:hover, .req-row:hover {
+  transform: translateY(-2px);
+  background: rgba(245, 241, 232, 0.045);
+  box-shadow: inset 0 0 0 1px rgba(245, 241, 232, 0.14), 0 10px 30px rgba(0, 0, 0, 0.22);
 }
 .desk-row { margin-top: 10px; }
 .key-id {
@@ -413,6 +464,7 @@ a { color: inherit; text-decoration: none; transition: color 160ms ease; }
   border-radius: 999px;
   background: rgba(245, 241, 232, 0.02);
   box-shadow: inset 0 0 0 1px rgba(245, 241, 232, 0.05);
+  transition: transform 200ms ease, box-shadow 200ms ease, background 200ms ease;
 }
 .crew-start {
   display: flex;
@@ -454,6 +506,7 @@ a { color: inherit; text-decoration: none; transition: color 160ms ease; }
   border-radius: 999px;
   background: rgba(245, 241, 232, 0.03);
   box-shadow: inset 0 0 0 1px rgba(245, 241, 232, 0.07);
+  transition: transform 200ms ease, box-shadow 200ms ease, background 200ms ease;
 }
 .partial {
   margin: 6px 0 0 8px;
@@ -479,6 +532,33 @@ a { color: inherit; text-decoration: none; transition: color 160ms ease; }
   color: var(--jt-gold);
 }
 
+/* the account-level next decision — the one line a human acts on */
+.pf-next {
+  margin: 14px 0 4px;
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: rgba(212, 175, 106, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(212, 175, 106, 0.22);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+.pf-next:empty { display: none; }
+
+/* sections rise into place as they enter the viewport */
+.dash-sec {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 600ms ease, transform 600ms ease;
+}
+.dash-sec.in { opacity: 1; transform: none; }
+
 @media (prefers-reduced-motion: reduce) {
   .scroll-cue i { animation: none; }
+  .login-mark { animation: none; }
+  .feed-line { animation: none; }
+  .dash-sec { opacity: 1; transform: none; transition: none; }
+  .key-row:hover, .desk-row:hover, .run-row:hover, .req-row:hover { transform: none; }
+  .btn:active { transform: none; }
 }

@@ -155,7 +155,7 @@
       <p class="eyebrow" style="margin-bottom:10px">Portfolio</p>
       <p class="fine">Every project in this account &mdash; and the next human decision each one is waiting on.
         Open work outranks green.</p>
-      <p id="pf-next" class="fine"></p>
+      <p id="pf-next" class="pf-next"></p>
       <div class="runs" id="portfolio"><p class="empty">loading&hellip;</p></div>
     </section>
 
@@ -363,6 +363,19 @@
       : "Nothing is waiting on a human — the crew has the wheel.";
   }
   loadPortfolio();
+
+  // sections rise into place as they enter the viewport (reduced-motion: off)
+  const showAll = () => document.querySelectorAll(".dash-sec").forEach((s) => s.classList.add("in"));
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches && "IntersectionObserver" in window) {
+    const io = new IntersectionObserver(
+      (entries) => entries.forEach((en) => en.isIntersecting && en.target.classList.add("in")),
+      { threshold: 0.12 },
+    );
+    document.querySelectorAll(".dash-sec").forEach((s) => io.observe(s));
+    setTimeout(showAll, 2500); // failsafe — content is never held hostage
+  } else {
+    showAll();
+  }
 
   function windowChips(windows) {
     if (!windows?.length) return `<span class="badge">no limits</span>`;

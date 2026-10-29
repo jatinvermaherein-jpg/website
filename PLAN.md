@@ -67,6 +67,20 @@ Two engines, one repo, one site.
 
 **Phase 0 status (this build):** repo scaffolded · full Prisma schema with `project_id` in the first migration · embedded Postgres dev DB · Fastify API (health, O3 auth loop, admin verification, per-key limits + vaulted key add) · landing page with the AntherBrackets-derived preloader (O4) · CI gates · seed (operator from env, org, project, law book v1 pinned).
 
+**Phases 1–12 status (this build, 2026-10-29):** all delivered and committed, 13/13 acceptance tests green, typecheck clean, grants gate holding (tests run as `jatin_app`).
+1. **Flow passthrough** — `POST /api/flow/chat/completions`, OpenAI-compatible, SSE + tee'd real usage, per-attempt Request rows.
+2. **Multi-key pool** — 401/403 → dead, 429/5xx → 60s cooldown, request survives, failover recorded.
+3. **Quota scheduler** — use-it-or-lose-it `urgency = Σ headroom/time-to-reset`, reserves, structured 429 + `retry_after_s`, measured headroom on the read side.
+4. **Multi-provider** — org alias ladder (≤4 hops, cross-provider), degradation flag in header + body + row (`x-jatin-degraded`), cost from Model prices, alias API.
+5. **Dashboard** — add key (O5 providers, per-key limits) → request → usage (live windows + ledger) → revoke (archive-not-delete, instant lockout) → crew board → live feed → portfolio. **Remaining: Next.js 15 rewrite of `apps/web`** (the static dashboard satisfies the flow acceptance; the rewrite is tracked, not yet done).
+6. **Stream + evidence** — one typed stream per project (envelope v1, 16-event vocabulary), validate-at-post (malformed refused, never written), fail-open read (corrupt flagged), cursor, verdict law: no falsification → `unproven`, no instrument control → `unproven`.
+7. **Crew runner** — one crew = one process group; kill = SIGTERM → 5.5s grace → SIGKILL to the group; kill mid-task keeps partials on the board and records exactly one KILLED attempt.
+8. **Cross-check** — the witness RUNS the falsification + control with digests (`POST /projects/:slug/falsify`); row resolution derived on read: witnessed decides, a control that fails to fail poisons its verdict, an attested claim never closes a row. Acceptance proven with a planted off-by-one: builder (groq) claims, auditor (openrouter) catches, row FAILS.
+9. **Interactive** — refusals are telemetry (well-formed `system` event per refusal; same reason twice = countable), live feed on the dashboard (2s poll, raw mode, rejected/corrupt styling).
+10. **Bench + fidelity** — `LedgerRow.environment` (migration 0003); the ladder only runs UP (production rows refuse local-stack/staging verdicts); digest-sealed manifest; resume in ONE command (tampered manifest → 409).
+11. **Multi-project** — isolation proven (a pass in one project cannot satisfy the other; org walls 404); portfolio resolves every project through the cross-check law and names the next human decision (open work outranks ship).
+12. **Stunning** — design pass: de-rectangularized language carried across all pages (pills, arches, beams, ripples, grain), live `/api/pulse` on the landing (aggregate telemetry only), refusal list in the footer, row hover-lifts, scroll-reveal sections (reduced-motion + failsafe respected), login drop-mark.
+
 ## §E — Open items
 
 1. **D4** — advisory-first confirmation (default applied; crew execution unlocks per-seat when said).

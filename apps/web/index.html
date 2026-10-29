@@ -58,8 +58,8 @@
         </div>
       </div>
       <div class="marks">
-        <span class="badge live">&#9679; Flow &mdash; 92&ndash;97% of spendable quota</span>
-        <span class="badge">&#10003; Crew &mdash; 10 seats &middot; 5 projects</span>
+        <span class="badge live" id="pulse-flow">&#9679; Flow &mdash; 92&ndash;97% of spendable quota</span>
+        <span class="badge" id="pulse-crew">&#10003; Crew &mdash; 10 seats &middot; 5 projects</span>
         <span class="badge">&#9670; One repo &middot; one site &middot; one system</span>
       </div>
     </div>
@@ -107,10 +107,32 @@
       <span class="mono-faint">Jatin &mdash; every drop, one pearl</span>
       <span class="mono-faint">one pool &middot; many models &mdash; one crew &middot; many seats</span>
     </div>
+    <div class="wrap refusals" aria-label="What Jatin will never do">
+      <span>no unencrypted keys</span>
+      <span>no PASS without falsification + a proven-able instrument</span>
+      <span>no agent-raised limits</span>
+      <span>no read path for env values</span>
+      <span>no summary-reading &ldquo;verification&rdquo;</span>
+      <span>no gate that never goes red</span>
+    </div>
   </footer>
 </main>
 
 <script src="/preloader.js"></script>
 <script>window.__jatinPreloader && window.__jatinPreloader.init({});</script>
+<script>
+// the landing is not a poster — it reads the live system (aggregate
+// telemetry only; if the fetch fails, the static claim stands).
+(async () => {
+  try {
+    const p = await (await fetch("/api/pulse", { cache: "no-store" })).json();
+    if (!p.up) return;
+    const flow = document.getElementById("pulse-flow");
+    const crew = document.getElementById("pulse-crew");
+    if (flow) flow.innerHTML = "&#9679; Flow &mdash; " + p.requests24h + " requests in 24h &middot; up " + Math.floor(p.uptimeS / 3600) + "h";
+    if (crew) crew.innerHTML = "&#10003; Crew &mdash; " + p.crewsRunning + " crew" + (p.crewsRunning === 1 ? "" : "s") + " working now";
+  } catch { /* the static claims are good enough */ }
+})();
+</script>
 </body>
 </html>
