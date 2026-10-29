@@ -358,7 +358,7 @@ export async function flowRoutes(app: FastifyInstance) {
         degraded: true,
         latencyMs: true,
         createdAt: true,
-        credential: { select: { keyMask: true, provider: true, label: true, status: true } },
+        credential: { select: { id: true, keyMask: true, provider: true, label: true, status: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: 50,

@@ -378,6 +378,29 @@ a { color: inherit; text-decoration: none; transition: color 160ms ease; }
   font-size: 13px;
   margin-top: 16px;
 }
+.badge.err { color: #E08A7A; border-color: #E08A7A; }
+.reqs { display: grid; gap: 8px; margin-top: 18px; }
+.req-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(245, 241, 232, 0.02);
+  box-shadow: inset 0 0 0 1px rgba(245, 241, 232, 0.05);
+}
+.api-endpoint {
+  display: inline-block;
+  margin: 4px 0 14px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: rgba(212, 175, 106, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(212, 175, 106, 0.3);
+  font-family: var(--jt-mono);
+  font-size: 13.5px;
+  color: var(--jt-gold);
+}
 
 @media (prefers-reduced-motion: reduce) {
   .scroll-cue i { animation: none; }

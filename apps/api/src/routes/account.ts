@@ -119,6 +119,21 @@ export async function accountRoutes(app: FastifyInstance) {
     return reply.code(201).send({ id: cred.id, provider, label, keyMask, projectId: projectId ?? null });
   });
 
+  // Phase 5 — revoke: archive-not-delete. The row (and the trail that
+  // references it) stays; the pool simply stops containing the key.
+  app.post('/keys/:id/revoke', async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    const { id } = req.params as { id: string };
+    const membership = await orgOf(user.id);
+    if (!membership) return reply.code(404).send({ error: 'no org' });
+    const cred = await prisma.providerCredential.findFirst({ where: { id, orgId: membership.orgId } });
+    if (!cred) return reply.code(404).send({ error: 'key not found' });
+    if (cred.status === 'revoked') return { id, status: 'revoked', note: 'already revoked' };
+    await prisma.providerCredential.update({ where: { id }, data: { status: 'revoked' } });
+    return { id, status: 'revoked' };
+  });
+
   // Phase 4 — org aliases: an ordered list of provider targets the gateway
   // walks when the model is requested by alias (≤4 hops).
   const aliasTargetSchema = z.object({
