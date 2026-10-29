@@ -1,0 +1,26 @@
+{
+  "name": "jatin",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "db:dev": "node scripts/dev-db.mjs",
+    "db:migrate": "npm run db:migrate -w @jatin/api",
+    "db:deploy": "npm run db:deploy -w @jatin/api",
+    "db:seed": "npm run db:seed -w @jatin/api",
+    "dev": "npm run dev -w @jatin/api",
+    "build": "npm run build -w @jatin/api",
+    "typecheck": "npm run typecheck -w @jatin/api",
+    "test": "npm run test -w @jatin/api",
+    "gates:tree": "bash scripts/scan-tree.sh"
+  },
+  "devDependencies": {
+    "@embedded-postgres/linux-x64": "*"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

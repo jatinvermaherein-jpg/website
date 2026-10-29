@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.pgdata/
+.env
+*.log
+.DS_Store
+apps/api/data.json
+workspace/antherbrackets/

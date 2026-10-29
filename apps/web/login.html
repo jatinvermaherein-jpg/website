@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JATIN — Sign in</title>
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0B0E1A">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/preloader.css">
+<link rel="stylesheet" href="/site.css">
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="jt-bar">
+  <div class="jt-bar-in">
+    <a class="jt-brand" href="/" aria-label="Jatin, home">
+      <svg class="jt-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true" focusable="false">
+        <circle cx="16" cy="16" r="11" opacity="0.25"/>
+        <circle cx="16" cy="16" r="7" opacity="0.5"/>
+        <circle class="jt-mark-core" cx="16" cy="16" r="3.4"/>
+      </svg>
+      <span>Jatin<i></i></span>
+    </a>
+    <nav class="jt-nav" aria-label="Site">
+      <a class="jt-cta" href="/">Home</a>
+    </nav>
+  </div>
+</header>
+
+<main class="login-main">
+  <div class="login-card">
+    <h1 class="login-title">Sign in</h1>
+    <p class="login-sub">Username and password. New accounts are verified by the operator before you can sign in.</p>
+
+    <form id="login-form">
+      <label>Username
+        <input name="username" autocomplete="username" spellcheck="false" required>
+      </label>
+      <label>Password
+        <input name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <button class="btn" type="submit">Sign in</button>
+    </form>
+
+    <p class="login-toggle">No account? <a href="#register">Create one</a></p>
+
+    <form id="register-form" hidden>
+      <label>Username
+        <input name="username" autocomplete="username" spellcheck="false" minlength="3" maxlength="32" pattern="[a-z0-9][a-z0-9_.\-]*" required>
+      </label>
+      <label>Password
+        <input name="password" type="password" autocomplete="new-password" minlength="8" required>
+      </label>
+      <button class="btn" type="submit">Create account</button>
+      <p class="hint" id="register-note" hidden>&#10003; Created. Your account is pending verification by the operator &mdash; you can sign in once it is verified.</p>
+    </form>
+
+    <p id="auth-msg" class="auth-msg" role="status"></p>
+  </div>
+</main>
+
+<script>
+  const msg = document.getElementById("auth-msg");
+  const say = (text, ok) => {
+    msg.textContent = text;
+    msg.className = "auth-msg " + (ok ? "ok" : "err");
+  };
+  const loginForm = document.getElementById("login-form");
+  const registerForm = document.getElementById("register-form");
+  const note = document.getElementById("register-note");
+
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(loginForm);
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username: fd.get("username"), password: fd.get("password") }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      say("Signed in — taking you in.", true);
+      setTimeout(() => (location.href = "/"), 500);
+    } else {
+      say(data.error || "sign-in failed", false);
+    }
+  });
+
+  document.querySelector(".login-toggle a").addEventListener("click", (e) => {
+    e.preventDefault();
+    loginForm.hidden = true;
+    registerForm.hidden = false;
+    msg.textContent = "";
+  });
+
+  registerForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(registerForm);
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username: fd.get("username"), password: fd.get("password") }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      note.hidden = false;
+      say("Account created.", true);
+      registerForm.reset();
+    } else {
+      say(data.error || "could not create the account", false);
+    }
+  });
+</script>
+</body>
+</html>

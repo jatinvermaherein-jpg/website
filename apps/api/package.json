@@ -1,0 +1,33 @@
+{
+  "name": "@jatin/api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test src/test/auth.test.ts",
+    "db:migrate": "node ../../scripts/with-env.mjs prisma migrate dev --schema ../../prisma/schema.prisma",
+    "db:deploy": "node ../../scripts/with-env.mjs prisma migrate deploy --schema ../../prisma/schema.prisma",
+    "db:seed": "tsx ../../prisma/seed.ts"
+  },
+  "prisma": {
+    "schema": "../../prisma/schema.prisma",
+    "seed": "tsx ../../prisma/seed.ts"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@node-rs/argon2": "^2.1.0",
+    "@prisma/client": "^6.7.0",
+    "fastify": "^5.3.2",
+    "zod": "^4.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "prisma": "^6.7.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0"
+  }
+}

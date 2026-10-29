@@ -1,0 +1,453 @@
+// JATIN — one schema, one migration history.
+// Laws encoded here (STRUCTURAL): append-only tables get no UPDATE/DELETE
+// grant (0002 migration); RLS on every table; project_id in the first
+// migration (V4 §13 Phase 0).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── identity ────────────────────────────────────────────────────────────────
+
+model User {
+  id          String   @id @default(cuid())
+  username    String   @unique
+  passHash    String
+  // O3: pending → active (verified by the operator) | suspended
+  status      String   @default("pending")
+  isOperator  Boolean  @default(false)
+  verifiedBy  String?
+  verifiedAt  DateTime?
+  createdAt   DateTime @default(now())
+  memberships Membership[]
+  verifications    Verification[]   @relation("pending")
+  verificationsAsVerifier Verification[] @relation("verifier")
+}
+
+model Verification {
+  id            String   @id @default(cuid())
+  pendingUserId String
+  pendingUser   User     @relation("pending", fields: [pendingUserId], references: [id])
+  byId          String?
+  by            User?    @relation("verifier", fields: [byId], references: [id])
+  decision      String // approved | rejected
+  note          String?
+  at            DateTime @default(now())
+}
+
+model Org {
+  id                 String   @id @default(cuid())
+  name               String
+  plan               String   @default("free")
+  masterBudgetCapCents Float?
+  createdAt          DateTime @default(now())
+  memberships        Membership[]
+  projects           Project[]
+  apiKeys            ApiKey[]
+  providerCreds      ProviderCredential[]
+}
+
+model Membership {
+  userId String
+  orgId  String
+  role   String @default("owner") // owner | member
+  user   User @relation(fields: [userId], references: [id])
+  org    Org  @relation(fields: [orgId], references: [id])
+  @@id([userId, orgId])
+}
+
+// ── FLOW ────────────────────────────────────────────────────────────────────
+
+// The org's own gateway key (sk-jatin-…). Hashed, never stored plain.
+model ApiKey {
+  id         String    @id @default(cuid())
+  orgId      String
+  org        Org       @relation(fields: [orgId], references: [id])
+  prefix     String    @unique
+  keyHash    String
+  name       String
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  requests   Request[]
+}
+
+// A provider key. orgId = the owning account (never pooled across tenants).
+// projectId = null → the org's Flow pool; set → the project's own keys (O1).
+model ProviderCredential {
+  id            String    @id @default(cuid())
+  orgId         String
+  org           Org       @relation(fields: [orgId], references: [id])
+  projectId     String?
+  project       Project?  @relation(fields: [projectId], references: [id])
+  provider      String // openai | anthropic | google | groq | openrouter
+  label         String
+  secretStored  String // envelope: wrap||iv||tag||ct, base64 — no read path
+  keyMask       String // first4…last4, display only
+  status        String    @default("active") // active | cooldown | dead
+  cooldownUntil DateTime?
+  createdAt     DateTime  @default(now())
+  limits        KeyLimit[]
+  windows       QuotaWindow[]
+  requests      Request[]
+}
+
+// O2 — user-set custom limits per key, per window kind.
+model KeyLimit {
+  id           String             @id @default(cuid())
+  credentialId String
+  credential   ProviderCredential @relation(fields: [credentialId], references: [id])
+  kind         String // rpm | tpm | rpd | monthly_tokens | monthly_cost_cents
+  limit        Float?
+  reservePct   Int                @default(5)
+  @@unique([credentialId, kind])
+}
+
+model Model {
+  id              String @id @default(cuid())
+  provider        String
+  providerModelId String
+  ctxWindow       Int    @default(8192)
+  priceInPerM     Float  @default(0)
+  priceOutPerM    Float  @default(0)
+  capabilities    Json?
+  @@unique([provider, providerModelId])
+}
+
+model ModelAlias {
+  id       String @id @default(cuid())
+  orgId    String
+  alias    String
+  modelId  String
+  priority Int    @default(100)
+  @@unique([orgId, alias, priority])
+}
+
+model QuotaWindow {
+  id           String             @id @default(cuid())
+  credentialId String
+  credential   ProviderCredential @relation(fields: [credentialId], references: [id])
+  modelId      String?
+  kind         String // rpm | tpm | rpd | monthly
+  limit        Float
+  used         Float    @default(0)
+  windowStart  DateTime
+  windowEnd    DateTime
+}
+
+// O1 — how a project's model calls are routed: org Flow pool, the
+// project's own keys, or the project's own external system.
+model ProjectModelRoute {
+  id            String  @id @default(cuid())
+  projectId     String
+  project       Project @relation(fields: [projectId], references: [id])
+  canonical     String
+  source        String // flow | project | external
+  credentialId  String?
+  externalUrl   String?
+  externalModel String?
+  priority      Int
+  tier          String @default("strong") // strong | fast
+  @@unique([projectId, canonical, priority])
+}
+
+model Request {
+  id             String    @id @default(cuid())
+  orgId          String
+  idempotencyKey String    @unique
+  apiKeyId       String?
+  apiKey         ApiKey?   @relation(fields: [apiKeyId], references: [id])
+  projectId      String?
+  credentialId   String?
+  credential     ProviderCredential? @relation(fields: [credentialId], references: [id])
+  source         String    @default("flow") // flow | project | external
+  modelRequested String
+  modelServed    String
+  degraded       Boolean   @default(false)
+  tokensIn       Int       @default(0)
+  tokensOut      Int       @default(0)
+  costCents      Float     @default(0)
+  latencyMs      Int       @default(0)
+  status         String    @default("ok") // ok | error | fallback
+  createdAt      DateTime  @default(now())
+  @@index([orgId, createdAt])
+}
+
+model UsageRollup {
+  id          String   @id @default(cuid())
+  orgId       String
+  projectId   String?
+  bucketStart DateTime
+  modelId     String
+  source      String   @default("flow")
+  requests    Int      @default(0)
+  tokensIn    Float    @default(0)
+  tokensOut   Float    @default(0)
+  costCents   Float    @default(0)
+  @@unique([orgId, projectId, bucketStart, modelId, source])
+}
+
+// ── CREW ────────────────────────────────────────────────────────────────────
+
+model Project {
+  id                   String   @id @default(cuid())
+  orgId                String
+  org                  Org      @relation(fields: [orgId], references: [id])
+  slug                 String   @unique
+  name                 String
+  // draft | active | paused | archived (archive = tombstone, never delete)
+  status               String   @default("draft")
+  budgetCapCents       Float?
+  maxSeats             Int      @default(20)
+  activeRulesetVersion Int?
+  archivedAt           DateTime?
+  createdAt            DateTime @default(now())
+  rulesets             Ruleset[]
+  env                  ProjectEnv[]
+  creds                ProviderCredential[]
+  routes               ProjectModelRoute[]
+  seats                SeatProject[]
+  tasks                Task[]
+  ledgerRows           LedgerRow[]
+  verdicts             Verdict[]
+  artifacts            Artifact[]
+  events               Event[]
+  handovers            Handover[]
+  waivers              Waiver[]
+  breaches             Breach[]
+}
+
+// The law book — versioned, append-only, injected into every seat's session.
+model Ruleset {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  version   Int
+  body      String
+  actor     String
+  ts        DateTime @default(now())
+  @@unique([projectId, version])
+}
+
+model ProjectEnv {
+  id          String       @id @default(cuid())
+  projectId   String
+  project     Project      @relation(fields: [projectId], references: [id])
+  name        String
+  valueStored String // envelope — never returned by any read path
+  keyMask     String
+  isSecret    Boolean      @default(true)
+  updatedAt   DateTime     @default(now())
+  versions    EnvVersion[]
+  @@unique([projectId, name])
+}
+
+model EnvVersion {
+  id          String     @id @default(cuid())
+  envId       String
+  env         ProjectEnv @relation(fields: [envId], references: [id])
+  version     Int
+  valueStored String
+  actor       String
+  ts          DateTime   @default(now())
+  @@unique([envId, version])
+}
+
+// One key, one seat (the join spine). Key shown once; only the hash stored.
+model Seat {
+  id            String   @id @default(cuid())
+  orgId         String
+  name          String
+  role          String // lead | builder | auditor | scribe | scout
+  // created | online | unadmitted | vacant | archived
+  status        String   @default("created")
+  modelRoute    Json?
+  contextBudget Int?
+  maxConcurrent Int      @default(1)
+  worktreeRef   String?
+  admittedAt    DateTime?
+  lastHeartbeat DateTime?
+  createdAt     DateTime @default(now())
+  keys          SeatKey[]
+  sessions      Session[]
+  projects      SeatProject[]
+  tasksOwned    Task[]   @relation("TaskOwner")
+  tasksWitness  Task[]   @relation("TaskWitness")
+}
+
+model SeatKey {
+  id        String   @id @default(cuid())
+  seatId    String
+  seat      Seat     @relation(fields: [seatId], references: [id])
+  keyHash   String   @unique
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  seatId    String
+  seat      Seat     @relation(fields: [seatId], references: [id])
+  tokenHash String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model SeatProject {
+  seatId    String
+  projectId String
+  seat      Seat    @relation(fields: [seatId], references: [id])
+  project   Project @relation(fields: [projectId], references: [id])
+  joinedAt  DateTime @default(now())
+  @@id([seatId, projectId])
+}
+
+model BenchManifest {
+  id       String   @id @default(cuid())
+  seatId   String
+  image    String
+  packages Json?
+  restore  String
+  digest   String
+  ts       DateTime @default(now())
+}
+
+model Task {
+  id             String   @id @default(cuid())
+  projectId      String
+  project        Project  @relation(fields: [projectId], references: [id])
+  title          String
+  acceptanceVerb String?
+  // backlog | in_progress | review | done | blocked
+  status         String   @default("backlog")
+  ownerId        String?
+  owner          Seat?    @relation("TaskOwner", fields: [ownerId], references: [id])
+  witnessId      String?
+  witness        Seat?    @relation("TaskWitness", fields: [witnessId], references: [id])
+  artifactRefs   Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// Append-only transition log. Current state = latest entry per rowId.
+// Counts are derived, never typed (law 2.1). No UPDATE/DELETE grant.
+model LedgerRow {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  rowId       String
+  requirement String?
+  // unverified | pass | partial | fail | blocked | carried | unproven
+  status      String
+  evidenceIds Json?
+  bySeat      String?
+  expiresAt   DateTime?
+  consequence String?
+  ts          DateTime @default(now())
+  @@index([projectId, rowId, ts])
+}
+
+model Artifact {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  commit      String
+  path        String
+  contentHash String
+  ts          DateTime @default(now())
+  @@unique([projectId, commit, path])
+}
+
+model Verdict {
+  id                   String   @id @default(cuid())
+  projectId            String
+  project              Project  @relation(fields: [projectId], references: [id])
+  rowId                String
+  seat                 String
+  direction            String // assert | falsify
+  // unit | local-stack | staging | production
+  environment          String
+  fidelity             Int    @default(0)
+  verdict              String // pass | fail | unproven
+  evidence             Json // [{kind: 'repo'|'system-probe', …}]
+  falsification        Json? // {command, output_digest}
+  instrumentControl    Json? // {command, output_digest, expected_failure}
+  witnessDigest        String?
+  attestedNotWitnessed Boolean  @default(true)
+  benchDigest          String?
+  contextRemainingPct  Int?
+  ts                   DateTime @default(now())
+}
+
+model Handover {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  seatId    String
+  body      String
+  ts        DateTime @default(now())
+}
+
+model Waiver {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  ruleId    String
+  reason    String
+  scope     String
+  expiresAt DateTime
+  actor     String
+  ts        DateTime @default(now())
+}
+
+model Breach {
+  id              String   @id @default(cuid())
+  projectId       String
+  project         Project  @relation(fields: [projectId], references: [id])
+  ruleId          String
+  artifactRef     String
+  discoveringSeat String
+  correction      String
+  ts              DateTime @default(now())
+}
+
+// THE stream — one per project (+ org scope for crew-wide events).
+// Validated at post, failed open on read; seq is the total order.
+model Event {
+  id              String   @id @default(cuid())
+  scopeId         String // project id, or org id for the crew-wide stream
+  projectId       String?
+  project         Project? @relation(fields: [projectId], references: [id])
+  seq             BigInt
+  // message|answer|correction|task|verdict|ledger|presence|git|env|ruleset|seat|brief|admission|waiver|breach|bench|system
+  type            String
+  actor           String
+  at              DateTime @default(now())
+  refs            Json?
+  body            Json
+  envelopeVersion Int      @default(1)
+  @@unique([scopeId, seq])
+  @@index([scopeId, seq])
+}
+
+model Cursor {
+  seatId    String
+  scopeId   String
+  lastSeq   BigInt
+  updatedAt DateTime @updatedAt
+  @@id([seatId, scopeId])
+}
+
+// Every decryption of a credential/env value is recorded here —
+// which key, which actor, which moment (law: audit every decryption).
+model AuditLog {
+  id     String   @id @default(cuid())
+  actor  String
+  action String
+  target String
+  ts     DateTime @default(now())
+}

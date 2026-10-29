@@ -1,0 +1,23 @@
+# Jatin site → Netlify.
+# Phase 0: static. Phase 5 swaps in Next.js — the build command changes,
+# the /api rewrites move into the app config, everything else holds.
+#
+# RAILWAY_API_HOST: replace with the Railway domain (or set it in the
+# Netlify build env and keep this in sync) — the rewrites point the site
+# at the API.
+
+[build]
+  command = "echo 'static site — Next.js lands in Phase 5'"
+  publish = "apps/web"
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://RAILWAY_API_HOST/api/:splat"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
