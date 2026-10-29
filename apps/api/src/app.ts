@@ -6,6 +6,7 @@ import { authRoutes } from './routes/auth.js';
 import { adminRoutes } from './routes/admin.js';
 import { accountRoutes } from './routes/account.js';
 import { flowRoutes } from './routes/flow.js';
+import { streamRoutes } from './routes/stream.js';
 import { staticRoutes } from './static.js';
 
 export async function buildApp() {
@@ -17,6 +18,7 @@ export async function buildApp() {
   await app.register(adminRoutes, { prefix: '/api/admin' });
   await app.register(accountRoutes, { prefix: '/api/account' });
   await app.register(flowRoutes, { prefix: '/api/flow' });
+  await app.register(streamRoutes, { prefix: '/api/projects' });
   app.register(staticRoutes);
 
   app.setErrorHandler((err: FastifyError, _req: FastifyRequest, reply: FastifyReply) => {
