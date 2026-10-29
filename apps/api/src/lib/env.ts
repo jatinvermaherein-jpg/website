@@ -1,11 +1,15 @@
 // .env loader — no dependency, no override of real env (12-factor).
-// Candidates: apps/api/.env (deploy override), then repo-root .env (dev).
+// Candidates, nearest first: apps/api/.env (deploy override), apps/.env,
+// repo-root .env (dev — where the two-tier DATABASE_URL / APP_DATABASE_URL
+// live). This file sits at apps/api/src/lib/, so the repo root is four
+// levels up.
 import { readFileSync, existsSync } from 'node:fs';
 
 export function loadDotEnv(): void {
   const candidates = [
     new URL('../../.env', import.meta.url).pathname,
     new URL('../../../.env', import.meta.url).pathname,
+    new URL('../../../../.env', import.meta.url).pathname,
   ];
   for (const p of candidates) {
     if (!existsSync(p)) continue;

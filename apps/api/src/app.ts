@@ -9,6 +9,7 @@ import { flowRoutes } from './routes/flow.js';
 import { streamRoutes } from './routes/stream.js';
 import { crewRoutes } from './routes/crew.js';
 import { crosscheckRoutes } from './routes/crosscheck.js';
+import { benchRoutes } from './routes/bench.js';
 import { staticRoutes } from './static.js';
 
 export async function buildApp() {
@@ -23,6 +24,7 @@ export async function buildApp() {
   await app.register(streamRoutes, { prefix: '/api/projects' });
   await app.register(crewRoutes, { prefix: '/api/crew' });
   await app.register(crosscheckRoutes, { prefix: '/api/projects' });
+  await app.register(benchRoutes, { prefix: '/api/projects' });
   app.register(staticRoutes);
 
   app.setErrorHandler((err: FastifyError, _req: FastifyRequest, reply: FastifyReply) => {

@@ -18,7 +18,7 @@ import { Prisma } from '@prisma/client';
 import type { InputJsonValue } from '@prisma/client/runtime/library';
 import { prisma } from '../lib/prisma.js';
 import { requireUser } from '../lib/auth.js';
-import { validateEvent, coerceVerdict, type EventType } from '../lib/envelope.js';
+import { validateEvent, coerceVerdict, ENV_RANK, type EventType } from '../lib/envelope.js';
 
 const MAX_TAKE = 200;
 
@@ -161,6 +161,26 @@ export async function streamRoutes(app: FastifyInstance) {
     const type = b.type as EventType;
     const actor = typeof b.actor === 'string' && b.actor.trim() ? b.actor : user.username;
     const violations = validateEvent(String(type), actor, b.body);
+
+    // Phase 10 — the fidelity ladder: verdicts only run UP. A row that
+    // demands production refuses a local-stack verdict, no matter who posts
+    // it. (Applies when the row exists on the join spine; verdicts on
+    // unregistered rows are unconstrained — they are attested, not decided.)
+    if (type === 'verdict' && b.body && typeof b.body === 'object' && !Array.isArray(b.body)) {
+      const v = b.body as Record<string, unknown>;
+      if (typeof v.rowId === 'string' && typeof v.environment === 'string') {
+        const row = await prisma.ledgerRow.findFirst({
+          where: { projectId: project.id, rowId: v.rowId },
+          orderBy: { ts: 'desc' },
+        });
+        if (row && (ENV_RANK[v.environment] ?? -1) < (ENV_RANK[row.environment] ?? -1)) {
+          return reply.code(422).send({
+            error: `a ${row.environment} row refuses a ${v.environment} verdict — fidelity only runs upward`,
+          });
+        }
+      }
+    }
+
     if (violations.length) {
       // the bad line is NEVER written — but the refusal is telemetry
       // (law: rejections are visible; the same refusal reason twice =

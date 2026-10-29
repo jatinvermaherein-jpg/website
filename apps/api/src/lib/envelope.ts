@@ -25,6 +25,15 @@ export const ENVIRONMENTS = ['unit', 'local-stack', 'staging', 'production'] as 
 export const VERDICTS = ['pass', 'fail', 'unproven'] as const;
 export const EVIDENCE_KINDS = ['repo', 'system-probe'] as const;
 
+// the fidelity ladder — verdicts only run UP it. A production row demands a
+// production verdict; a local-stack verdict cannot decide it.
+export const ENV_RANK: Record<string, number> = {
+  unit: 0,
+  'local-stack': 1,
+  staging: 2,
+  production: 3,
+};
+
 export interface Envelope<T = unknown> {
   v: 1;
   scopeId: string;

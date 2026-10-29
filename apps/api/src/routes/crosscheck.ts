@@ -17,6 +17,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { requireUser } from '../lib/auth.js';
 import { REPO_ROOT } from '../lib/paths.js';
+import { ENVIRONMENTS } from '../lib/envelope.js';
 
 const COMMAND_TIMEOUT_MS = 15000;
 const ROW_ID_RE = /^J-\d{1,4}$/;
@@ -92,17 +93,29 @@ export async function crosscheckRoutes(app: FastifyInstance) {
     const project = await projectOf(req as { params: { slug: string } }, membership, reply);
     if (!project) return;
 
-    const b = (req.body ?? {}) as { rowId?: string; requirement?: string; status?: string; bySeat?: string; consequence?: string };
+    const b = (req.body ?? {}) as {
+      rowId?: string;
+      requirement?: string;
+      status?: string;
+      bySeat?: string;
+      consequence?: string;
+      environment?: string;
+    };
     if (!b.rowId || !ROW_ID_RE.test(b.rowId)) return reply.code(422).send({ error: 'rowId must look like J-01' });
     const status = b.status ?? 'unverified';
     const allowed = ['unverified', 'pass', 'partial', 'fail', 'blocked', 'carried', 'unproven'];
     if (!allowed.includes(status)) return reply.code(422).send({ error: `status must be one of: ${allowed.join(', ')}` });
+    const environment = b.environment ?? 'local-stack';
+    if (!(ENVIRONMENTS as readonly string[]).includes(environment)) {
+      return reply.code(422).send({ error: `environment must be one of: ${ENVIRONMENTS.join(', ')}` });
+    }
 
     const row = await prisma.ledgerRow.create({
       data: {
         projectId: project.id,
         rowId: b.rowId,
         requirement: b.requirement ?? null,
+        environment,
         status,
         bySeat: b.bySeat ?? user.username,
         consequence: b.consequence ?? null,
@@ -116,7 +129,7 @@ export async function crosscheckRoutes(app: FastifyInstance) {
           seq: await nextSeqIn(project.id),
           type: 'ledger',
           actor: b.bySeat ?? user.username,
-          body: { rowId: b.rowId, status, bySeat: b.bySeat ?? user.username, requirement: b.requirement ?? null },
+          body: { rowId: b.rowId, status, bySeat: b.bySeat ?? user.username, requirement: b.requirement ?? null, environment },
         },
       })
       .catch((e) => console.error('[crosscheck] event write failed', e));

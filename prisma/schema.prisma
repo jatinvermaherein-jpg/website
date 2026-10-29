@@ -341,6 +341,10 @@ model LedgerRow {
   project     Project  @relation(fields: [projectId], references: [id])
   rowId       String
   requirement String?
+  // unit | local-stack | staging | production — the fidelity level the row
+  // demands. Verdicts only run UP the ladder: a production row refuses a
+  // local-stack verdict (Phase 10).
+  environment String   @default("local-stack")
   // unverified | pass | partial | fail | blocked | carried | unproven
   status      String
   evidenceIds Json?
