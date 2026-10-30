@@ -29,6 +29,23 @@ npx tsx scripts/check-grants.mts   # the append-only law, verified against the l
 
 Auth (O3): `POST /api/auth/register` creates a **pending** account; the operator (env-seeded) verifies from `/api/admin/*`; only then does login work.
 
+## Deploy
+
+**API → Railway** (config in [`deploy/railway.json`](deploy/railway.json) — Nixpacks build, `prisma migrate deploy` on start):
+1. Railway → New Project → from this repo. Attach a Railway **Postgres** plugin.
+2. Env vars (same as local `.env`):
+   - `DATABASE_URL` — the Postgres connection string (owner role; runs migrations).
+   - `APP_DATABASE_URL` — same host, **user `jatin_app`, password `jatin_app`** (migration 0002 creates that role and all grants itself). If the platform's Postgres user lacks `CREATEROLE`, run the role block from `prisma/migrations/0002_immutable_grants/migration.sql` in the SQL console once, before the first deploy.
+   - `MASTER_KEY` (`openssl rand -base64 32`), `JWT_SECRET` (`openssl rand -hex 32`), `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `WEB_ORIGIN`, `PORT`.
+3. Deploy. `GET /health` should answer before the site points at it.
+
+**Site → Netlify** (config in [`deploy/netlify.toml`](deploy/netlify.toml) — publishes `apps/web`, proxies `/api/*` to the API):
+1. Netlify → import this repo; the toml picks the publish dir and the rewrites.
+2. The one manual step: edit the `RAILWAY_API_HOST` line in `deploy/netlify.toml` to your Railway domain, commit, redeploy. (Netlify does not interpolate env vars inside `netlify.toml` redirects.)
+3. The operator account for the live system is whatever `ADMIN_USERNAME`/`ADMIN_PASSWORD` you set on Railway — register → verify → sign in, same as local.
+
+**CI** (`.github/workflows/ci.yml`) gates every push: typecheck · tests against a live Postgres (seeded) · **grants gate** (append-only law verified against the schema) · **tree scan** (no caches/binaries/secrets in the build context).
+
 ## Layout
 
 ```

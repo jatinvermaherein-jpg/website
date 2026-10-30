@@ -9,7 +9,9 @@ FAIL=0
 check() {
   local label="$1"; shift
   local hits
-  hits=$(grep -rn --exclude-dir=node_modules --exclude-dir=.pgdata --exclude-dir=dist "$@" apps packages prisma deploy 2>/dev/null | wc -l | tr -d ' ')
+  # grep exits 1 on zero matches — under pipefail that would kill the script
+  # (set -e) exactly when the tree is CLEAN, so wrap it: clean must pass.
+  hits=$( { grep -rn --exclude-dir=node_modules --exclude-dir=.pgdata --exclude-dir=dist "$@" apps packages prisma deploy 2>/dev/null || true; } | wc -l | tr -d ' ')
   if [ "$hits" != "0" ]; then
     echo "FAIL tree-scan:${label} (${hits})"
     grep -rn --exclude-dir=node_modules --exclude-dir=.pgdata --exclude-dir=dist "$@" apps packages prisma deploy 2>/dev/null | head -5
