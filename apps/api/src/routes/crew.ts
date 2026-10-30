@@ -154,6 +154,13 @@ export async function crewRoutes(app: FastifyInstance) {
 
   // start a crew on a project task
   app.post('/', async (req, reply) => {
+    // a crew IS a process group — a serverless function cannot spawn one.
+    // Loud 501 with the reason, never a silent no-op (law 1.6).
+    if (process.env.JATIN_RUNTIME === 'serverless') {
+      return reply.code(501).send({
+        error: 'crew runner spawns a process group — impossible on a serverless function. Run the API on a persistent host for crews; verdicts (attested) still work here.',
+      });
+    }
     const user = await requireUser(req, reply);
     if (!user) return;
     const membership = await prisma.membership.findFirst({ where: { userId: user.id } });

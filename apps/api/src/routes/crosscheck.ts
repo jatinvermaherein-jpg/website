@@ -139,6 +139,14 @@ export async function crosscheckRoutes(app: FastifyInstance) {
 
   // the witness RUNS the falsification + the instrument control (digests)
   app.post('/:slug/falsify', async (req, reply) => {
+    // running a falsification spawns a shell — impossible in a serverless
+    // function. The law still works here: post an attested-not-witnessed
+    // verdict (recorded as unproven until witnessed on a persistent host).
+    if (process.env.JATIN_RUNTIME === 'serverless') {
+      return reply.code(501).send({
+        error: 'falsification RUN spawns a shell process — impossible on a serverless function. Post an attested verdict instead, or run the witness on a persistent host.',
+      });
+    }
     const user = await requireUser(req, reply);
     if (!user) return;
     const membership = await prisma.membership.findFirst({ where: { userId: user.id } });

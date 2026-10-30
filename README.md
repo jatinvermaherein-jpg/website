@@ -31,22 +31,27 @@ Auth (O3): `POST /api/auth/register` creates a **pending** account; the operator
 
 ## Deploy
 
-**API → Railway** (config in [`railway.json`](railway.json) at the repo root — where Railway looks; Nixpacks build, `prisma migrate deploy` on start):
-1. Railway → New Project → from this repo. Attach a Railway **Postgres** plugin.
-2. **Before the first deploy**, in the Postgres SQL console, create the restricted role with a real password — migration 0002 deliberately creates it *without* one (a shipped default credential would make the append-only law a public secret), so if you create it first, 0002 only adds the grants:
+**Everything on Netlify** (site + API as functions — config in [`netlify.toml`](netlify.toml)):
+1. Netlify → import this repo. Attach **Netlify DB** (managed Postgres; works with any Postgres too — Supabase free tier, Neon, …).
+2. **Before the first deploy**, in the Postgres SQL console, create the restricted role with a real password — migration 0002 deliberately creates it *without* one, so if you create it first, 0002 only adds the grants:
    ```sql
    CREATE ROLE jatin_app LOGIN PASSWORD '<openssl rand -hex 24>';
    ```
-3. Env vars:
-   - `DATABASE_URL` — the Postgres connection string (owner role; runs migrations).
-   - `APP_DATABASE_URL` — same host, **user `jatin_app`, the password you just set**. This is the role the API hot path connects as; the 0002 grants (append-only on `Event`, `Verdict`, `LedgerRow`, …) bind production behaviour.
-   - `MASTER_KEY` (`openssl rand -base64 32`), `JWT_SECRET` (`openssl rand -hex 32`), `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `WEB_ORIGIN`, `PORT`.
-4. Deploy. Watch the deploy log for the `prisma migrate deploy` output line (proof the start command runs), then `GET /health`.
+3. Site env vars: `DATABASE_URL` (owner role), `APP_DATABASE_URL` (user `jatin_app`, your password — the API hot path), `MASTER_KEY` (`openssl rand -base64 32`), `JWT_SECRET` (`openssl rand -hex 32`), `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `WEB_ORIGIN` (= your site URL), and **`JATIN_RUNTIME=serverless`**.
+4. Deploy. Migrations run in the build (`prisma migrate deploy`, idempotent) — if the DB is unreachable the build fails loudly.
+5. The operator account is whatever `ADMIN_USERNAME`/`ADMIN_PASSWORD` you set — register → verify → sign in, same as local.
 
-**Site → Netlify** (config in [`netlify.toml`](netlify.toml) — publishes `apps/web`; `/api/*` is proxied through [`netlify/functions/proxy-api.mjs`](netlify/functions/proxy-api.mjs)):
-1. Netlify → import this repo; the toml picks the publish dir, the proxy route, and the security headers.
-2. Set one env var in the Netlify dashboard: `API_ORIGIN` = your Railway domain. That's it — no file edits. (The proxy is a function because `netlify.toml` redirects cannot read environment variables; the earlier literal-placeholder redirect made the whole site a DNS error while looking deployed.)
-3. The operator account for the live system is whatever `ADMIN_USERNAME`/`ADMIN_PASSWORD` you set on Railway — register → verify → sign in, same as local.
+**What runs on Netlify — the honest tier:**
+
+| surface | on Netlify | why |
+|---|---|---|
+| auth, account keys, gateway keys, usage, aliases, stream, bench, portfolio, verdicts (attested) | ✓ full | DB + HTTP only |
+| Flow gateway, SSE included | ✓ full | real socket bridge, chunks verified at 150 ms spacing |
+| single-call ceiling | 10 s free · 26 s paid | platform limit — fast models fine, slow reasoning models can hit the wall |
+| crew runner | ✗ **501 with the reason** | a crew is a process group; a serverless function cannot spawn one |
+| falsification RUN | ✗ **501 with the reason** | it spawns a shell; post an attested-not-witnessed verdict instead (the law supports it) |
+
+**Full set on a persistent host** (when crews come back): [`railway.json`](railway.json) at the repo root — same repo, same build, `JATIN_RUNTIME` unset. The two 501s disappear; nothing else changes.
 
 **CI** (`.github/workflows/ci.yml`) runs on every push to `master`: typecheck · 13 tests against a live seeded Postgres (fresh DB, `migrate deploy` + seed) · **grants gate** (append-only law verified against the live schema, all 32 models classified) · **migrations against a fresh database not named `jatin`** (the Railway trap) · **tree scan** (no caches/binaries/secrets in source, no literal masks in workflow YAML, build context excludes `workspace/` and `.env`).
 
@@ -59,7 +64,7 @@ apps/web       the static site (landing, login, dashboard) — the shipped vehic
 apps/api       Fastify + TS: flow, pool, scheduler, stream, crew, cross-check, portfolio → Railway
 prisma/        one schema, one migration history (0002 makes the append-only law structural)
 workspace/     plans, law book, evidence, reference — NEVER in a build context (.dockerignore)
-netlify/functions/  the /api proxy (reads API_ORIGIN — redirects can't read env vars)
+netlify/functions/  the API itself, on Netlify — _api bridges /api/* into the built Fastify app (SSE intact)
 railway.json   API build + start (prisma migrate deploy on start) — repo root, where Railway looks
 netlify.toml   site publish + proxy route + headers — repo root
 ```

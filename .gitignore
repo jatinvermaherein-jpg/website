@@ -7,3 +7,5 @@ dist/
 apps/api/data.json
 workspace/antherbrackets/
 runs/
+# build-time copies into the functions dir (created by the Netlify build)
+netlify/functions/_appdist/
