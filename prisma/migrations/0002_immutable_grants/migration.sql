@@ -18,13 +18,23 @@
 
 DO $$
 BEGIN
+  -- M2: no password in the migration — a shipped default credential would
+  -- make the append-only law a public secret. Production: the operator sets
+  -- a password once (README → Deploy). Local dev DBs may set a dev password.
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'jatin_app') THEN
-    CREATE ROLE jatin_app LOGIN PASSWORD 'jatin_app';
+    CREATE ROLE jatin_app LOGIN;
   END IF;
 END
 $$;
 
-GRANT CONNECT ON DATABASE jatin TO jatin_app;
+-- B3: the target database is wherever the migration runs (CI service,
+-- Railway's plugin DB, local). Hardcoding 'jatin' made the gate green by
+-- coincidence in the only environment it could see.
+DO $$
+BEGIN
+  EXECUTE format('GRANT CONNECT ON DATABASE %I TO jatin_app', current_database());
+END
+$$;
 GRANT USAGE ON SCHEMA public TO jatin_app;
 
 -- base: read + insert + reference on everything

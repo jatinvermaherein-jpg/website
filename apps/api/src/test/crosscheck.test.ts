@@ -134,6 +134,9 @@ test('Phase 8: cross-check — different-provider auditor catches the planted bu
   assert.equal(j01.builderClaim, "claimed (attested)", 'the builder\'s claim stays on the record');
   assert.equal(j01.verdicts.length, 2);
   const providers = j01.verdicts.map((v: { seat: string }) => v.seat.split('-')[1]);
+  // m3/D10 — this proves two provider LABELS differ (the routing law), not
+  // that two model families are decorrelated. Do not cite this as proof of
+  // independence; the plan's own ruling D10 says as much.
   assert.notEqual(new Set(providers).size, 1, 'builder and auditor sat on different providers');
 
   // ── a control that FAILS TO FAIL poisons its own verdict ───────────────

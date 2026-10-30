@@ -40,12 +40,12 @@ Two engines, one repo, one site.
 
 ## §C — Engineering layer (build team's)
 
-- **Stack:** Node 20 · pnpm→npm workspaces · TypeScript strict · Fastify 5 · Prisma + Postgres (managed on Railway; embedded Postgres for sandbox dev) · Redis (quota windows, heartbeats — Phase 3+) · zod · argon2id · HS256 JWT (node:crypto) · AES-256-GCM envelope vault (node:crypto) · Next.js 15 (Phase 5, replaces the static `apps/web`) · Tailwind 4.
+- **Stack:** Node 20 · pnpm→npm workspaces · TypeScript strict · Fastify 5 · Prisma + Postgres (managed on Railway; embedded Postgres for sandbox dev) · Redis (quota windows, heartbeats — Phase 3+) · zod · argon2id · HS256 JWT (node:crypto) · AES-256-GCM envelope vault (node:crypto) · Tailwind 4. (Next.js 15 ruled a future option, 2026-10-30 — the static dashboard is the shipped vehicle; see Phase 5 status.)
 - **Repo:** `apps/web` (Netlify) · `apps/api` (Railway) · `packages/core` (router/scheduler/quota/adapters) · `packages/crew` (seats/stream/tasks/ledger/handovers/bench) · `packages/evidence` (verdict validation/digests/controls) · `packages/ui` · `prisma/` · `workspace/` (plans, law, evidence — **never in a build context**; CI scans for it).
 - **Event vocabulary (envelope v1):** `message | answer | correction | task | verdict | ledger | presence | git | env | ruleset | seat | brief | admission | waiver | breach | bench | system`. The wedge evidence is law: the vocabulary must cover the moves agents actually make (answering, correcting, admitting) **from day one**; one malformed event never stops the journal; rejections are telemetry (same refusal reason twice = schema defect).
 - **Eventual model (Phases 5+):** the crew room, dashboard, command deck, portfolio, vault UI, seat editor, law-book view, docs — all server-rendered from the stream and ledger. STATE is generated; EVIDENCE narratives are legal.
 - **CI gates (positive reporting, 5.5):** typecheck · tests · **grant/RLS gate** (append-only tables have no UPDATE/DELETE for the app role — fails otherwise) · **tree scan** (law 4.5: no caches/binaries/secrets/workspace in build context) · **envelope fuzz** (malformed write rejected at post; read stays open) · provider contract tests (daily, Phase 4). Every gate prints `PASS <name> <count> <timestamp>`.
-- **Deploy:** Railway — `deploy/railway.json`, prestart `prisma migrate deploy`, secrets `DATABASE_URL REDIS_URL MASTER_KEY JWT_SECRET ADMIN_USERNAME ADMIN_PASSWORD WEB_ORIGIN PORT`; app role `jatin_app` (no UPDATE/DELETE on append-only). Netlify — `apps/web` (static now, Next.js at Phase 5), `/api/*` → Railway. Rollback rehearsed once by someone who didn't write it.
+- **Deploy:** Railway — `railway.json` (repo root), start `prisma migrate deploy && node dist/server.js`, env `DATABASE_URL APP_DATABASE_URL MASTER_KEY JWT_SECRET ADMIN_USERNAME ADMIN_PASSWORD WEB_ORIGIN PORT`; app role `jatin_app` (no UPDATE/DELETE on append-only; created WITHOUT a password — the operator sets one before first deploy). Netlify — `apps/web` (static = shipped vehicle), `/api/*` proxied via `netlify/functions` reading `API_ORIGIN`. Rollback rehearsed once by someone who didn't write it.
 
 ## §D — Phases (V4 §13, binding)
 
@@ -56,7 +56,7 @@ Two engines, one repo, one site.
 | 2 | Multi-key pool | kill a key mid-run, request survives, failover recorded |
 | 3 | Quota scheduler | load test proves soonest-reset-first, with numbers |
 | 4 | Multi-provider | Big Five adapters; degradation flagged in the response |
-| 5 | Dashboard | add key → set per-key limits (O2) → request → see usage → revoke → locked out · web app goes Next.js |
+| 5 | Dashboard | add key → set per-key limits (O2) → request → see usage → revoke → locked out · web app: static shipped (Next.js ruled a future option, 2026-10-30) |
 | 6 | Stream + evidence | one stream, cursor, validate-at-post; bad-line verdict **rejected**; no-falsification verdict **unproven**; no-control instrument **unproven** |
 | 7 | Crew runner | agents execute real tasks; kill one mid-task, work finishes |
 | 8 | Cross-check | auditor on a different provider catches a planted bug the builders missed |
@@ -72,7 +72,7 @@ Two engines, one repo, one site.
 2. **Multi-key pool** — 401/403 → dead, 429/5xx → 60s cooldown, request survives, failover recorded.
 3. **Quota scheduler** — use-it-or-lose-it `urgency = Σ headroom/time-to-reset`, reserves, structured 429 + `retry_after_s`, measured headroom on the read side.
 4. **Multi-provider** — org alias ladder (≤4 hops, cross-provider), degradation flag in header + body + row (`x-jatin-degraded`), cost from Model prices, alias API.
-5. **Dashboard** — add key (O5 providers, per-key limits) → request → usage (live windows + ledger) → revoke (archive-not-delete, instant lockout) → crew board → live feed → portfolio. **Remaining: Next.js 15 rewrite of `apps/web`** (the static dashboard satisfies the flow acceptance; the rewrite is tracked, not yet done).
+5. **Dashboard** — add key (O5 providers, per-key limits) → request → usage (live windows + ledger) → revoke (archive-not-delete, instant lockout) → crew board → live feed → portfolio. **Decision (2026-10-30, audit M6): the static dashboard is the shipped vehicle** — it satisfies the flow acceptance, and the plan's wording is corrected to match the tree. Next.js 15 remains a tracked future option (build-command + rewrite move in `netlify.toml` say so), not debt.
 6. **Stream + evidence** — one typed stream per project (envelope v1, 16-event vocabulary), validate-at-post (malformed refused, never written), fail-open read (corrupt flagged), cursor, verdict law: no falsification → `unproven`, no instrument control → `unproven`.
 7. **Crew runner** — one crew = one process group; kill = SIGTERM → 5.5s grace → SIGKILL to the group; kill mid-task keeps partials on the board and records exactly one KILLED attempt.
 8. **Cross-check** — the witness RUNS the falsification + control with digests (`POST /projects/:slug/falsify`); row resolution derived on read: witnessed decides, a control that fails to fail poisons its verdict, an attested claim never closes a row. Acceptance proven with a planted off-by-one: builder (groq) claims, auditor (openrouter) catches, row FAILS.

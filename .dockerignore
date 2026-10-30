@@ -1,0 +1,13 @@
+# Law 4.5 — the build context is published on the internet.
+# Nothing here may contain: the plan, the law book, the evidence bundle,
+# caches, build output, or real credentials.
+workspace/
+.git/
+node_modules/
+**/node_modules/
+**/dist/
+.pgdata/
+.env
+runs/
+*.log
+.DS_Store

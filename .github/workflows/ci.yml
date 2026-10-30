@@ -28,13 +28,19 @@ jobs:
         options: >-
           --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      DATABASE_URL: postgresql://jatin:***@localhost:5432/jatin
+      DATABASE_URL: postgresql://jatin:jatin@localhost:5432/jatin
       MASTER_KEY: ${{ secrets.MASTER_KEY }}
       JWT_SECRET: ci-test-secret
       ADMIN_USERNAME: ciadmin
       ADMIN_PASSWORD: ci-admin-password-123
     steps:
       - uses: actions/checkout@v4
+      - name: MASTER_KEY (secret optional — CI synthesizes a per-run key)
+        run: |
+          if [ -z "$MASTER_KEY" ]; then
+            echo "::notice::MASTER_KEY secret not set — synthesizing a per-run key. The vault law (encrypt→decrypt round-trip) is what is exercised, not key persistence."
+            echo "MASTER_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+          fi
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: npm }
       - run: npm ci
@@ -55,14 +61,21 @@ jobs:
         options: >-
           --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      DATABASE_URL: postgresql://jatin:***@localhost:5432/jatin
+      DATABASE_URL: postgresql://jatin:jatin@localhost:5432/jatin
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: npm }
       - run: npm ci
       - run: npm run db:deploy
+      # B3 — the migration must survive a database NOT named 'jatin'
+      # (Railway's Postgres is named after the plugin, not the project).
+      # The service DB above is a coincidence CI used to hide that.
+      - name: Migrations against a fresh database named 'prod_sim'
+        run: |
+          psql "$DATABASE_URL" -c "CREATE DATABASE prod_sim;"
+          DATABASE_URL=postgresql://jatin:jatin@localhost:5432/prod_sim npx prisma migrate deploy --schema prisma/schema.prisma
       # 0002 creates jatin_app + all grants itself — the gate then validates
       # the schema against the law, not a promise.
       - run: npx tsx scripts/check-grants.mts
-      - run: bash scripts/scan-tree.sh
+      - run: npm run gates:tree

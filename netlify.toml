@@ -1,0 +1,27 @@
+# Jatin site → Netlify.
+# The static site (landing, login, dashboard) is the shipped vehicle —
+# Phase 12 finished it; Next.js is a tracked future option, not a debt
+# (decided 2026-10-30, audit M6). If Next.js lands, the build command
+# changes and the /api rewrites move into the app config.
+
+[build]
+  command = "echo 'static site — published as-is'"
+  publish = "apps/web"
+  functions = "netlify/functions"
+
+# M4 — /api/* is proxied through a Netlify function, because netlify.toml
+# redirects cannot read environment variables. A literal placeholder host in
+# a redirect made the whole site a DNS error while looking deployed.
+# Set API_ORIGIN (your Railway domain) in the Netlify dashboard — no manual
+# edit of this file is ever needed.
+[[redirects]]
+  from = "/api/*"
+  to = "/proxy-api/:splat"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
