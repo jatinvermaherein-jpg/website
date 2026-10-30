@@ -16,6 +16,25 @@ import { prisma } from './lib/prisma.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: false });
+
+  // The dashboard always sends `content-type: application/json`, and some of
+  // its actions (revoke, kill) send NO body. Fastify's default JSON parser
+  // hard-fails those with FST_ERR_CTP_EMPTY_JSON_BODY before the route
+  // answers — treat an empty body as an empty object instead.
+  app.addContentTypeParser(
+    'application/json',
+    { parseAs: 'string' },
+    (_req, body, done) => {
+      const s = (body ?? '').toString().trim();
+      if (!s) return done(null, {});
+      try {
+        done(null, JSON.parse(s));
+      } catch (e) {
+        done(e as Error);
+      }
+    },
+  );
+
   await app.register(cookie);
 
   app.get('/health', healthRoutes);

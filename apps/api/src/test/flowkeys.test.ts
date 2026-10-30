@@ -42,7 +42,10 @@ function fakeUpstream(): Promise<{ url: string; close: () => Promise<void> }> {
   });
 }
 
-async function makeUser(app: { inject: (o: object) => Promise<{ statusCode: number; json: () => object }> }, password = 'password123') {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type InjectApp = { inject: (o: object) => Promise<{ statusCode: number; json: () => any }> };
+
+async function makeUser(app: InjectApp, password = 'password123') {
   const username = `gk${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   let res = await app.inject({ method: 'POST', url: '/api/auth/register', payload: { username, password } });
   assert.equal(res.statusCode, 201, 'register');
