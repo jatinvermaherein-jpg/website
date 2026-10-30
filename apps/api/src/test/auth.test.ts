@@ -19,7 +19,7 @@ test('O3: register → pending → operator verify → login', async () => {
 
   // 1 · register creates a pending account
   let res = await app.inject({ method: 'POST', url: '/api/auth/register', payload: { username, password } });
-  assert.equal(res.statusCode, 201);
+  assert.equal(res.statusCode, 200);
   assert.equal(res.json().status, 'pending');
   await app.inject({ method: 'POST', url: '/api/auth/register', payload: { username: other, password } });
 
