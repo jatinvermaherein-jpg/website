@@ -50,6 +50,8 @@ Auth (O3): `POST /api/auth/register` creates a **pending** account; the operator
 
 **CI** (`.github/workflows/ci.yml`) runs on every push to `master`: typecheck · 13 tests against a live seeded Postgres (fresh DB, `migrate deploy` + seed) · **grants gate** (append-only law verified against the live schema, all 32 models classified) · **migrations against a fresh database not named `jatin`** (the Railway trap) · **tree scan** (no caches/binaries/secrets in source, no literal masks in workflow YAML, build context excludes `workspace/` and `.env`).
 
+*Verified, on the record (2026-10-30):* **green** at `cd529cd2` (first green run — all jobs, step-level) · **red** at `26d55cda` (one broken assertion — the gate failed as it must) · **green** at `5139a8d4` (restored). A gate that has gone both green and red is a gate that discriminates.
+
 ## Layout
 
 ```

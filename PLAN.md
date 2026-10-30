@@ -81,6 +81,8 @@ Two engines, one repo, one site.
 11. **Multi-project** — isolation proven (a pass in one project cannot satisfy the other; org walls 404); portfolio resolves every project through the cross-check law and names the next human decision (open work outranks ship).
 12. **Stunning** — design pass: de-rectangularized language carried across all pages (pills, arches, beams, ripples, grain), live `/api/pulse` on the landing (aggregate telemetry only), refusal list in the footer, row hover-lifts, scroll-reveal sections (reduced-motion + failsafe respected), login drop-mark.
 
+**Independent audit (2026-10-30, Auditor seat) — responded in full.** The audit found the CI gate had never run before the branch-trigger fix, a literal `***` committed in the workflow, a hardcoded database name in 0002, and a tree-scan that never checked the folder it named. All addressed and verified on the record: **green** CI at `cd529cd2` · **red** at `26d55cda` (deliberate break — the gate discriminates) · **green** at `5139a8d4`. See README → Deploy for the current deploy runbook (root `railway.json`, password-less `jatin_app` role with operator-set password, Netlify `API_ORIGIN` proxy).
+
 ## §E — Open items
 
 1. **D4** — advisory-first confirmation (default applied; crew execution unlocks per-seat when said).
