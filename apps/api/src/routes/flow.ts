@@ -13,8 +13,8 @@
 // Token counts are the provider's own numbers. Provider silent →
 // `provider-silent` — never an estimate. Cost is priced from the Model row
 // when one exists; unpriced = 0, not a guess.
-import type { FastifyInstance } from 'fastify';
-import { randomUUID } from 'node:crypto';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { requireUser } from '../lib/auth.js';
@@ -25,6 +25,47 @@ import { keyWindows, isSpendable, urgency, exhaustion } from '../lib/quota.js';
 const UPSTREAM_TIMEOUT_MS = 10 * 60_000;
 const COOLDOWN_MS = 60_000;
 const MAX_HOPS = 4;
+
+// Gateway keys (the key a CLIENT uses to call this gateway, `jkn_…`).
+// Law 6.3 — write-only: the plaintext exists exactly once, at creation.
+// The row keeps sha256 + a unique prefix for lookup; no read path ever
+// returns the key or the hash.
+const GK_PREFIX = 'jkn_';
+const GK_PREFIX_LEN = 12; // jkn_ + 8 chars of the random part
+const sha256hex = (s: string) => createHash('sha256').update(s).digest('hex');
+
+// actor = the vault-audit identity: the user's name, or the gateway key's
+// name — the append-only AuditLog must say WHO decrypted which secret.
+type Caller = { orgId: string; apiKeyId?: string; actor: string };
+
+// One caller resolution for the whole flow surface: a session JWT
+// (dashboard user) or a gateway key (external client). Both land on an org.
+async function resolveCaller(req: FastifyRequest, reply: FastifyReply): Promise<Caller | null> {
+  const auth = req.headers.authorization;
+  if (auth?.startsWith('Bearer ')) {
+    const token = auth.slice(7).trim();
+    if (token.startsWith(GK_PREFIX)) {
+      const key = await prisma.apiKey.findUnique({ where: { prefix: token.slice(0, GK_PREFIX_LEN) } });
+      if (!key || key.keyHash !== sha256hex(token)) {
+        reply.code(401).send({ error: 'unknown gateway key' });
+        return null;
+      }
+      if (key.revokedAt) {
+        reply.code(401).send({ error: 'gateway key revoked' });
+        return null;
+      }
+      return { orgId: key.orgId, apiKeyId: key.id, actor: `key:${key.name}` };
+    }
+  }
+  const user = await requireUser(req, reply);
+  if (!user) return null;
+  const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
+  if (!membership) {
+    reply.code(404).send({ error: 'no org' });
+    return null;
+  }
+  return { orgId: membership.orgId, actor: user.username };
+}
 
 const chatSchema = z
   .object({
@@ -100,8 +141,8 @@ async function priceFor(provider: string, providerModelId: string, usage: Usage)
 
 export async function flowRoutes(app: FastifyInstance) {
   app.post('/chat/completions', async (req, reply) => {
-    const user = await requireUser(req, reply);
-    if (!user) return;
+    const caller = await resolveCaller(req, reply);
+    if (!caller) return;
 
     const parsed = chatSchema.safeParse(req.body ?? {});
     if (!parsed.success) {
@@ -109,10 +150,7 @@ export async function flowRoutes(app: FastifyInstance) {
     }
     const body = parsed.data;
 
-    const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
-    if (!membership) return reply.code(404).send({ error: 'no org' });
-
-    const { targets, error } = await resolveTargets(membership.orgId, body.model);
+    const { targets, error } = await resolveTargets(caller.orgId, body.model);
     if (error) return reply.code(400).send({ error });
 
     const baseIdempotency = (req.headers['idempotency-key'] as string) || randomUUID();
@@ -125,7 +163,7 @@ export async function flowRoutes(app: FastifyInstance) {
     for (let hop = 0; hop < targets.length; hop++) {
       const target = targets[hop]!;
 
-      const pool = await poolFor(membership.orgId, target.provider);
+      const pool = await poolFor(caller.orgId, target.provider);
       if (!pool.length) {
         // one target and no key at all → say exactly that (it's an action,
         // not a failure of the ladder); on a ladder it's just a rung that's
@@ -162,8 +200,9 @@ export async function flowRoutes(app: FastifyInstance) {
           data: {
             id: requestId,
             idempotencyKey: `${baseIdempotency}#h${hop + 1}a${attempt + 1}`,
-            orgId: membership.orgId,
+            orgId: caller.orgId,
             credentialId: credential.id,
+            apiKeyId: caller.apiKeyId ?? null,
             source: 'flow',
             modelRequested: body.model,
             modelServed: `${target.provider}/${target.providerModelId}`,
@@ -186,7 +225,7 @@ export async function flowRoutes(app: FastifyInstance) {
 
         const secret = decryptSecret(credential.secretStored, {
           prisma,
-          actor: user.username,
+          actor: caller.actor,
           action: 'flow.upstream',
           target: credential.id,
         });
@@ -338,14 +377,13 @@ export async function flowRoutes(app: FastifyInstance) {
   });
 
   // what did my account spend (per key, per model)? — the read side of
-  // "every number on screen is measured".
+  // "every number on screen is measured". Accepts a session (dashboard)
+  // or a gateway key (the client's own monitor view of its org's flow).
   app.get('/usage', async (req, reply) => {
-    const user = await requireUser(req, reply);
-    if (!user) return;
-    const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
-    if (!membership) return reply.code(404).send({ error: 'no org' });
+    const caller = await resolveCaller(req, reply);
+    if (!caller) return;
     const requests = await prisma.request.findMany({
-      where: { orgId: membership.orgId, source: 'flow' },
+      where: { orgId: caller.orgId, source: 'flow' },
       select: {
         id: true,
         credentialId: true,
@@ -359,12 +397,13 @@ export async function flowRoutes(app: FastifyInstance) {
         latencyMs: true,
         createdAt: true,
         credential: { select: { id: true, keyMask: true, provider: true, label: true, status: true } },
+        apiKey: { select: { name: true, prefix: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
     const creds = await prisma.providerCredential.findMany({
-      where: { orgId: membership.orgId, projectId: null, provider: { in: TEXT_PROVIDERS } },
+      where: { orgId: caller.orgId, projectId: null, provider: { in: TEXT_PROVIDERS } },
     });
     const keys = await Promise.all(
       creds.map(async (c) => ({
@@ -376,6 +415,90 @@ export async function flowRoutes(app: FastifyInstance) {
         windows: await keyWindows(prisma, c.id),
       })),
     );
-    return { requests, keys };
+    // detailed per-gateway-key usage: every number measured from the ledger
+    const gkeys = await prisma.apiKey.findMany({ where: { orgId: caller.orgId }, orderBy: { createdAt: 'asc' } });
+    const gatewayKeys = await Promise.all(
+      gkeys.map(async (k) => {
+        const agg = await prisma.request.aggregate({
+          where: { apiKeyId: k.id },
+          _count: { _all: true },
+          _sum: { tokensIn: true, tokensOut: true, costCents: true },
+          _max: { createdAt: true },
+        });
+        return {
+          id: k.id,
+          name: k.name,
+          prefix: k.prefix,
+          createdAt: k.createdAt,
+          revokedAt: k.revokedAt,
+          requests: agg._count._all,
+          tokensIn: agg._sum.tokensIn ?? 0,
+          tokensOut: agg._sum.tokensOut ?? 0,
+          costCents: agg._sum.costCents ?? 0,
+          lastUsedAt: agg._max.createdAt,
+        };
+      }),
+    );
+    return { requests, keys, gatewayKeys };
+  });
+
+  // ── gateway keys: the key a CLIENT uses to call this gateway ─────────
+  // Law 6.3 — write-only. POST returns the plaintext exactly once; GET
+  // lists name/prefix/status only; revoke is archive-not-delete (the row
+  // and its Request trail stay, the key stops working instantly).
+
+  app.post('/keys', async (req, reply) => {
+    const caller = await resolveCaller(req, reply);
+    if (!caller) return;
+    const parsed = z.object({ name: z.string().min(1).max(80) }).safeParse(req.body ?? {});
+    if (!parsed.success) return reply.code(422).send({ error: parsed.error.issues[0]?.message ?? 'invalid name' });
+
+    // prefix collision is ~impossible (48 bits) but the unique index is the
+    // law — retry rather than crash
+    let created: { id: string; name: string; prefix: string; createdAt: Date } | null = null;
+    let plaintext = '';
+    for (let i = 0; i < 5 && !created; i++) {
+      plaintext = GK_PREFIX + randomBytes(32).toString('base64url');
+      try {
+        created = await prisma.apiKey.create({
+          data: { orgId: caller.orgId, prefix: plaintext.slice(0, GK_PREFIX_LEN), keyHash: sha256hex(plaintext), name: parsed.data.name },
+        });
+      } catch {
+        /* prefix collision — regenerate */
+      }
+    }
+    if (!created) return reply.code(500).send({ error: 'could not allocate a key prefix' });
+    return reply.code(201).send({
+      id: created.id,
+      name: created.name,
+      prefix: created.prefix,
+      key: plaintext,
+      note: 'shown exactly once — there is no read path that returns this key again',
+    });
+  });
+
+  app.get('/keys', async (req, reply) => {
+    const caller = await resolveCaller(req, reply);
+    if (!caller) return;
+    const keys = await prisma.apiKey.findMany({ where: { orgId: caller.orgId }, orderBy: { createdAt: 'asc' } });
+    return {
+      keys: keys.map((k) => ({
+        id: k.id,
+        name: k.name,
+        prefix: k.prefix,
+        createdAt: k.createdAt,
+        revokedAt: k.revokedAt,
+      })),
+    };
+  });
+
+  app.post('/keys/:id/revoke', async (req, reply) => {
+    const caller = await resolveCaller(req, reply);
+    if (!caller) return;
+    const key = await prisma.apiKey.findFirst({ where: { id: (req.params as { id: string }).id, orgId: caller.orgId } });
+    if (!key) return reply.code(404).send({ error: 'key not found' });
+    if (key.revokedAt) return { id: key.id, status: 'revoked', note: 'already revoked' };
+    await prisma.apiKey.update({ where: { id: key.id }, data: { revokedAt: new Date() } });
+    return { id: key.id, status: 'revoked' };
   });
 }

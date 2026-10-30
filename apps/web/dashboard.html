@@ -92,10 +92,46 @@
     </section>
 
     <section class="dash-sec">
+      <p class="eyebrow">Gateway keys</p>
+      <p class="fine">Keys you hand to your clients so they can call <code>POST&nbsp;/api/flow/chat/completions</code>
+        with <code>Authorization: Bearer jkn_&hellip;</code> &mdash; the same OpenAI-shaped gateway,
+        no browser session. The key is shown <strong>exactly once</strong>; this account is billed per request,
+        and each key&rsquo;s usage is measured below.</p>
+      <div class="keys" id="gk-keys"><p class="empty">loading&hellip;</p></div>
+
+      <form id="add-gk" class="panel panel--flow add-key" autocomplete="off">
+        <svg class="panel-ripple" viewBox="0 0 140 140" aria-hidden="true"><circle cx="140" cy="0" r="118"/><circle cx="140" cy="0" r="78"/><circle cx="140" cy="0" r="40"/></svg>
+        <h2 class="panel-h" style="font-size:clamp(18px,2vw,22px)">Issue a gateway key</h2>
+        <label>Name
+          <input name="name" placeholder="mobile-app · ci · a partner" maxlength="80" required>
+        </label>
+        <div class="cta">
+          <button class="btn" type="submit">Issue key</button>
+          <span class="hint" id="gk-note">&nbsp;</span>
+        </div>
+      </form>
+
+      <div class="gk-reveal" id="gk-reveal" hidden>
+        <p class="fine">Your new key — <strong>copy it now</strong>. It is shown exactly once; there is no read path that returns it again.</p>
+        <div class="gk-plain">
+          <code id="gk-plain"></code>
+          <button type="button" class="btn-ghost" id="gk-copy">Copy</button>
+        </div>
+        <pre class="gk-curl">curl https://&lt;your-gateway&gt;/api/flow/chat/completions \
+  -H "Authorization: Bearer jkn_&hellip;" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"groq/llama-3.3-70b-versatile","stream":false,"messages":[{"role":"user","content":"hi"}]}'</pre>
+      </div>
+    </section>
+
+    <section class="dash-sec">
       <p class="eyebrow">Usage</p>
       <p class="fine">What this account spent — the provider&rsquo;s own numbers, per key.
         Windows show live headroom; a revoked key stops serving immediately.</p>
       <div class="keys" id="windows"><p class="empty">loading&hellip;</p></div>
+      <p class="eyebrow" style="margin-top:26px">Per gateway key</p>
+      <p class="fine">Requests, tokens and cost attributed to each key you issued — the client&rsquo;s own view is the same endpoint, called with the key.</p>
+      <div class="reqs" id="gk-usage"></div>
       <div class="reqs" id="reqs"></div>
     </section>
 
@@ -215,6 +251,54 @@
         if (ok) loadKeys(); else b.disabled = false;
       }));
   }
+
+  // ── gateway keys (the keys clients use to call the gateway) ──────────
+  async function loadGatewayKeys() {
+    const { ok, data } = await api("/api/flow/keys");
+    if (!ok) { $("gk-keys").innerHTML = `<p class="empty">could not load gateway keys</p>`; return; }
+    if (!data.keys.length) {
+      $("gk-keys").innerHTML = `<p class="empty">no gateway keys yet — issue the first one below. Your clients use it against /api/flow exactly like an OpenAI key.</p>`;
+      return;
+    }
+    $("gk-keys").innerHTML = data.keys
+      .map(
+        (k) => `
+      <div class="key-row">
+        <span class="key-id">${esc(k.name)}</span>
+        <span class="key-mask">${esc(k.prefix)}&hellip;</span>
+        <span class="badge">${esc(new Date(k.createdAt).toLocaleDateString())}</span>
+        ${k.revokedAt ? '<span class="badge live">revoked</span>' : `<button class="btn-ghost danger" data-gk-revoke="${esc(k.id)}">Revoke</button>`}
+      </div>`,
+      )
+      .join("");
+    $("gk-keys").querySelectorAll("button[data-gk-revoke]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        b.disabled = true;
+        const { ok } = await api(`/api/flow/keys/${b.dataset.gkRevoke}/revoke`, { method: "POST" });
+        if (ok) { loadGatewayKeys(); loadUsage(); } else b.disabled = false;
+      }));
+  }
+
+  $("add-gk").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    const note = $("gk-note");
+    note.innerHTML = "&nbsp;";
+    const { ok, status, data } = await api("/api/flow/keys", { method: "POST", body: JSON.stringify({ name: f.name.value }) });
+    if (!ok) {
+      note.innerHTML = `<span class="err">${esc(status)} — ${esc(data.error ?? "could not issue key")}</span>`;
+      return;
+    }
+    $("gk-plain").textContent = data.key;
+    $("gk-reveal").hidden = false;
+    $("gk-copy").onclick = async () => {
+      try { await navigator.clipboard.writeText(data.key); $("gk-copy").textContent = "Copied"; }
+      catch { $("gk-copy").textContent = "select it and copy manually"; }
+    };
+    f.reset();
+    note.innerHTML = '<span class="ok">issued — copy the key now; it will not be shown again</span>';
+    loadGatewayKeys();
+  });
 
   // ── crew board ──────────────────────────────────────────────────────────
   let crewPoll = null;
@@ -417,9 +501,23 @@
         <span class="badge ${r.status === "ok" ? "" : r.status === "fallback" ? "live" : " err"}">${esc(r.status)}</span>
         ${r.degraded ? '<span class="badge live">degraded</span>' : ""}
         ${r.credential ? `<span class="key-mask">${esc(r.credential.label)}</span>` : ""}
+        ${r.apiKey ? `<span class="badge via">via ${esc(r.apiKey.name)}</span>` : ""}
       </div>`,
       )
       .join("") || `<p class="empty">no requests yet — the ledger is empty</p>`;
+    $("gk-usage").innerHTML = (data.gatewayKeys || [])
+      .map(
+        (k) => `
+      <div class="req-row">
+        <span class="key-mask">${esc(k.name)} &middot; ${esc(k.prefix)}&hellip;</span>
+        <span class="badge">${k.requests} req</span>
+        <span class="badge">${k.tokensIn}→${k.tokensOut} tok</span>
+        <span class="badge">${k.costCents.toFixed(2)}&cent;</span>
+        <span class="badge">${k.lastUsedAt ? esc(new Date(k.lastUsedAt).toLocaleString()) : "never used"}</span>
+        ${k.revokedAt ? '<span class="badge live">revoked</span>' : ""}
+      </div>`,
+      )
+      .join("") || `<p class="empty">no gateway keys yet — issue one above</p>`;
     const aliases = await api("/api/account/aliases");
     $("alias-list").innerHTML = aliases.ok
       ? (aliases.data.aliases || [])
@@ -482,6 +580,7 @@
       `<span class="badge live">● ${esc(data.status)}</span>` +
       (data.operator ? `<span class="badge">operator</span>` : `<span class="badge">member</span>`);
     await loadKeys();
+    loadGatewayKeys();
     loadUsage();
     if (data.operator) { $("desk-sec").hidden = false; loadDesk(); }
   })();

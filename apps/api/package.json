@@ -8,7 +8,7 @@
     "start": "node dist/server.js",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx --test src/test/auth.test.ts src/test/flow.test.ts src/test/pool.test.ts src/test/scheduler.test.ts src/test/crossprovider.test.ts src/test/revoke.test.ts src/test/stream.test.ts src/test/crew.test.ts src/test/crosscheck.test.ts src/test/interactive.test.ts src/test/bench.test.ts src/test/isolation.test.ts",
+    "test": "node --import tsx --test src/test/auth.test.ts src/test/flow.test.ts src/test/pool.test.ts src/test/scheduler.test.ts src/test/crossprovider.test.ts src/test/revoke.test.ts src/test/stream.test.ts src/test/crew.test.ts src/test/crosscheck.test.ts src/test/interactive.test.ts src/test/bench.test.ts src/test/isolation.test.ts src/test/flowkeys.test.ts",
     "db:migrate": "node ../../scripts/with-env.mjs prisma migrate dev --schema ../../prisma/schema.prisma",
     "db:deploy": "node ../../scripts/with-env.mjs prisma migrate deploy --schema ../../prisma/schema.prisma",
     "db:seed": "tsx ../../prisma/seed.ts"
