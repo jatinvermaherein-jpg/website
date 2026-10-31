@@ -26,6 +26,7 @@ import { requireUser } from '../lib/auth.js';
 import { decryptSecret } from '../lib/vault.js';
 import { TEXT_PROVIDERS, upstreamBase } from '../lib/upstream.js';
 import { keyWindows, orgWindows, isSpendable, urgency, exhaustion } from '../lib/quota.js';
+import { refreshStalePoolCatalogs } from '../lib/catalog.js';
 
 const UPSTREAM_TIMEOUT_MS = 10 * 60_000;
 const COOLDOWN_MS = 60_000;
@@ -225,6 +226,12 @@ export async function flowRoutes(app: FastifyInstance) {
     // true once the walk touches the OPERATOR's shared pool — from then on
     // no error text may name a provider, whatever the caller is
     let sawForeignPool = false;
+
+    // 0006 — keep catalog knowledge fresh in the background (per key, at
+    // most once per 20h). Never awaited: traffic must not wait on catalogs.
+    if (opOrg && opOrg !== caller.orgId) {
+      void refreshStalePoolCatalogs(prisma, [opOrg]).catch(() => {});
+    }
 
     for (let hop = 0; hop < targets.length; hop++) {
       const target = targets[hop]!;
@@ -495,6 +502,51 @@ export async function flowRoutes(app: FastifyInstance) {
   // full ledger; a GATEWAY-KEY caller sees only their own aggregates and the
   // account's limit windows — never provider names, credential masks, or
   // the model that served.
+  // 30-day daily series for the usage charts. Aggregates the three API
+  // faces (text / search / image) by the NAME the customer called — the
+  // served model and credential never appear, so it stays safe for the
+  // redacted (non-detailed) view too.
+  async function usageSeries(orgId: string) {
+    const since = new Date(Date.now() - 30 * 24 * 3600_000);
+    const rows = (await prisma.$queryRaw`
+      SELECT to_char(date_trunc('day', "createdAt"), 'YYYY-MM-DD') AS d,
+             "modelRequested" AS model,
+             count(*)::int AS requests,
+             coalesce(sum("tokensIn"), 0)::bigint AS tokens_in,
+             coalesce(sum("tokensOut"), 0)::bigint AS tokens_out,
+             coalesce(sum("costCents"), 0)::int AS cost_cents
+      FROM "Request"
+      WHERE "orgId" = ${orgId}
+        AND "createdAt" >= ${since}
+        AND "category" IN ('text', 'search', 'image')
+      GROUP BY 1, 2
+      ORDER BY 1
+    `) as { d: string; model: string; requests: number; tokens_in: string | number; tokens_out: string | number; cost_cents: string | number }[];
+
+    const days: { date: string; requests: number; tokens: number; costCents: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      days.push({ date: new Date(Date.now() - i * 86400_000).toISOString().slice(0, 10), requests: 0, tokens: 0, costCents: 0 });
+    }
+    const dayIdx = new Map(days.map((x, i) => [x.date, i]));
+    const byModel = new Map<string, { model: string; requests: number; tokens: number; costCents: number }>();
+    for (const r of rows) {
+      const idx = dayIdx.get(r.d);
+      const tokens = Number(r.tokens_in) + Number(r.tokens_out);
+      const cost = Number(r.cost_cents);
+      if (idx !== undefined) {
+        days[idx]!.requests += r.requests;
+        days[idx]!.tokens += tokens;
+        days[idx]!.costCents += cost;
+      }
+      const m = byModel.get(r.model) ?? { model: r.model, requests: 0, tokens: 0, costCents: 0 };
+      m.requests += r.requests;
+      m.tokens += tokens;
+      m.costCents += cost;
+      byModel.set(r.model, m);
+    }
+    return { days, models: [...byModel.values()].sort((a, b) => b.costCents - a.costCents) };
+  }
+
   app.get('/usage', async (req, reply) => {
     const caller = await resolveCaller(req, reply);
     if (!caller) return;
@@ -566,9 +618,11 @@ export async function flowRoutes(app: FastifyInstance) {
           ? { ...r, modelServed: r.modelRequested, credential: null }
           : r,
       );
-      return { requests: safeRequests, keys, gatewayKeys, orgWindows: await orgWindows(prisma, caller.orgId) };
+      const series = await usageSeries(caller.orgId);
+      return { requests: safeRequests, keys, gatewayKeys, orgWindows: await orgWindows(prisma, caller.orgId), series };
     }
-    return { requests, keys, gatewayKeys };
+    const series2 = await usageSeries(caller.orgId);
+    return { requests, keys, gatewayKeys, series: series2 };
   });
 
   // ── gateway keys: the key a CLIENT uses to call this gateway ─────────

@@ -109,10 +109,24 @@ model ProviderCredential {
   keyMask       String // first4…last4, display only
   status        String    @default("active") // active | cooldown | dead
   cooldownUntil DateTime?
-  createdAt     DateTime  @default(now())
-  limits        KeyLimit[]
-  windows       QuotaWindow[]
-  requests      Request[]
+  // 0006 — when this key's model catalog was last fetched from the provider
+  lastCatalogCheckedAt DateTime?
+  createdAt          DateTime   @default(now())
+  limits             KeyLimit[]
+  windows            QuotaWindow[]
+  requests           Request[]
+}
+
+// 0006 — the providers' model lists change (new models, retired ones),
+// often daily. Each sighting row is one (provider, model) pair we observed
+// in a catalog fetch; lastSeenAt tells us how fresh that knowledge is.
+model ModelSighting {
+  provider    String
+  model       String
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  @@id([provider, model])
+  @@index([provider, lastSeenAt])
 }
 
 // O2 — user-set custom limits per key, per window kind.

@@ -1,0 +1,35 @@
+# Keeps the free Render API instance warm.
+#
+# Render free instances auto-sleep after ~15 minutes of inactivity, which
+# means the next real caller pays a ~20-45 s cold start. Pinging the health
+# endpoint every 10 minutes keeps the instance awake around the clock.
+#
+# Cost: this workflow is tiny (one curl), and public repos get GitHub
+# Actions minutes for free — so it costs $0. If the schedule is ever
+# disabled, the API still works; calls just take a cold start.
+name: keep-alive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: ping the API
+        run: |
+          # first hit may land on a cold instance — give it time to boot,
+          # retry a few times before declaring failure
+          for i in 1 2 3; do
+            if curl -fsS -m 90 -o /dev/null https://jatin-api.onrender.com/health; then
+              echo "up after attempt $i"
+              exit 0
+            fi
+            echo "attempt $i failed, waiting 20s"
+            sleep 20
+          done
+          echo "keep-alive: API did not answer 3 times" >&2
+          exit 1

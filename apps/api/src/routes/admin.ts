@@ -7,6 +7,10 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { requireOperator } from '../lib/auth.js';
 import { ORG_LIMIT_KINDS } from '../lib/quota.js';
+import { poolMatrix, scopeProviders, poolCapacity, grantedElsewhere, usage30d, fractionForUsage, reconcileLimit } from '../lib/poolcap.js';
+import { providerCatalog, refreshStalePoolCatalogs, refreshCatalogForCredential, catalogStatusForTargets } from '../lib/catalog.js';
+import { operatorOrgId } from './flow.js';
+import { TEXT_PROVIDERS as ALL_TEXT_PROVIDERS, SEARCH_PROVIDERS, IMAGE_PROVIDERS } from '../lib/upstream.js';
 
 const limitSchema = z.object({
   // null / omitted = the whole account; otherwise the model name the
@@ -124,10 +128,20 @@ export async function adminRoutes(app: FastifyInstance) {
       const row = rows.find((r) => (r.model ?? null) === scope && r.kind === kind);
       return { model: scope, kind, limit: row?.limit ?? null, reservePct: row?.reservePct ?? 5 };
     };
+    // what the POOL can actually back, per scope × kind — so a grant is
+    // never set above the capacity standing behind the model
+    const opOrg = await operatorOrgId();
+    const use30 = await usage30d(prisma, m.orgId);
+    const matrix = opOrg
+      ? await poolMatrix(prisma, opOrg, m.orgId, scopes.filter((s): s is string => !!s), ORG_LIMIT_KINDS)
+      : {};
     return {
       org: { id: m.orgId, name: m.org.name },
       scopes,
       limits: scopes.flatMap((scope) => ORG_LIMIT_KINDS.map((kind) => cell(scope, kind))),
+      pool: matrix,
+      fraction: fractionForUsage(use30.requests, use30.costCents),
+      usage30d: use30,
     };
   });
 
@@ -143,17 +157,38 @@ export async function adminRoutes(app: FastifyInstance) {
     const parsed = z.object({ limits: z.array(limitSchema).max(100) }).safeParse(req.body ?? {});
     if (!parsed.success) return reply.code(422).send({ error: 'invalid limits' });
 
-    await prisma.orgLimit.deleteMany({ where: { orgId: m.orgId } });
+    // Reconcile every MODEL-scoped grant against the pool's real capacity
+    // for that model. Account-wide rows (model NULL) are the operator's own
+    // account-level ceiling and are saved as typed.
+    const opOrg = await operatorOrgId();
+    const use30 = await usage30d(prisma, m.orgId);
+    const fraction = fractionForUsage(use30.requests, use30.costCents);
+    const caps: ReturnType<typeof reconcileLimit>[] = [];
+    const toSave: { model: string | null; kind: string; limit: number; reservePct: number }[] = [];
     for (const l of parsed.data.limits) {
-      if (l.limit === null) continue; // blank = unlimited
-      await prisma.orgLimit.create({
-        data: { orgId: m.orgId, model: l.model ?? null, kind: l.kind, limit: l.limit, reservePct: l.reservePct },
-      });
+      let effective = l.limit;
+      if (l.limit !== null && l.model && opOrg) {
+        const providers = await scopeProviders(prisma, m.orgId, l.model);
+        const pool = await poolCapacity(prisma, opOrg, providers, l.kind);
+        const elsewhere = await grantedElsewhere(prisma, l.model, l.kind, m.orgId);
+        const r = reconcileLimit(l.model, l.kind, l.limit, pool, elsewhere, fraction);
+        if (r.capped) caps.push(r);
+        effective = r.effective;
+      }
+      if (effective === null) continue; // blank = unlimited
+      if (effective <= 0) continue; // the pool cannot back this at all — saving 0 would be a wall, skip
+      toSave.push({ model: l.model ?? null, kind: l.kind, limit: effective, reservePct: l.reservePct });
+    }
+
+    await prisma.orgLimit.deleteMany({ where: { orgId: m.orgId } });
+    for (const l of toSave) {
+      await prisma.orgLimit.create({ data: { orgId: m.orgId, ...l } });
     }
     const rows = await prisma.orgLimit.findMany({ where: { orgId: m.orgId } });
     return {
       username: target.username,
       limits: rows.map((r) => ({ model: r.model, kind: r.kind, limit: r.limit, reservePct: r.reservePct })),
+      caps,
     };
   });
 
@@ -179,7 +214,71 @@ export async function adminRoutes(app: FastifyInstance) {
       if (!grouped.has(a.alias)) grouped.set(a.alias, { alias: a.alias, targets: [] });
       grouped.get(a.alias)!.targets.push({ priority: a.priority, provider: mm.provider, providerModelId: mm.providerModelId });
     }
-    return { aliases: [...grouped.values()] };
+    // 0006 — per-alias catalog health: is every rung's model in its
+    // provider's fresh (24h) catalog? The workbench shows this per rung.
+    const withCatalog = await Promise.all(
+      [...grouped.values()].map(async (g) => ({
+        ...g,
+        catalog: await catalogStatusForTargets(prisma, g.targets.map((t) => ({ provider: t.provider, providerModelId: t.providerModelId }))),
+      })),
+    );
+    return { aliases: withCatalog };
+  });
+
+  // ── 0006 · the model catalog the gateway knows about ───────────────────
+  // What we have seen, per provider, and when it was checked. The operator
+  // uses this to (a) pick real, currently-servable model ids for the
+  // workbench rungs, and (b) spot a model that vanished from a catalog.
+  app.get('/catalog', async (req, reply) => {
+    const op = await requireOperator(req, reply);
+    if (!op) return;
+    const opOrg = (await operatorOrgId()) ?? '';
+    const creds = await prisma.providerCredential.findMany({
+      where: { orgId: opOrg, status: { in: ['active', 'cooldown'] } },
+      select: { provider: true, lastCatalogCheckedAt: true },
+    });
+    const providers = [
+      ...new Set([
+        ...ALL_TEXT_PROVIDERS,
+        ...SEARCH_PROVIDERS,
+        ...IMAGE_PROVIDERS,
+        ...creds.map((c) => c.provider),
+      ]),
+    ];
+    const out = [];
+    for (const provider of providers) {
+      const cat = await providerCatalog(prisma, provider);
+      const hasKeys = creds.some((c) => c.provider === provider);
+      out.push({
+        provider,
+        hasPoolKey: hasKeys,
+        checkedAt: cat.checkedAt,
+        fresh: cat.checkedAt ? Date.now() - cat.checkedAt.getTime() < 24 * 3600_000 : false,
+        count: cat.models.length,
+        models: cat.models.map((m) => ({ model: m.model, lastSeenAt: m.lastSeenAt })),
+      });
+    }
+    return { catalog: out };
+  });
+
+  // force an immediate catalog refresh for every active pool key (the daily
+  // check happens in the background; this is the "check now" button)
+  app.post('/catalog/refresh', async (req, reply) => {
+    const op = await requireOperator(req, reply);
+    if (!op) return;
+    const opOrg = (await operatorOrgId()) ?? '';
+    const creds = await prisma.providerCredential.findMany({
+      where: { orgId: opOrg, status: 'active' },
+      select: { id: true, provider: true, secretStored: true },
+    });
+    const results = [];
+    for (const c of creds) {
+      const models = await refreshCatalogForCredential(prisma, c);
+      results.push({ provider: c.provider, models: models.length, ok: models.length > 0 });
+    }
+    // anything left stale after the pass (failing providers)
+    const left = await refreshStalePoolCatalogs(prisma, [opOrg]).catch(() => 0);
+    return { refreshed: results, morePending: left };
   });
 
   app.put('/users/:id/aliases', async (req, reply) => {

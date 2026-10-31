@@ -643,3 +643,32 @@ a { color: inherit; text-decoration: none; transition: color 160ms ease; }
 .workbench { margin-top: 12px; padding: 12px; background: color-mix(in srgb, var(--ink) 55%, transparent); border-radius: 10px; }
 .rungs { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .rungs .badge button { margin-left: 6px; padding: 0 5px; font-size: 11px; }
+/* usage charts (30-day) */
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 10px; }
+@media (max-width: 780px) { .chart-grid { grid-template-columns: 1fr; } }
+.chart-card { padding: 14px; background: color-mix(in srgb, var(--ink) 40%, transparent); border-radius: 12px; }
+.chart-card .eyebrow { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.chart-total { font-family: var(--jt-mono); font-size: 12px; letter-spacing: 0; text-transform: none; color: var(--jt-gold); }
+.chart-svg { width: 100%; height: auto; display: block; }
+.chart-svg .area-req { fill: color-mix(in srgb, var(--jt-gold) 16%, transparent); }
+.chart-svg .line-req { fill: none; stroke: var(--jt-gold); stroke-width: 2; }
+.chart-svg .area-cost { fill: color-mix(in srgb, #7FB4E6 16%, transparent); }
+.chart-svg .line-cost { fill: none; stroke: #7FB4E6; stroke-width: 2; }
+.chart-svg .tick { fill: #6b7288; font-size: 10px; font-family: var(--jt-mono); }
+.chart-svg .tickmax { fill: #9aa1b5; }
+.mrow { display: grid; grid-template-columns: minmax(90px, 160px) 1fr minmax(170px, auto); gap: 10px; align-items: center; margin: 7px 0; }
+.mname { font-family: var(--jt-mono); font-size: 12.5px; color: #cfd3e0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mbar { height: 8px; border-radius: 99px; background: color-mix(in srgb, #fff 7%, transparent); overflow: hidden; }
+.mfill { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--jt-gold), color-mix(in srgb, var(--jt-gold) 55%, #fff)); }
+.mstat { font-family: var(--jt-mono); font-size: 11.5px; color: #9aa1b5; white-space: nowrap; }
+/* pool headroom chips on the limit matrix */
+.pool-chips { margin: 2px 0 4px; display: flex; flex-wrap: wrap; gap: 6px; }
+.pool-chips .badge { font-family: var(--jt-mono); font-size: 10.5px; }
+.pool-chips .over { border-color: #E08A7A; color: #E08A7A; }
+/* catalog freshness in the workbench */
+.cat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 99px; margin-right: 5px; vertical-align: baseline; }
+.cat-dot.live { background: #59C98B; }
+.cat-dot.partial { background: var(--jt-gold); }
+.cat-dot.unknown { background: #6b7288; }
+.catalog-note { font-size: 11.5px; color: #9aa1b5; margin-top: 6px; }
+.datalist-hidden { display: none; }

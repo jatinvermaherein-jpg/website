@@ -4,6 +4,8 @@ import { loadDotEnv } from './lib/env.js'; // first — DATABASE_URL before Pris
 import { buildApp } from './app.js';
 import { prisma } from './lib/prisma.js';
 import { hashPassword } from './lib/hash.js';
+import { refreshStalePoolCatalogs } from './lib/catalog.js';
+import { operatorOrgId } from './routes/flow.js';
 
 async function ensureOperator(): Promise<void> {
   const u = process.env.ADMIN_USERNAME;
@@ -47,3 +49,19 @@ try {
 const port = Number(process.env.PORT || 8080);
 await app.listen({ host: '0.0.0.0', port });
 console.log(`[jatin] api on http://0.0.0.0:${port} — landing + preloader at /`);
+
+// 0006 — daily model-catalog checks. Provider model lists change (often
+// daily), so on boot — and hourly — refresh every pool key whose catalog
+// was checked more than 20h ago. Strictly background: a failing or slow
+// provider must never delay boot or serve traffic.
+const catalogTick = async (): Promise<void> => {
+  try {
+    const op = await operatorOrgId();
+    if (op) await refreshStalePoolCatalogs(prisma, [op]);
+  } catch (e) {
+    console.error('[jatin] catalog tick failed', e);
+  }
+};
+void catalogTick();
+const catalogTimer = setInterval(() => void catalogTick(), 3600_000);
+catalogTimer.unref?.();

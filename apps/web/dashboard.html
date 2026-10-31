@@ -100,6 +100,13 @@
         <label>Name
           <input name="name" placeholder="mobile-app · ci · a partner" maxlength="80" required>
         </label>
+        <label>Default model for the sample
+          <select id="gk-model"><option value="">(pick one&hellip;)</option></select>
+        </label>
+        <p class="fine">One key covers every face &mdash; text (a model name from the list),
+          <code>model:"search"</code> and <code>model:"image"</code>. The list is the real
+          catalog, checked daily; &ldquo;verified&rdquo; means the gateway confirmed the model
+          in its upstream today.</p>
         <div class="cta">
           <button class="btn" type="submit">Issue key</button>
           <span class="hint" id="gk-note">&nbsp;</span>
@@ -123,7 +130,7 @@
       <p class="eyebrow">Usage</p>
       <p class="fine">What this account spent — the provider&rsquo;s own numbers, per key.
         Windows show live headroom; a revoked key stops serving immediately.</p>
-      <div class="keys" id="windows"><p class="empty">loading&hellip;</p></div>
+      <div id="usage-chart"></div>
       <p class="eyebrow" style="margin-top:26px">Per gateway key</p>
       <p class="fine">Requests, tokens and cost attributed to each key you issued — the client&rsquo;s own view is the same endpoint, called with the key.</p>
       <div class="reqs" id="gk-usage"></div>
@@ -296,6 +303,14 @@
       return;
     }
     $("gk-plain").textContent = data.key;
+    // point the sample at the model the operator picked, if any
+    const pick = $("gk-model");
+    const model = (pick && pick.value) || "fast";
+    $("gk-curl").textContent =
+      'curl https://<your-gateway>/api/flow/chat/completions \\\n' +
+      '  -H "Authorization: Bearer ' + data.key + '" \\\n' +
+      '  -H "Content-Type: application/json" \\\n' +
+      "  -d '{\"model\":\"" + model + "\",\"stream\":false,\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}'";
     $("gk-reveal").hidden = false;
     $("gk-copy").onclick = async () => {
       try { await navigator.clipboard.writeText(data.key); $("gk-copy").textContent = "Copied"; }
@@ -481,6 +496,74 @@
       .join("");
   }
 
+  // ── the 30-day usage chart (member + operator) — inline SVG, no libs ──
+  // data.series = { days: [{date, requests, tokens, costCents}…30],
+  //                 models: [{model, requests, tokens, costCents}…] }
+  function areaPath(vals, w, h, pad) {
+    if (!vals.length) return "";
+    const max = Math.max(1, ...vals);
+    const step = (w - pad * 2) / Math.max(1, vals.length - 1);
+    const pts = vals.map((v, i) => [pad + i * step, h - pad - (v / max) * (h - pad * 2)]);
+    const line = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+    const area = `${line} L${pts[pts.length - 1][0].toFixed(1)},${(h - pad).toFixed(1)} L${pad},${(h - pad).toFixed(1)} Z`;
+    return { line, area, max };
+  }
+  function renderUsageChart(series) {
+    const el = $("usage-chart");
+    if (!el) return;
+    if (!series || !series.days?.length) { el.innerHTML = ""; return; }
+    const W = 720, H = 180, PAD = 26;
+    const reqVals = series.days.map((d) => d.requests);
+    const costVals = series.days.map((d) => d.costCents);
+    const r = areaPath(reqVals, W, H, PAD);
+    const c = areaPath(costVals, W, H, PAD);
+    const xFor = (i) => PAD + (i * (W - PAD * 2)) / Math.max(1, series.days.length - 1);
+    const xticks = series.days
+      .map((d, i) => ({ d, i }))
+      .filter((_, i) => i % 5 === 0 || i === series.days.length - 1)
+      .map(({ d, i }) => `<text x="${xFor(i).toFixed(1)}" y="${H - 8}" class="tick" text-anchor="middle">${esc(d.date.slice(5))}</text>`)
+      .join("");
+    const totalReq = reqVals.reduce((a, b) => a + b, 0);
+    const totalCost = costVals.reduce((a, b) => a + b, 0);
+    const modelBars = (series.models || [])
+      .slice(0, 6)
+      .map((m) => {
+        const maxReq = Math.max(1, ...(series.models || []).map((x) => x.requests));
+        const pct = Math.round((m.requests / maxReq) * 100);
+        return `<div class="mrow">
+          <span class="mname">${esc(m.model)}</span>
+          <span class="mbar"><span class="mfill" style="width:${pct}%"></span></span>
+          <span class="mstat">${m.requests} req · ${m.tokens.toLocaleString()} tok · ${(m.costCents / 100).toFixed(2)}&cent;</span>
+        </div>`;
+      })
+      .join("") || `<p class="empty">no traffic in the last 30 days</p>`;
+    el.innerHTML = `
+      <div class="chart-grid">
+        <div class="chart-card">
+          <p class="eyebrow">Requests · last 30 days <span class="chart-total">${totalReq.toLocaleString()} total</span></p>
+          <svg viewBox="0 0 ${W} ${H}" class="chart-svg" role="img" aria-label="daily requests">
+            <path d="${r.area}" class="area-req"/>
+            <path d="${r.line}" class="line-req"/>
+            ${xticks}
+            <text x="${PAD}" y="${PAD - 8}" class="tick tickmax">${r.max.toLocaleString()} max/day</text>
+          </svg>
+        </div>
+        <div class="chart-card">
+          <p class="eyebrow">Cost · last 30 days <span class="chart-total">${(totalCost / 100).toFixed(2)}&cent; total</span></p>
+          <svg viewBox="0 0 ${W} ${H}" class="chart-svg" role="img" aria-label="daily cost">
+            <path d="${c.area}" class="area-cost"/>
+            <path d="${c.line}" class="line-cost"/>
+            ${xticks}
+            <text x="${PAD}" y="${PAD - 8}" class="tick tickmax">${(c.max / 100).toFixed(2)}&cent; max/day</text>
+          </svg>
+        </div>
+      </div>
+      <div class="chart-card" style="margin-top:14px">
+        <p class="eyebrow">By model · 30 days</p>
+        ${modelBars}
+      </div>`;
+  }
+
   // member view: the account's limit windows + the (API-scoped) ledger +
   // per-key aggregates — rows served from the shared pool arrive redacted
   async function loadMemberUsage(data) {
@@ -523,6 +606,7 @@
       $("windows").innerHTML = `<p class="empty">could not load usage</p>`;
       return;
     }
+    renderUsageChart(data.series);
     if (data.orgWindows !== undefined) { loadMemberUsage(data); return; }
     $("windows").innerHTML = (data.keys || [])
       .map(
@@ -563,13 +647,38 @@
       )
       .join("") || `<p class="empty">no gateway keys yet — issue one above</p>`;
     const aliases = await api("/api/account/aliases");
-    $("alias-list").innerHTML = aliases.ok
-      ? (aliases.data.aliases || [])
-          .map((a) => a.targets
-              ? `<span class="badge">${esc(a.alias)} → ${a.targets.map((t) => esc(t.provider)).join(" → ")}</span>`
-              : `<span class="badge">${esc(a.alias)}</span>`)
-          .join("") || (IS_OP ? '<span class="badge">no aliases — request provider/model directly</span>' : '<span class="badge">no model names assigned to your account yet</span>')
-      : "";
+    if (aliases.ok) {
+      const names = (aliases.data.aliases || []);
+      const services = aliases.data.services || [];
+      // the customer view: the names they may call + the verified badge —
+      // the operator (BYO) also sees the rung chain
+      $("alias-list").innerHTML =
+        names
+          .map((a) => {
+            const verified = a.verified
+              ? `<span class="badge live" title="confirmed in the upstream catalog">✓ ${a.verifiedAt ? esc(new Date(a.verifiedAt).toLocaleDateString()) : "verified"}</span>`
+              : `<span class="badge" title="not yet confirmed against the catalog">checking…</span>`;
+            const rungs = a.targets && !IS_OP ? "" : a.targets ? ` <span class="key-mask">&larr; ${a.targets.map((t) => esc(t.provider)).join(" → ")}</span>` : "";
+            return `<span class="badge">${esc(a.alias)}</span>${verified}${rungs}`;
+          })
+          .join("") || (IS_OP ? '<span class="badge">no aliases — request provider/model directly</span>' : '<span class="badge">no model names assigned to your account yet</span>');
+      // service faces are model names too
+      services.forEach((s) => {
+        if (s.available) $("alias-list").insertAdjacentHTML("beforeend", `<span class="badge">${esc(s.name)}</span><span class="badge live" title="this face is live on the pool">live</span>`);
+      });
+      // the sample-code model picker on the key form
+      const sel = $("gk-model");
+      if (sel) {
+        sel.innerHTML = '<option value="">(pick one…)</option>' +
+          names.map((a) => `<option value="${esc(a.alias)}">${esc(a.alias)}${a.verified ? "" : " (unverified)"}</option>`).join("") +
+          services.filter((s) => s.available).map((s) => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join("");
+      }
+      if (!IS_OP) {
+        $("api-model-note").innerHTML =
+          `OpenAI-compatible, streaming. <code>model</code> is one of the <strong>names below</strong> — ` +
+          `text models, plus <code>search</code> and <code>image</code>. Your cookie is the credential; nothing else authenticates here.`;
+      }
+    }
   }
 
   async function loadDesk() {
@@ -615,11 +724,30 @@
     const scopes = ld.scopes?.length ? ld.scopes : [null, "search", "image"];
     const byKey = Object.fromEntries((ld.limits || []).map((l) => [`${l.model ?? "all"}|${l.kind}`, l]));
     const kinds = LIMIT_FIELDS.map((f) => f[0]);
+    const pool = ld.pool || {};
+    // the pool standing behind each model — a grant above it is meaningless,
+    // so the chips are right here next to the inputs
+    const poolChips = (s) => {
+      if (s === null || !pool[s]) return "";
+      return `<div class="pool-chips">${kinds
+        .map((kind) => {
+          const p = pool[s][kind];
+          if (!p) return "";
+          const capTxt = p.cap === null || p.cap === undefined ? "∞" : p.cap;
+          const others = p.elsewhere ? ` · ${p.elsewhere} granted elsewhere` : "";
+          return `<span class="badge" data-poolcap="${s === null ? "all" : s}|${kind}" title="total pool capacity for this model · headroom left after other accounts">${kind} pool ${capTxt}${others}</span>`;
+        })
+        .join("")}</div>`;
+    };
     return `<div class="limits-edit">
+      <p class="fine">Per-model grants are reconciled against the pool: a value above what the
+        pool can back is clamped to ${Math.round((ld.fraction ?? 0.8) * 100)}% of the pool for this
+        account (its 30-day usage: ${ld.usage30d ? `${ld.usage30d.requests.toLocaleString()} req · ${(ld.usage30d.costCents / 100).toFixed(2)}¢` : "n/a"}). Blank = unlimited.</p>
       ${scopes
         .map(
           (s) => `<div class="scope-row">
           <span class="scope-name">${s === null ? "all models" : esc(s)}</span>
+          ${poolChips(s)}
           <div class="row2">
             ${kinds.map((kind) =>
               `<label>${kind}
@@ -639,46 +767,115 @@
 
   // the model workbench: one model NAME the customer calls, backed by up to
   // 5 provider rungs (the pool). The customer never sees the rungs.
-  function modelsEditor(u, aliases) {
+  // `catalog` = { provider: { checkedAt, models: [ids] } } from /api/admin/catalog
+  function modelsEditor(u, aliases, catalog) {
+    const cat = catalog || {};
+    const checkedNote = Object.keys(cat)
+      .filter((p) => cat[p] && cat[p].checkedAt)
+      .map((p) => `${p} · ${new Date(cat[p].checkedAt).toLocaleDateString()}`)
+      .join(" · ") || "catalog not checked yet";
     return `<div class="models-edit">
       ${(aliases || [])
         .map(
-          (a) => `<div class="alias-edit">
+          (a) => {
+            const st = a.catalog?.status || "unknown";
+            const missing = (a.catalog?.missing || []).length
+              ? `<span class="catalog-note">missing from today&rsquo;s catalog: ${a.catalog.missing.map((m) => `<span class="key-mask">${esc(m)}</span>`).join(", ")}</span>`
+              : "";
+            return `<div class="alias-edit">
           <div class="key-row">
-            <span class="key-id">${esc(a.alias)}</span>
+            <span class="key-id"><span class="cat-dot ${st}" title="catalog status: ${st}"></span>${esc(a.alias)}</span>
             ${a.targets.map((t) => `<span class="key-mask">${esc(t.provider)}/${esc(t.providerModelId)}</span>`).join("")}
             <button class="btn-ghost" data-load-alias="${esc(u.id)}" data-alias="${esc(a.alias)}">edit ▾</button>
           </div>
-        </div>`
+          ${missing}
+        </div>`;
+          }
         )
         .join("") || `<p class="empty">no model names assigned to this account yet</p>`}
       <div class="workbench">
         <div class="row2">
           <label>Model name (what the customer calls)
-            <input data-alias-name placeholder="fast · writer · coder" pattern="[a-z0-9][a-z0-9_-]{2,31}">
+            <input data-alias-name placeholder="use the real model name — e.g. gemini-2.5-flash" pattern="[a-z0-9][a-z0-9_-]{2,31}">
           </label>
           <label>Rung provider (hidden from the customer)
             <select data-rung-provider>${PROVIDERS.map((p) => `<option>${p}</option>`).join("")}</select>
           </label>
         </div>
-        <label>Rung model id
-          <input data-rung-model placeholder="gemini-2.5-flash · llama-3.3-70b-versatile · deepseek/deepseek-r1:free" style="width:100%">
+        <label>Rung model id — pick from the catalog (checked daily)
+          <input data-rung-model list="cat-dl" placeholder="gemini-2.5-flash · llama-3.3-70b-versatile · deepseek/deepseek-r1:free" style="width:100%">
+          <datalist id="cat-dl"></datalist>
         </label>
         <div class="cta">
+          <button class="btn-ghost" data-use-name>use model name</button>
           <button class="btn-ghost" data-add-rung>+ add rung</button>
           <button class="btn" data-save-alias="${esc(u.id)}">Assign / replace ladder</button>
           <span class="hint" data-alias-note="${esc(u.id)}">&nbsp;</span>
         </div>
         <div class="rungs" data-rungs></div>
+        <div class="cta" style="margin-top:10px">
+          <button class="btn-ghost" data-check-catalog>check catalog now</button>
+          <span class="catalog-note">last checked: ${esc(checkedNote)}</span>
+        </div>
         <p class="fine">A model name pools up to 5 provider rungs — the gateway walks them when
-          one is exhausted. Re-saving a name replaces its whole ladder.</p>
+          one is exhausted. Re-saving a name replaces its whole ladder. The green dot means every
+          rung&rsquo;s model is in its provider&rsquo;s catalog as of today; gold means one is missing
+          or the catalog is stale.</p>
       </div>
     </div>`;
   }
 
-  function wireWorkbench(el, u) {
+  function wireWorkbench(el, u, catalog) {
     let rungs = [];
     const rungBox = el.querySelector("[data-rungs]");
+
+    // the rung model id picker is fed from the daily-checked catalog
+    const catDl = el.querySelector("#cat-dl");
+    const fillCatalog = () => {
+      if (!catDl) return;
+      const p = el.querySelector("[data-rung-provider]");
+      const models = (catalog && catalog[p.value] && catalog[p.value].models) || [];
+      catDl.innerHTML = models.map((m) => `<option value="${esc(m)}"></option>`).join("");
+    };
+    el.querySelector("[data-rung-provider]")?.addEventListener("change", fillCatalog);
+    fillCatalog();
+
+    // "use model name": the rung's real model id becomes the alias name —
+    // the customer then calls the model by the name it actually has
+    el.querySelector("[data-use-name]")?.addEventListener("click", () => {
+      const raw = el.querySelector("[data-rung-model]").value.trim();
+      if (!raw) return;
+      const slug = raw.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
+      if (slug.length >= 3) el.querySelector("[data-alias-name]").value = slug;
+    });
+
+    // "check catalog now": force an immediate fetch of every pool key's catalog
+    el.querySelector("[data-check-catalog]")?.addEventListener("click", async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      btn.textContent = "checking…";
+      const { ok, data } = await api("/api/admin/catalog/refresh", { method: "POST" });
+      btn.disabled = false;
+      btn.textContent = "check catalog now";
+      const note = el.querySelector(`[data-alias-note="${u.id}"]`);
+      if (ok) {
+        const good = (data.refreshed || []).filter((r) => r.ok).length;
+        const bad = (data.refreshed || []).length - good;
+        note.innerHTML = ok
+          ? `<span class="ok">catalog checked — ${good} provider(s) answered${bad ? `, ${bad} unreachable (stays stale, retried hourly)` : ""}</span>`
+          : "";
+        // refresh the cached catalog for the pickers
+        const c = await api("/api/admin/catalog");
+        if (c.ok) {
+          for (const row of c.data.catalog || []) {
+            catalog[row.provider] = { checkedAt: row.checkedAt, models: row.models.map((m) => m.model) };
+          }
+          fillCatalog();
+        }
+      } else {
+        note.innerHTML = `<span class="err">catalog check failed</span>`;
+      }
+    });
     const renderRungs = () => {
       rungBox.innerHTML = rungs.length
         ? rungs.map((t, i) => `<span class="badge">${i + 1} · ${esc(t.provider)}/${esc(t.providerModelId)} <button type="button" class="btn-ghost" data-drop-rung="${i}">×</button></span>`).join(" ")
@@ -737,7 +934,22 @@
     renderRungs();
   }
 
+  // the catalog the workbench pickers use — fetched once per desk load
+  let catalogCache = null;
+  async function fetchCatalog() {
+    if (catalogCache) return catalogCache;
+    const { ok, data } = await api("/api/admin/catalog");
+    if (ok) {
+      catalogCache = {};
+      for (const row of data.catalog || []) {
+        catalogCache[row.provider] = { checkedAt: row.checkedAt, models: row.models.map((m) => m.model) };
+      }
+    }
+    return catalogCache;
+  }
+
   async function loadDeskUsers() {
+    catalogCache = null; // a fresh desk load gets a fresh catalog
     const box = $("desk-users");
     const { ok, data } = await api("/api/admin/users");
     if (!ok) { box.innerHTML = `<p class="empty">desk unavailable</p>`; return; }
@@ -775,7 +987,7 @@
         if (!el.hidden && !el.dataset.loaded) {
           const u = (data.users || []).find((x) => x.id === id);
           const { ok, data: ld } = await api(`/api/admin/users/${id}/limits`);
-          el.innerHTML = ok ? limitsEditor(u, ld.limits) : `<p class="empty">could not load limits</p>`;
+          el.innerHTML = ok ? limitsEditor(u, ld) : `<p class="empty">could not load limits</p>`;
           el.dataset.loaded = "1";
           wireLimits(el, id);
         }
@@ -788,15 +1000,32 @@
         el.hidden = !el.hidden;
         if (!el.hidden && !el.dataset.loaded) {
           const u = (data.users || []).find((x) => x.id === id);
-          const { ok, data: ad } = await api(`/api/admin/users/${id}/aliases`);
-          el.innerHTML = modelsEditor(u, ok ? ad.aliases : []);
+          const [ad, cat] = await Promise.all([api(`/api/admin/users/${id}/aliases`), fetchCatalog()]);
+          el.innerHTML = modelsEditor(u, ad.ok ? ad.aliases : [], cat);
           el.dataset.loaded = "1";
-          wireWorkbench(el, u);
+          wireWorkbench(el, u, cat);
         }
       }));
   }
 
   function wireLimits(el, id) {
+    // live headroom warning: flag a grant above the pool as the operator types
+    el.querySelectorAll("input[data-kind]").forEach((i) => {
+      i.addEventListener("input", () => {
+        const v = i.value ? Number(i.value) : null;
+        const chips = el.querySelectorAll(`.pool-chips .badge[data-poolcap]`);
+        let over = false;
+        chips.forEach((c) => {
+          const [scope, kind] = c.dataset.poolcap.split("|");
+          const input = el.querySelector(`input[data-scope="${CSS.escape(scope)}"][data-kind="${CSS.escape(kind)}"]`);
+          const capTxt = (c.textContent.match(/pool ([∞0-9.]+)/) || [])[1];
+          const cap = capTxt === "∞" ? null : Number(capTxt);
+          const isMine = input && input === i;
+          c.classList.toggle("over", !!isMine && v !== null && cap !== null && v > cap);
+          if (isMine && v !== null && cap !== null && v > cap) over = true;
+        });
+      });
+    });
     el.querySelector(`[data-save-limits="${id}"]`).addEventListener("click", async (e) => {
       const btn = e.currentTarget;
       const note = el.querySelector(`[data-limits-note="${id}"]`);
@@ -809,7 +1038,17 @@
       btn.disabled = true;
       const { ok, data } = await api(`/api/admin/users/${id}/limits`, { method: "PUT", body: JSON.stringify({ limits }) });
       btn.disabled = false;
-      note.innerHTML = ok ? `<span class="ok">saved — ${data.limits.length} active limit(s), applied per model</span>` : `<span class="err">${esc(data.error ?? "could not save")}</span>`;
+      if (!ok) { note.innerHTML = `<span class="err">${esc(data.error ?? "could not save")}</span>`; return; }
+      const caps = data.caps || [];
+      const capHtml = caps.length
+        ? caps.map((c) => `<span class="err">${esc(c.model)} ${esc(c.kind)}: ${c.requested} → ${c.effective} — ${esc(c.note ?? "capped to pool")}</span>`).join(" · ")
+        : "";
+      note.innerHTML = `<span class="ok">saved — ${data.limits.length} active limit(s), applied per model</span> ${capHtml}`;
+      // reflect the effective (possibly clamped) values back into the inputs
+      (data.limits || []).forEach((l) => {
+        const input = el.querySelector(`input[data-scope="${CSS.escape(l.model ?? "all")}"][data-kind="${CSS.escape(l.kind)}"]`);
+        if (input) input.value = l.limit ?? "";
+      });
     });
   }
 

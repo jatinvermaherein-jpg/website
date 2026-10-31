@@ -7,6 +7,8 @@ import { prisma } from '../lib/prisma.js';
 import { requireUser } from '../lib/auth.js';
 import { encryptSecret } from '../lib/vault.js';
 import { TEXT_PROVIDERS } from '../lib/upstream.js';
+import { catalogStatusForTargets } from '../lib/catalog.js';
+import { operatorOrgId } from './flow.js';
 
 // Operator's provider stack (2026-10-29, supersedes D1's "Big Five"):
 //   text/reasoning: google (Gemini) · groq · openrouter (free models —
@@ -252,14 +254,44 @@ export async function accountRoutes(app: FastifyInstance) {
       grouped.get(a.alias)!.targets.push({ priority: a.priority, provider: m.provider, providerModelId: m.providerModelId });
     }
     const values = [...grouped.values()];
+    // the two non-text faces one key can call — model names too
+    const opOrg = (await operatorOrgId()) ?? '';
+    const ownSearch = (await prisma.providerCredential.count({ where: { orgId: membership.orgId, provider: { in: ['tavily', 'serper'] }, status: 'active' } })) > 0;
+    const ownImage = (await prisma.providerCredential.count({ where: { orgId: membership.orgId, provider: { in: ['pollinations'] }, status: 'active' } })) > 0;
+    const poolSearch = opOrg ? (await prisma.providerCredential.count({ where: { orgId: opOrg, provider: { in: ['tavily', 'serper'] }, status: 'active' } })) > 0 : false;
+    const poolImage = opOrg ? (await prisma.providerCredential.count({ where: { orgId: opOrg, provider: { in: ['pollinations'] }, status: 'active' } })) > 0 : false;
+    const services = [
+      { name: 'search', available: ownSearch || poolSearch },
+      { name: 'image', available: ownImage || poolImage },
+    ];
+
+    // 0006 — verification: has the gateway confirmed (within 24h) that this
+    // model is in its provider's catalog? The customer sees the name + the
+    // badge — never the provider behind it.
+    const withCatalog = await Promise.all(
+      values.map(async (v) => {
+        const cat = await catalogStatusForTargets(
+          prisma,
+          v.targets.map((t) => ({ provider: t.provider, providerModelId: t.providerModelId })),
+        );
+        const verified = cat.status !== 'unknown' && cat.missing.length < v.targets.length;
+        return { alias: v.alias, verified, verifiedAt: verified ? cat.verifiedAt : null, targets: v.targets };
+      }),
+    );
+
     // opacity: a customer sees the model NAMES they may call — never the
     // provider or model id behind them. Exception: a BYO account (the org
     // holds its own provider keys) may see the targets IT assigned.
     if (!user.isOperator) {
       const hasOwnKeys = (await prisma.providerCredential.count({ where: { orgId: membership.orgId } })) > 0;
-      if (!hasOwnKeys) return { aliases: values.map((v) => ({ alias: v.alias })) };
+      if (!hasOwnKeys) {
+        return {
+          aliases: withCatalog.map(({ alias, verified, verifiedAt }) => ({ alias, verified, verifiedAt })),
+          services,
+        };
+      }
     }
-    return { aliases: values };
+    return { aliases: withCatalog, services };
   });
 
   // the account's own limit windows — what the operator set, and how much

@@ -25,7 +25,14 @@ function fakeUpstream(): Promise<{ url: string; close: () => Promise<void> }> {
       let body = '';
       req.on('data', (c) => (body += c));
       req.on('end', () => {
-        const j = JSON.parse(body || '{}') as { stream?: boolean };
+        let j: { stream?: boolean };
+        try {
+          j = JSON.parse(body || '{}');
+        } catch {
+          res.writeHead(400, { 'content-type': 'application/json' });
+          res.end('{"error":"bad request"}');
+          return;
+        }
         if (u.endsWith('/search')) {
           // both search rungs call /search — the header is the only tell
           // (tavily authenticates with Bearer, serper with x-api-key)

@@ -20,7 +20,15 @@ function fakeUpstream(): Promise<{ url: string; close: () => Promise<void> }> {
       let body = '';
       req.on('data', (c) => (body += c));
       req.on('end', () => {
-        const j = JSON.parse(body) as { stream?: boolean };
+        // aborted/empty requests arrive in suite runs — answer 400, never throw
+        let j: { stream?: boolean };
+        try {
+          j = JSON.parse(body || '{}');
+        } catch {
+          res.writeHead(400, { 'content-type': 'application/json' });
+          res.end('{"error":"bad request"}');
+          return;
+        }
         if (j.stream) {
           res.writeHead(200, { 'content-type': 'text/event-stream' });
           res.write('data: {"id":"s1","model":"upstream-secret-model","choices":[{"delta":{"content":"ok"}}]}\n\n');
