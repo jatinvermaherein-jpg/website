@@ -6,6 +6,7 @@ import { authRoutes } from './routes/auth.js';
 import { adminRoutes } from './routes/admin.js';
 import { accountRoutes } from './routes/account.js';
 import { flowRoutes } from './routes/flow.js';
+import { serviceRoutes } from './routes/services.js';
 import { streamRoutes } from './routes/stream.js';
 import { crewRoutes } from './routes/crew.js';
 import { crosscheckRoutes } from './routes/crosscheck.js';
@@ -77,6 +78,7 @@ export async function buildApp() {
   await app.register(adminRoutes, { prefix: '/api/admin' });
   await app.register(accountRoutes, { prefix: '/api/account' });
   await app.register(flowRoutes, { prefix: '/api/flow' });
+  await app.register(serviceRoutes, { prefix: '/api/flow' }); // search + image — one key, all three faces
   await app.register(streamRoutes, { prefix: '/api/projects' });
   await app.register(crewRoutes, { prefix: '/api/crew' });
   await app.register(crosscheckRoutes, { prefix: '/api/projects' });

@@ -9,6 +9,11 @@
 //     targets, ≤4 hops). When the first target is exhausted or dead, the
 //     next one serves — and the response CARRIES THE FLAG (degraded header +
 //     body field + Request row). Degradation is never silent.
+//   Phase 5: resale — customers call through THEIR gateway keys (jkn_…);
+//     provider secrets live on the OPERATOR org and are never named, masked
+//     or hinted to a customer. The account's operator-set limits (OrgLimit)
+//     gate the whole org: every key the account issues pools into the
+//     operator's numbers. Customers address models by alias only.
 // OpenAI-compatible surface: POST /api/flow/chat/completions.
 // Token counts are the provider's own numbers. Provider silent →
 // `provider-silent` — never an estimate. Cost is priced from the Model row
@@ -20,11 +25,12 @@ import { prisma } from '../lib/prisma.js';
 import { requireUser } from '../lib/auth.js';
 import { decryptSecret } from '../lib/vault.js';
 import { TEXT_PROVIDERS, upstreamBase } from '../lib/upstream.js';
-import { keyWindows, isSpendable, urgency, exhaustion } from '../lib/quota.js';
+import { keyWindows, orgWindows, isSpendable, urgency, exhaustion } from '../lib/quota.js';
 
 const UPSTREAM_TIMEOUT_MS = 10 * 60_000;
 const COOLDOWN_MS = 60_000;
-const MAX_HOPS = 4;
+// one logical model may be backed by up to 5 provider rungs
+const MAX_HOPS = 5;
 
 // Gateway keys (the key a CLIENT uses to call this gateway, `jkn_…`).
 // Law 6.3 — write-only: the plaintext exists exactly once, at creation.
@@ -36,11 +42,23 @@ const sha256hex = (s: string) => createHash('sha256').update(s).digest('hex');
 
 // actor = the vault-audit identity: the user's name, or the gateway key's
 // name — the append-only AuditLog must say WHO decrypted which secret.
-type Caller = { orgId: string; apiKeyId?: string; actor: string };
+// `detailed` = the caller may see operator-grade error detail (provider
+// names, upstream trails). Customers never get it — opacity is the contract.
+type Caller = { orgId: string; apiKeyId?: string; actor: string; detailed: boolean };
+
+let opOrgCache: { at: number; orgId: string | null } = { at: 0, orgId: null };
+export async function operatorOrgId(): Promise<string | null> {
+  if (Date.now() - opOrgCache.at < 15_000) return opOrgCache.orgId;
+  const m = await prisma.membership.findFirst({ where: { user: { isOperator: true } }, select: { orgId: true } });
+  opOrgCache = { at: Date.now(), orgId: m?.orgId ?? null };
+  return opOrgCache.orgId;
+}
 
 // One caller resolution for the whole flow surface: a session JWT
 // (dashboard user) or a gateway key (external client). Both land on an org.
-async function resolveCaller(req: FastifyRequest, reply: FastifyReply): Promise<Caller | null> {
+// Shared with the service routes (search, image) — one key, all three faces.
+export type { Caller };
+export async function resolveCaller(req: FastifyRequest, reply: FastifyReply): Promise<Caller | null> {
   const auth = req.headers.authorization;
   if (auth?.startsWith('Bearer ')) {
     const token = auth.slice(7).trim();
@@ -54,7 +72,21 @@ async function resolveCaller(req: FastifyRequest, reply: FastifyReply): Promise<
         reply.code(401).send({ error: 'gateway key revoked' });
         return null;
       }
-      return { orgId: key.orgId, apiKeyId: key.id, actor: `key:${key.name}` };
+      // suspension of the account kills every key in it, instantly
+      const owner = await prisma.membership.findFirst({
+        where: { orgId: key.orgId, role: 'owner' },
+        include: { user: { select: { status: true } } },
+      });
+      if (owner?.user.status === 'suspended') {
+        reply.code(403).send({ error: 'account suspended' });
+        return null;
+      }
+      return {
+        orgId: key.orgId,
+        apiKeyId: key.id,
+        actor: `key:${key.name}`,
+        detailed: (await operatorOrgId()) === key.orgId,
+      };
     }
   }
   const user = await requireUser(req, reply);
@@ -64,7 +96,7 @@ async function resolveCaller(req: FastifyRequest, reply: FastifyReply): Promise<
     reply.code(404).send({ error: 'no org' });
     return null;
   }
-  return { orgId: membership.orgId, actor: user.username };
+  return { orgId: membership.orgId, actor: user.username, detailed: user.isOperator };
 }
 
 const chatSchema = z
@@ -118,7 +150,7 @@ async function resolveTargets(orgId: string, modelRef: string): Promise<{ target
 }
 
 // pool = active keys + expired cooldowns (they revive without a write)
-async function poolFor(orgId: string, provider: string) {
+export async function poolFor(orgId: string, provider: string) {
   const now = new Date();
   return prisma.providerCredential.findMany({
     where: {
@@ -150,8 +182,38 @@ export async function flowRoutes(app: FastifyInstance) {
     }
     const body = parsed.data;
 
+    // Opacity for the resale path: when the caller's org holds NO key for
+    // the named provider, the answer would come from the OPERATOR's pool —
+    // and naming our stack is how a customer would learn it. Alias-only then.
+    // An org with its own BYO keys may address those directly (they know
+    // their own providers).
+    if (!caller.detailed && body.model.includes('/')) {
+      const t = splitModel(body.model);
+      const hasOwn = t
+        ? (await prisma.providerCredential.count({ where: { orgId: caller.orgId, provider: t.provider } })) > 0
+        : false;
+      if (!hasOwn) {
+        return reply.code(400).send({ error: 'unknown model — use one of the model names assigned to your account' });
+      }
+    }
+
     const { targets, error } = await resolveTargets(caller.orgId, body.model);
-    if (error) return reply.code(400).send({ error });
+    if (error) return reply.code(400).send({ error: caller.detailed ? error : `unknown model "${body.model}"` });
+
+    // ── the ACCOUNT gate: the operator's limits for this org, pooled ──
+    // account-wide limits + the limits for THIS model (the name called)
+    const orgWins = await orgWindows(prisma, caller.orgId, body.model);
+    if (!isSpendable(orgWins)) {
+      const dead = orgWins.filter((w) => w.headroom <= 0);
+      const retryAfter = Math.max(1, Math.ceil(Math.min(...dead.map((w) => w.msUntilReset)) / 1000));
+      const name = (w: { kind: string; model?: string }) => (w.model && w.model !== 'all' ? `${w.kind} (${w.model})` : w.kind);
+      return reply.code(429).send({
+        error: caller.detailed
+          ? `account limit — ${exhaustion(orgWins)}`
+          : `usage limit reached for this account (${dead.map(name).join(', ')}); resets in ~${retryAfter}s`,
+        retry_after_s: retryAfter,
+      });
+    }
 
     const baseIdempotency = (req.headers['idempotency-key'] as string) || randomUUID();
     const startedAt = Date.now();
@@ -159,19 +221,35 @@ export async function flowRoutes(app: FastifyInstance) {
     const ladderFailures: string[] = [];
     let quotaResetMs = Infinity;
     let lastError = `all targets for "${body.model}" failed`;
+    const opOrg = caller.detailed ? caller.orgId : (await operatorOrgId());
+    // true once the walk touches the OPERATOR's shared pool — from then on
+    // no error text may name a provider, whatever the caller is
+    let sawForeignPool = false;
 
     for (let hop = 0; hop < targets.length; hop++) {
       const target = targets[hop]!;
 
-      const pool = await poolFor(caller.orgId, target.provider);
+      // The account's own provider keys first (BYO), then the operator's
+      // shared pool — the customer never learns which one answered.
+      let pool = await poolFor(caller.orgId, target.provider);
+      let poolForeign = false;
+      if (!pool.length && opOrg && opOrg !== caller.orgId) {
+        pool = await poolFor(opOrg, target.provider);
+        if (pool.length) {
+          poolForeign = true;
+          sawForeignPool = true;
+        }
+      }
       if (!pool.length) {
         // one target and no key at all → say exactly that (it's an action,
         // not a failure of the ladder); on a ladder it's just a rung that's
         // missing, so the walk continues
         if (targets.length === 1) {
-          return reply.code(409).send({ error: `no active ${target.provider} key on this account — add one in the dashboard` });
+          return caller.detailed
+            ? reply.code(409).send({ error: `no active ${target.provider} key on this account — add one in the dashboard` })
+            : reply.code(503).send({ error: 'service currently unavailable — try again later' });
         }
-        const wall = `${target.provider}: no active key`;
+        const wall = caller.detailed ? `${target.provider}: no active key` : 'no capacity';
         ladderFailures.push(wall);
         lastError = wall;
         continue;
@@ -183,7 +261,10 @@ export async function flowRoutes(app: FastifyInstance) {
       ).sort((a, b) => urgency(b.windows) - urgency(a.windows));
       const spendable = ranked.filter((r) => isSpendable(r.windows));
       if (!spendable.length) {
-        const wall = `${target.provider}: ${[...new Set(ranked.map((r) => exhaustion(r.windows)).filter(Boolean))].join(' · ') || 'no quota'}`;
+        const detailedWall = `${target.provider}: ${[...new Set(ranked.map((r) => exhaustion(r.windows)).filter(Boolean))].join(' · ') || 'no quota'}`;
+        // the wall names the pool's provider — safe when the pool is the
+        // caller's own (or the caller is an operator), generic otherwise
+        const wall = caller.detailed || !poolForeign ? detailedWall : 'usage limit reached';
         quotaWalls.push(wall);
         lastError = wall;
         for (const r of ranked) for (const w of r.windows) quotaResetMs = Math.min(quotaResetMs, w.msUntilReset);
@@ -204,6 +285,7 @@ export async function flowRoutes(app: FastifyInstance) {
             credentialId: credential.id,
             apiKeyId: caller.apiKeyId ?? null,
             source: 'flow',
+            category: 'text',
             modelRequested: body.model,
             modelServed: `${target.provider}/${target.providerModelId}`,
           },
@@ -257,7 +339,7 @@ export async function flowRoutes(app: FastifyInstance) {
             .update({ where: { id: credential.id }, data: { status: 'cooldown', cooldownUntil: new Date(Date.now() + COOLDOWN_MS) } })
             .catch(() => {});
           await finish('error', { tokensIn: 0, tokensOut: 0, source: 'provider' }, 0, degraded);
-          lastError = `network error talking to ${target.provider}: ${(e as Error).message}`;
+          lastError = caller.detailed ? `network error talking to ${target.provider}: ${(e as Error).message}` : 'upstream error';
           continue;
         }
 
@@ -280,9 +362,11 @@ export async function flowRoutes(app: FastifyInstance) {
               .catch(() => {});
           } else {
             // a 4xx that is not about the key — failing over would just burn
-            // the ladder; surface it now.
+            // the ladder; surface it now. Customers get no upstream text.
             await finish('error', { tokensIn: 0, tokensOut: 0, source: 'provider' }, 0, false);
-            return reply.code(res.status).send({ error: lastError });
+            return caller.detailed
+              ? reply.code(res.status).send({ error: lastError })
+              : reply.code(400).send({ error: 'bad request' });
           }
           await finish('error', { tokensIn: 0, tokensOut: 0, source: 'provider' }, 0, degraded);
           continue;
@@ -309,37 +393,50 @@ export async function flowRoutes(app: FastifyInstance) {
             for (;;) {
               const { done, value } = await reader.read();
               if (done) break;
-              raw.write(value);
               buf += decoder.decode(value, { stream: true });
               let nl: number;
               while ((nl = buf.indexOf('\n')) >= 0) {
-                const line = buf.slice(0, nl).trim();
+                const line = buf.slice(0, nl);
                 buf = buf.slice(nl + 1);
-                if (!line.startsWith('data:')) continue;
-                const payload = line.slice(5).trim();
-                if (!payload || payload === '[DONE]') continue;
-                try {
-                  const j = JSON.parse(payload);
-                  if (j?.usage && typeof j.usage.prompt_tokens === 'number') {
-                    usage = { tokensIn: j.usage.prompt_tokens, tokensOut: j.usage.completion_tokens ?? 0, source: 'provider' };
+                // opacity: every data payload is re-issued with the model the
+                // caller addressed — the upstream model id never reaches them
+                let out = line + '\n';
+                if (line.startsWith('data:')) {
+                  const payload = line.slice(5).trim();
+                  if (payload && payload !== '[DONE]') {
+                    try {
+                      const j = JSON.parse(payload) as Record<string, unknown>;
+                      j.model = body.model;
+                      if (j.usage && typeof (j.usage as { prompt_tokens?: number }).prompt_tokens === 'number') {
+                        usage = {
+                          tokensIn: (j.usage as { prompt_tokens: number }).prompt_tokens,
+                          tokensOut: (j.usage as { completion_tokens?: number }).completion_tokens ?? 0,
+                          source: 'provider',
+                        };
+                      }
+                      out = `data: ${JSON.stringify(j)}\n`;
+                    } catch {
+                      /* non-JSON data line — pass through untouched */
+                    }
                   }
-                } catch {
-                  /* non-JSON data line — pass through untouched */
                 }
+                raw.write(out);
+              }
             }
+            const tail = decoder.decode();
+            if (buf || tail) raw.write((buf + tail) + '\n');
+          } catch (e) {
+            console.error('[flow] stream error', e);
+            await finish('error', usage, 0, degraded);
+            if (!raw.writableEnded) raw.end();
+            return;
           }
-        } catch (e) {
-          console.error('[flow] stream error', e);
-          await finish('error', usage, 0, degraded);
+          // the trail is durable BEFORE the stream is declared done — the
+          // record exists even if the client hangs up on the last byte
+          await finish(degraded ? 'fallback' : 'ok', usage, await priceFor(target.provider, target.providerModelId, usage), degraded);
           if (!raw.writableEnded) raw.end();
           return;
         }
-        // the trail is durable BEFORE the stream is declared done — the
-        // record exists even if the client hangs up on the last byte
-        await finish(degraded ? 'fallback' : 'ok', usage, await priceFor(target.provider, target.providerModelId, usage), degraded);
-        if (!raw.writableEnded) raw.end();
-        return;
-      }
 
         const json = (await res.json().catch(() => null)) as Record<string, unknown> | null;
         if (!json) {
@@ -354,10 +451,18 @@ export async function flowRoutes(app: FastifyInstance) {
         await finish(degraded ? 'fallback' : 'ok', usage, await priceFor(target.provider, target.providerModelId, usage), degraded);
         return {
           ...json,
+          model: body.model,
           _jatin: {
             request_id: requestId,
             usage_source: usage.source,
-            ...(degraded ? { degraded: true, reason: lastError } : {}),
+            ...(degraded
+              ? {
+                  degraded: true,
+                  // the reason names providers — safe only for operators, or
+                  // when the whole walk stayed inside the caller's own pool
+                  ...(caller.detailed || !sawForeignPool ? { reason: lastError } : { reason: 'upstream fallback' }),
+                }
+              : {}),
           },
         };
       }
@@ -366,56 +471,34 @@ export async function flowRoutes(app: FastifyInstance) {
     // the whole ladder failed. Every rung hit a QUOTA wall → structured
     // 429 (retryable, with the wall named and a retry hint). Anything else
     // (missing keys, dead keys, upstream errors) → 502 with the trail.
+    // Customers see no provider names in either shape.
     if (quotaWalls.length === targets.length && ladderFailures.length === 0) {
       return reply.code(429).send({
-        error: `all keys are at their quota limit — ${quotaWalls.join(' · ')}`,
+        error: caller.detailed
+          ? `all keys are at their quota limit — ${quotaWalls.join(' · ')}`
+          : 'usage limit reached for this account',
         retry_after_s: Math.max(1, Math.ceil(quotaResetMs / 1000)),
       });
     }
     const allFailures = [...quotaWalls, ...ladderFailures];
-    return reply.code(502).send({ error: allFailures.length ? `all targets for "${body.model}" failed — ladder: ${allFailures.join(' → ')}` : lastError });
+    return reply.code(502).send({
+      error: caller.detailed
+        ? allFailures.length
+          ? `all targets for "${body.model}" failed — ladder: ${allFailures.join(' → ')}`
+          : lastError
+        : 'upstream error — try again later',
+    });
   });
 
-  // what did my account spend (per key, per model)? — the read side of
-  // "every number on screen is measured". Accepts a session (dashboard)
-  // or a gateway key (the client's own monitor view of its org's flow).
+  // what did my account spend? — the read side of "every number on screen is
+  // measured". A SESSION caller (the account's owner / operator) sees the
+  // full ledger; a GATEWAY-KEY caller sees only their own aggregates and the
+  // account's limit windows — never provider names, credential masks, or
+  // the model that served.
   app.get('/usage', async (req, reply) => {
     const caller = await resolveCaller(req, reply);
     if (!caller) return;
-    const requests = await prisma.request.findMany({
-      where: { orgId: caller.orgId, source: 'flow' },
-      select: {
-        id: true,
-        credentialId: true,
-        modelRequested: true,
-        modelServed: true,
-        tokensIn: true,
-        tokensOut: true,
-        costCents: true,
-        status: true,
-        degraded: true,
-        latencyMs: true,
-        createdAt: true,
-        credential: { select: { id: true, keyMask: true, provider: true, label: true, status: true } },
-        apiKey: { select: { name: true, prefix: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
-    const creds = await prisma.providerCredential.findMany({
-      where: { orgId: caller.orgId, projectId: null, provider: { in: TEXT_PROVIDERS } },
-    });
-    const keys = await Promise.all(
-      creds.map(async (c) => ({
-        id: c.id,
-        provider: c.provider,
-        label: c.label,
-        keyMask: c.keyMask,
-        status: c.status,
-        windows: await keyWindows(prisma, c.id),
-      })),
-    );
-    // detailed per-gateway-key usage: every number measured from the ledger
+
     const gkeys = await prisma.apiKey.findMany({ where: { orgId: caller.orgId }, orderBy: { createdAt: 'asc' } });
     const gatewayKeys = await Promise.all(
       gkeys.map(async (k) => {
@@ -439,6 +522,52 @@ export async function flowRoutes(app: FastifyInstance) {
         };
       }),
     );
+
+    const requests = await prisma.request.findMany({
+      where: { orgId: caller.orgId, source: 'flow' },
+      select: {
+        id: true,
+        credentialId: true,
+        modelRequested: true,
+        modelServed: true,
+        tokensIn: true,
+        tokensOut: true,
+        costCents: true,
+        status: true,
+        degraded: true,
+        latencyMs: true,
+        createdAt: true,
+        credential: { select: { id: true, keyMask: true, provider: true, label: true, status: true, orgId: true } },
+        apiKey: { select: { name: true, prefix: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    const creds = await prisma.providerCredential.findMany({
+      where: { orgId: caller.orgId, projectId: null, provider: { in: TEXT_PROVIDERS } },
+    });
+    const keys = await Promise.all(
+      creds.map(async (c) => ({
+        id: c.id,
+        provider: c.provider,
+        label: c.label,
+        keyMask: c.keyMask,
+        status: c.status,
+        windows: await keyWindows(prisma, c.id),
+      })),
+    );
+
+    if (!caller.detailed) {
+      // opacity: rows served by the OPERATOR's shared pool are redacted —
+      // the credential goes away and the served model becomes the name the
+      // caller used. The account's own BYO rows stay fully visible.
+      const safeRequests = requests.map((r) =>
+        r.credential && r.credential.orgId !== caller.orgId
+          ? { ...r, modelServed: r.modelRequested, credential: null }
+          : r,
+      );
+      return { requests: safeRequests, keys, gatewayKeys, orgWindows: await orgWindows(prisma, caller.orgId) };
+    }
     return { requests, keys, gatewayKeys };
   });
 

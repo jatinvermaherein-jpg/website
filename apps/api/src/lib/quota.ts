@@ -11,7 +11,24 @@
 // spend next. That is "soonest-reset-first", made into arithmetic.
 import type { PrismaClient } from '@prisma/client';
 
-export type WindowKind = 'rpm' | 'tpm' | 'rpd' | 'monthly_tokens' | 'monthly_cost_cents';
+export type WindowKind =
+  | 'rpm'
+  | 'tpm'
+  | 'rpd'
+  | 'monthly_tokens'
+  | 'monthly_cost_cents'
+  | 'monthly_images'
+  | 'monthly_searches';
+
+export const ORG_LIMIT_KINDS = [
+  'rpm',
+  'tpm',
+  'rpd',
+  'monthly_tokens',
+  'monthly_cost_cents',
+  'monthly_images',
+  'monthly_searches',
+] as const;
 
 export interface WindowState {
   kind: WindowKind;
@@ -23,6 +40,8 @@ export interface WindowState {
   windowStart: Date;
   windowEnd: Date;
   msUntilReset: number;
+  // org windows only: the model the limit applies to ('all' = whole account)
+  model?: string;
 }
 
 function minuteFloor(d: Date): Date {
@@ -48,6 +67,8 @@ function windowBounds(kind: WindowKind, now: Date): [Date, Date] {
       return [dayFloor(now), new Date(dayFloor(now).getTime() + 86_400_000)];
     case 'monthly_tokens':
     case 'monthly_cost_cents':
+    case 'monthly_images':
+    case 'monthly_searches':
       return [monthFloor(now), new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))];
   }
 }
@@ -101,6 +122,73 @@ export async function keyWindows(prisma: PrismaClient, credentialId: string, now
       windowStart: start,
       windowEnd: end,
       msUntilReset: Math.max(0, end.getTime() - now.getTime()),
+    });
+  }
+  return out;
+}
+
+// Org-level windows — the operator-set account limits. Measured across EVERY
+// request in the org's ledger, whatever key or credential served it: all of
+// the account's gateway keys pool into the operator's numbers.
+// `model` (the name the caller used) selects the view: account-wide limits
+// (model IS NULL) always apply; per-model limits apply only to their model.
+export async function orgWindows(
+  prisma: PrismaClient,
+  orgId: string,
+  model?: string,
+  now = new Date(),
+): Promise<WindowState[]> {
+  const limits = await prisma.orgLimit.findMany({
+    where: { orgId, ...(model ? { OR: [{ model: null }, { model }] } : {}) },
+  });
+  const out: WindowState[] = [];
+  for (const l of limits) {
+    if (l.limit === null) continue; // an unset limit is not a limit
+    const kind = l.kind as WindowKind;
+    if (!ORG_LIMIT_KINDS.includes(kind)) continue;
+    const [start, end] = windowBounds(kind, now);
+    const category = kind === 'monthly_images' ? 'image' : kind === 'monthly_searches' ? 'search' : undefined;
+    // a per-model row measures ONLY that model's traffic; the account-wide
+    // row measures everything the account did
+    const scope = l.model ? { modelRequested: l.model } : {};
+    const agg = await prisma.request.aggregate({
+      where: {
+        orgId,
+        ...scope,
+        ...(category ? { category } : {}),
+        createdAt: { gte: start, lt: end },
+      },
+      _count: { _all: true },
+      _sum: { tokensIn: true, tokensOut: true, costCents: true },
+    });
+    let used = 0;
+    switch (kind) {
+      case 'rpm':
+      case 'rpd':
+      case 'monthly_images':
+      case 'monthly_searches':
+        used = agg._count._all;
+        break;
+      case 'tpm':
+      case 'monthly_tokens':
+        used = (agg._sum.tokensIn ?? 0) + (agg._sum.tokensOut ?? 0);
+        break;
+      case 'monthly_cost_cents':
+        used = agg._sum.costCents ?? 0;
+        break;
+    }
+    const effectiveLimit = Math.floor(l.limit * (1 - (l.reservePct ?? 0) / 100));
+    out.push({
+      kind,
+      limit: l.limit,
+      reservePct: l.reservePct ?? 0,
+      effectiveLimit,
+      used,
+      headroom: effectiveLimit - used,
+      windowStart: start,
+      windowEnd: end,
+      msUntilReset: Math.max(0, end.getTime() - now.getTime()),
+      model: l.model ?? 'all',
     });
   }
   return out;

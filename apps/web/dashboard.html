@@ -42,7 +42,7 @@
       </p>
     </section>
 
-    <section class="dash-sec">
+    <section class="dash-sec" id="prov-sec">
       <p class="eyebrow">Your keys</p>
       <p class="fine">Provider keys for this account. Stored encrypted, write-only
         &mdash; no screen, endpoint, or log ever shows the secret again.</p>
@@ -76,14 +76,9 @@
         <label>Secret
           <input name="secret" type="password" placeholder="sk-…" autocomplete="off" minlength="8" required>
         </label>
-        <div class="row2">
-          <label>Requests / min
-            <input name="rpm" type="number" min="1" max="100000" placeholder="e.g. 60">
-          </label>
-          <label>Tokens / min
-            <input name="tpm" type="number" min="1" max="1000000000" placeholder="e.g. 100000">
-          </label>
-        </div>
+        <p class="fine" style="margin-top:4px">Limits are applied automatically per provider type
+          (requests/min, tokens/min, per day, monthly tokens + cost) &mdash; you never type them.
+          They are listed on the key once saved.</p>
         <div class="cta">
           <button class="btn" type="submit">Add key</button>
           <span class="hint" id="add-note">&nbsp;</span>
@@ -117,7 +112,7 @@
           <code id="gk-plain"></code>
           <button type="button" class="btn-ghost" id="gk-copy">Copy</button>
         </div>
-        <pre class="gk-curl">curl https://&lt;your-gateway&gt;/api/flow/chat/completions \
+        <pre class="gk-curl" id="gk-curl">curl https://&lt;your-gateway&gt;/api/flow/chat/completions \
   -H "Authorization: Bearer jkn_&hellip;" \
   -H "Content-Type: application/json" \
   -d '{"model":"groq/llama-3.3-70b-versatile","stream":false,"messages":[{"role":"user","content":"hi"}]}'</pre>
@@ -139,7 +134,7 @@
       <svg class="panel-ripple" viewBox="0 0 140 140" aria-hidden="true"><circle cx="140" cy="0" r="118"/><circle cx="140" cy="0" r="78"/><circle cx="140" cy="0" r="40"/></svg>
       <p class="eyebrow" style="margin-bottom:10px">The API</p>
       <code class="api-endpoint">POST&nbsp; /api/flow/chat/completions</code>
-      <p class="fine">OpenAI-compatible, streaming. <code>model</code> is
+      <p class="fine" id="api-model-note">OpenAI-compatible, streaming. <code>model</code> is
         <code>provider/model-id</code> — e.g. <code>groq/llama-3.3-70b-versatile</code>,
         <code>openrouter/deepseek/deepseek-r1:free</code>,
         <code>google/gemini-2.5-flash</code>, <code>mistral/mistral-large-latest</code>
@@ -197,9 +192,20 @@
 
     <section class="dash-sec" id="desk-sec" hidden>
       <p class="eyebrow">Operator desk</p>
-      <p class="fine">Accounts waiting for a decision. You are the only person
-        who sees this.</p>
+      <p class="fine">Accounts waiting for a decision. You are the only person who sees this.</p>
       <div id="desk"></div>
+
+      <p class="eyebrow" style="margin-top:30px">Accounts</p>
+      <p class="fine">Every account: verify or suspend it, set the usage limits all of its keys
+        pool into, and assign the model names it may call. Blank limit = unlimited.</p>
+      <div id="desk-users"><p class="empty">loading&hellip;</p></div>
+    </section>
+
+    <section class="dash-sec" id="limits-sec">
+      <p class="eyebrow">Your limits</p>
+      <p class="fine" id="limits-note">What your account may use &mdash; set by the operator.
+        Every key you issue draws on the same numbers.</p>
+      <div class="keys" id="org-limits"><p class="empty">loading&hellip;</p></div>
     </section>
   </div>
 </main>
@@ -469,9 +475,46 @@
         const mm = Math.floor(secs / 60);
         const when = secs < 90 ? `${secs}s` : mm < 90 ? `${mm}m` : `${Math.floor(mm / 60)}h${mm % 60 ? (mm % 60) + "m" : ""}`;
         const tight = w.headroom <= 0;
-        return `<span class="badge${tight ? " live" : ""}">${esc(w.kind)} ${w.used}/${w.effectiveLimit} · reset ${when}</span>`;
+        const scope = w.model && w.model !== "all" ? `${esc(w.model)} · ` : "";
+        return `<span class="badge${tight ? " live" : ""}">${scope}${esc(w.kind)} ${w.used}/${w.effectiveLimit} · reset ${when}</span>`;
       })
       .join("");
+  }
+
+  // member view: the account's limit windows + the (API-scoped) ledger +
+  // per-key aggregates — rows served from the shared pool arrive redacted
+  async function loadMemberUsage(data) {
+    $("windows").innerHTML = (data.orgWindows || []).length
+      ? (data.orgWindows || []).map((w) => `<div class="key-row"><span class="key-id">${esc(w.kind)}</span><span class="key-limits">${windowChips([w])}</span></div>`).join("")
+      : `<p class="empty">no limits set yet — your account draws on the operator&rsquo;s shared capacity</p>`;
+    $("reqs").innerHTML = (data.requests || [])
+      .slice(0, 15)
+      .map(
+        (r) => `
+      <div class="req-row">
+        <span class="key-mask">${esc(r.modelServed)}</span>
+        <span class="badge">${r.tokensIn}→${r.tokensOut} tok</span>
+        <span class="badge">${r.latencyMs}ms</span>
+        <span class="badge ${r.status === "ok" ? "" : r.status === "fallback" ? "live" : " err"}">${esc(r.status)}</span>
+        ${r.degraded ? '<span class="badge live">degraded</span>' : ""}
+        ${r.credential ? `<span class="key-mask">${esc(r.credential.label)}</span>` : ""}
+        ${r.apiKey ? `<span class="badge via">via ${esc(r.apiKey.name)}</span>` : ""}
+      </div>`,
+      )
+      .join("") || `<p class="empty">no requests yet — the ledger is empty</p>`;
+    $("gk-usage").innerHTML = (data.gatewayKeys || [])
+      .map(
+        (k) => `
+      <div class="req-row">
+        <span class="key-mask">${esc(k.name)} &middot; ${esc(k.prefix)}&hellip;</span>
+        <span class="badge">${k.requests} req</span>
+        <span class="badge">${k.tokensIn}→${k.tokensOut} tok</span>
+        <span class="badge">${k.costCents.toFixed(2)}&cent;</span>
+        <span class="badge">${k.lastUsedAt ? esc(new Date(k.lastUsedAt).toLocaleString()) : "never used"}</span>
+        ${k.revokedAt ? '<span class="badge live">revoked</span>' : ""}
+      </div>`,
+      )
+      .join("") || `<p class="empty">no gateway keys yet — issue one above</p>`;
   }
 
   async function loadUsage() {
@@ -480,6 +523,7 @@
       $("windows").innerHTML = `<p class="empty">could not load usage</p>`;
       return;
     }
+    if (data.orgWindows !== undefined) { loadMemberUsage(data); return; }
     $("windows").innerHTML = (data.keys || [])
       .map(
         (k) => `
@@ -521,8 +565,10 @@
     const aliases = await api("/api/account/aliases");
     $("alias-list").innerHTML = aliases.ok
       ? (aliases.data.aliases || [])
-          .map((a) => `<span class="badge">${esc(a.alias)} → ${a.targets.map((t) => esc(t.provider)).join(" → ")}</span>`)
-          .join("") || '<span class="badge">no aliases — request provider/model directly</span>'
+          .map((a) => a.targets
+              ? `<span class="badge">${esc(a.alias)} → ${a.targets.map((t) => esc(t.provider)).join(" → ")}</span>`
+              : `<span class="badge">${esc(a.alias)}</span>`)
+          .join("") || (IS_OP ? '<span class="badge">no aliases — request provider/model directly</span>' : '<span class="badge">no model names assigned to your account yet</span>')
       : "";
   }
 
@@ -546,23 +592,236 @@
       b.addEventListener("click", async () => {
         b.disabled = true;
         const { ok: done } = await api(`/api/admin/users/${b.dataset.id}/${b.dataset.act}`, { method: "POST" });
-        if (done) loadDesk(); else b.disabled = false;
+        if (done) { loadDesk(); loadDeskUsers(); } else b.disabled = false;
       }));
+  }
+
+  // ── the account book: limits + model assignments, per account ─────────
+  const LIMIT_FIELDS = [
+    ["rpm", "Requests / min"],
+    ["tpm", "Tokens / min"],
+    ["rpd", "Requests / day"],
+    ["monthly_tokens", "Tokens / month"],
+    ["monthly_cost_cents", "Cost ¢ / month"],
+    ["monthly_images", "Images / month"],
+    ["monthly_searches", "Searches / month"],
+  ];
+  const PROVIDERS = ["google", "groq", "openrouter", "mistral"];
+
+  // the limit matrix: one row per scope — 'all models' (the account),
+  // the 'search' and 'image' faces, and each model name assigned to the
+  // account. Blank = unlimited. Every key of the account pools into these.
+  function limitsEditor(u, ld) {
+    const scopes = ld.scopes?.length ? ld.scopes : [null, "search", "image"];
+    const byKey = Object.fromEntries((ld.limits || []).map((l) => [`${l.model ?? "all"}|${l.kind}`, l]));
+    const kinds = LIMIT_FIELDS.map((f) => f[0]);
+    return `<div class="limits-edit">
+      ${scopes
+        .map(
+          (s) => `<div class="scope-row">
+          <span class="scope-name">${s === null ? "all models" : esc(s)}</span>
+          <div class="row2">
+            ${kinds.map((kind) =>
+              `<label>${kind}
+                <input data-kind="${kind}" data-scope="${s === null ? "all" : s}" type="number" min="1" step="any" placeholder="∞"
+                  value="${byKey[`${s === null ? "all" : s}|${kind}`]?.limit ?? ""}">
+              </label>`).join("")}
+          </div>
+        </div>`
+        )
+        .join("")}
+      <div class="cta">
+        <button class="btn" data-save-limits="${esc(u.id)}">Save limits</button>
+        <span class="hint" data-limits-note="${esc(u.id)}">&nbsp;</span>
+      </div>
+    </div>`;
+  }
+
+  // the model workbench: one model NAME the customer calls, backed by up to
+  // 5 provider rungs (the pool). The customer never sees the rungs.
+  function modelsEditor(u, aliases) {
+    return `<div class="models-edit">
+      ${(aliases || [])
+        .map(
+          (a) => `<div class="alias-edit">
+          <div class="key-row">
+            <span class="key-id">${esc(a.alias)}</span>
+            ${a.targets.map((t) => `<span class="key-mask">${esc(t.provider)}/${esc(t.providerModelId)}</span>`).join("")}
+            <button class="btn-ghost" data-load-alias="${esc(u.id)}" data-alias="${esc(a.alias)}">edit ▾</button>
+          </div>
+        </div>`
+        )
+        .join("") || `<p class="empty">no model names assigned to this account yet</p>`}
+      <div class="workbench">
+        <div class="row2">
+          <label>Model name (what the customer calls)
+            <input data-alias-name placeholder="fast · writer · coder" pattern="[a-z0-9][a-z0-9_-]{2,31}">
+          </label>
+          <label>Rung provider (hidden from the customer)
+            <select data-rung-provider>${PROVIDERS.map((p) => `<option>${p}</option>`).join("")}</select>
+          </label>
+        </div>
+        <label>Rung model id
+          <input data-rung-model placeholder="gemini-2.5-flash · llama-3.3-70b-versatile · deepseek/deepseek-r1:free" style="width:100%">
+        </label>
+        <div class="cta">
+          <button class="btn-ghost" data-add-rung>+ add rung</button>
+          <button class="btn" data-save-alias="${esc(u.id)}">Assign / replace ladder</button>
+          <span class="hint" data-alias-note="${esc(u.id)}">&nbsp;</span>
+        </div>
+        <div class="rungs" data-rungs></div>
+        <p class="fine">A model name pools up to 5 provider rungs — the gateway walks them when
+          one is exhausted. Re-saving a name replaces its whole ladder.</p>
+      </div>
+    </div>`;
+  }
+
+  function wireWorkbench(el, u) {
+    let rungs = [];
+    const rungBox = el.querySelector("[data-rungs]");
+    const renderRungs = () => {
+      rungBox.innerHTML = rungs.length
+        ? rungs.map((t, i) => `<span class="badge">${i + 1} · ${esc(t.provider)}/${esc(t.providerModelId)} <button type="button" class="btn-ghost" data-drop-rung="${i}">×</button></span>`).join(" ")
+        : `<span class="fine">no rungs yet — pick a provider + model id, then “+ add rung”</span>`;
+      rungBox.querySelectorAll("button[data-drop-rung]").forEach((b) =>
+        b.addEventListener("click", () => {
+          rungs.splice(Number(b.dataset.dropRung), 1);
+          renderRungs();
+        }));
+    };
+    el.querySelector("[data-add-rung]").addEventListener("click", () => {
+      const provider = el.querySelector("[data-rung-provider]").value;
+      const providerModelId = el.querySelector("[data-rung-model]").value.trim();
+      if (!providerModelId) return;
+      if (rungs.length >= 5) return;
+      rungs.push({ provider, providerModelId, priority: rungs.length * 10 });
+      el.querySelector("[data-rung-model]").value = "";
+      renderRungs();
+    });
+    el.querySelectorAll("button[data-load-alias]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        const { ok, data } = await api(`/api/admin/users/${u.id}/aliases`);
+        if (!ok) return;
+        const a = (data.aliases || []).find((x) => x.alias === b.dataset.alias);
+        if (!a) return;
+        el.querySelector("[data-alias-name]").value = a.alias;
+        rungs = a.targets.map((t, i) => ({ provider: t.provider, providerModelId: t.providerModelId, priority: t.priority ?? i * 10 }));
+        renderRungs();
+        const note = el.querySelector(`[data-alias-note="${u.id}"]`);
+        note.innerHTML = `<span class="ok">editing “${esc(a.alias)}” — saving replaces its ladder</span>`;
+      }));
+    el.querySelector(`[data-save-alias="${u.id}"]`).addEventListener("click", async (e) => {
+      const btn = e.currentTarget;
+      const note = el.querySelector(`[data-alias-note="${u.id}"]`);
+      const alias = el.querySelector("[data-alias-name]").value.trim();
+      if (!alias) { note.innerHTML = `<span class="err">model name required</span>`; return; }
+      if (!rungs.length) { note.innerHTML = `<span class="err">add at least one rung first</span>`; return; }
+      btn.disabled = true;
+      const r = await api(`/api/admin/users/${u.id}/aliases`, {
+        method: "PUT",
+        body: JSON.stringify({ alias, targets: rungs }),
+      });
+      btn.disabled = false;
+      if (r.ok) {
+        note.innerHTML = `<span class="ok">assigned — “${esc(alias)}” pools ${r.data.targets.length} rung(s); the account can call it now</span>`;
+        rungs = [];
+        el.querySelector("[data-alias-name]").value = "";
+        renderRungs();
+        el.dataset.loaded = "";
+        el.hidden = true;
+        el.hidden = false; // force a fresh render next open
+      } else {
+        note.innerHTML = `<span class="err">${esc(r.data.error ?? "could not assign")}</span>`;
+      }
+    });
+    renderRungs();
+  }
+
+  async function loadDeskUsers() {
+    const box = $("desk-users");
+    const { ok, data } = await api("/api/admin/users");
+    if (!ok) { box.innerHTML = `<p class="empty">desk unavailable</p>`; return; }
+    box.innerHTML = (data.users || [])
+      .filter((u) => !u.isOperator)
+      .map((u) => `
+      <div class="user-row">
+        <div class="key-row">
+          <span class="key-id">${esc(u.username)}</span>
+          <span class="badge ${u.status === "active" ? "" : u.status === "pending" ? "live" : "err"}">${esc(u.status)}</span>
+          <span class="key-mask">org ${esc(u.org?.name ?? "—")} · ${u.gatewayKeys} key(s) · ${u.usage.requests} req · ${u.usage.costCents.toFixed(0)}¢</span>
+          <span class="key-limits">
+            ${u.status === "pending" ? `<button class="btn-ghost" data-act="verify" data-id="${esc(u.id)}">Verify</button>` : ""}
+            <button class="btn-ghost danger" data-act="suspend" data-id="${esc(u.id)}">Suspend</button>
+            <button class="btn-ghost" data-toggle-limits="${esc(u.id)}">Limits ▾</button>
+            <button class="btn-ghost" data-toggle-models="${esc(u.id)}">Models ▾</button>
+          </span>
+        </div>
+        <div class="limits-edit" id="limits-edit-${esc(u.id)}" hidden></div>
+        <div class="models-edit" id="models-edit-${esc(u.id)}" hidden></div>
+      </div>`).join("") || `<p class="empty">no accounts yet — sign-ups appear here first, pending</p>`;
+
+    box.querySelectorAll("button[data-act]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        b.disabled = true;
+        const { ok: done } = await api(`/api/admin/users/${b.dataset.id}/${b.dataset.act}`, { method: "POST" });
+        if (done) { loadDesk(); loadDeskUsers(); } else b.disabled = false;
+      }));
+
+    box.querySelectorAll("button[data-toggle-limits]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        const id = b.dataset.toggleLimits;
+        const el = $(`limits-edit-${id}`);
+        el.hidden = !el.hidden;
+        if (!el.hidden && !el.dataset.loaded) {
+          const u = (data.users || []).find((x) => x.id === id);
+          const { ok, data: ld } = await api(`/api/admin/users/${id}/limits`);
+          el.innerHTML = ok ? limitsEditor(u, ld.limits) : `<p class="empty">could not load limits</p>`;
+          el.dataset.loaded = "1";
+          wireLimits(el, id);
+        }
+      }));
+
+    box.querySelectorAll("button[data-toggle-models]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        const id = b.dataset.toggleModels;
+        const el = $(`models-edit-${id}`);
+        el.hidden = !el.hidden;
+        if (!el.hidden && !el.dataset.loaded) {
+          const u = (data.users || []).find((x) => x.id === id);
+          const { ok, data: ad } = await api(`/api/admin/users/${id}/aliases`);
+          el.innerHTML = modelsEditor(u, ok ? ad.aliases : []);
+          el.dataset.loaded = "1";
+          wireWorkbench(el, u);
+        }
+      }));
+  }
+
+  function wireLimits(el, id) {
+    el.querySelector(`[data-save-limits="${id}"]`).addEventListener("click", async (e) => {
+      const btn = e.currentTarget;
+      const note = el.querySelector(`[data-limits-note="${id}"]`);
+      const limits = [...el.querySelectorAll("input[data-kind]")].map((i) => ({
+        model: i.dataset.scope === "all" ? null : i.dataset.scope,
+        kind: i.dataset.kind,
+        limit: i.value ? Number(i.value) : null,
+        reservePct: 5,
+      }));
+      btn.disabled = true;
+      const { ok, data } = await api(`/api/admin/users/${id}/limits`, { method: "PUT", body: JSON.stringify({ limits }) });
+      btn.disabled = false;
+      note.innerHTML = ok ? `<span class="ok">saved — ${data.limits.length} active limit(s), applied per model</span>` : `<span class="err">${esc(data.error ?? "could not save")}</span>`;
+    });
   }
 
   $("add-key").addEventListener("submit", async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    const limits = [];
-    if (fd.get("rpm")) limits.push({ kind: "rpm", limit: Number(fd.get("rpm")), reservePct: 5 });
-    if (fd.get("tpm")) limits.push({ kind: "tpm", limit: Number(fd.get("tpm")), reservePct: 5 });
     const { ok, status, data } = await api("/api/account/keys", {
       method: "POST",
       body: JSON.stringify({
         provider: fd.get("provider"),
         label: fd.get("label"),
         secret: fd.get("secret") || undefined,
-        limits,
       }),
     });
     $("add-note").textContent = ok
@@ -571,18 +830,46 @@
     if (ok) { e.target.reset(); loadKeys(); loadUsage(); }
   });
 
+  let IS_OP = false;
+
+  async function loadOrgLimits() {
+    const { ok, data } = await api("/api/account/limits");
+    if (!ok) { $("org-limits").innerHTML = `<p class="empty">could not load limits</p>`; return; }
+    $("org-limits").innerHTML = (data.orgWindows || []).length
+      ? data.orgWindows.map((w) => `<div class="key-row"><span class="key-id">${esc(w.kind)}</span><span class="key-limits">${windowChips([w])}</span></div>`).join("")
+      : `<p class="empty">no limits set on your account yet — the operator has not assigned usage limits</p>`;
+  }
+
   (async function main() {
     const { ok, status, data } = await api("/api/auth/me");
     if (!ok || status === 401) { location.replace("/login.html"); return; }
+    IS_OP = !!data.operator;
     $("who").textContent = data.username;
     $("hello").textContent = `Hello, ${data.username}.`;
     $("status-marks").innerHTML =
       `<span class="badge live">● ${esc(data.status)}</span>` +
-      (data.operator ? `<span class="badge">operator</span>` : `<span class="badge">member</span>`);
+      (IS_OP ? `<span class="badge">operator</span>` : `<span class="badge">member</span>`);
+
+    if (!IS_OP) {
+      // opacity for members: no provider list anywhere on this screen
+      $("prov-sec").hidden = true;
+      $("api-model-note").innerHTML =
+        "OpenAI-compatible. <code>model</code> = one of the names assigned to your account (badges below). " +
+        "One key, three services: <code>POST&nbsp;/api/flow/chat/completions</code> (text) · " +
+        "<code>POST&nbsp;/api/flow/search</code> with <code>{&quot;query&quot;:&quot;…&quot;}</code> · " +
+        "<code>POST&nbsp;/api/flow/image</code> with <code>{&quot;prompt&quot;:&quot;…&quot;}</code>.";
+      $("gk-curl").textContent =
+        'curl https://<your-gateway>/api/flow/chat/completions \\\n' +
+        '  -H "Authorization: Bearer jkn_…" \\\n' +
+        '  -H "Content-Type: application/json" \\\n' +
+        '  -d \'{"model":"fast","stream":false,"messages":[{"role":"user","content":"hi"}]}\' \n\n' +
+        'model — one of the names assigned to your account (see "The API" below)';
+    }
     await loadKeys();
     loadGatewayKeys();
     loadUsage();
-    if (data.operator) { $("desk-sec").hidden = false; loadDesk(); }
+    loadOrgLimits();
+    if (IS_OP) { $("desk-sec").hidden = false; loadDesk(); loadDeskUsers(); }
   })();
 </script>
 </body>

@@ -132,5 +132,5 @@ test('Phase 4: alias ladder — cross-provider failover is flagged in the respon
   // unknown alias — a plain sentence, not a wall
   res = await chat('nope-nope');
   assert.equal(res.statusCode, 400);
-  assert.match(res.json().error, /no alias "nope-nope"/);
+  assert.match(res.json().error, /unknown model "nope-nope"|no alias "nope-nope"/);
 });

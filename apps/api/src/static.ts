@@ -29,8 +29,33 @@ function sendFile(reply: FastifyReply, rel: string): void {
   reply.header('content-type', type).header('cache-control', 'no-cache').send(body);
 }
 
+// the API host is a real entry point (people click it) — when the web build
+// is not in this image, serve a small honest card instead of a 404
+const FALLBACK = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jatin API</title>
+<style>
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0B0E1A;color:#E8EAF2;font:16px/1.5 system-ui,sans-serif}
+main{max-width:520px;padding:40px;text-align:center}
+h1{font-size:28px;margin:0 0 8px;letter-spacing:.04em}
+p{color:#9aa1b5;margin:12px 0}
+code{background:#151a2c;padding:2px 8px;border-radius:6px;font-size:14px;color:#cdd3e4}
+</style></head>
+<body><main>
+<h1>Jatin API</h1>
+<p>The full site lives at its own address; this host runs the API.</p>
+<p><code>/health</code> — status &middot; <code>/api/flow/chat/completions</code> — OpenAI-compatible gateway</p>
+</main></body></html>`;
+
 export async function staticRoutes(app: FastifyInstance) {
-  app.get('/', (req, reply) => sendFile(reply, 'index.html'));
+  app.get('/', (req, reply) => {
+    if (!existsSync(WEB + 'index.html')) {
+      reply.header('content-type', 'text/html; charset=utf-8').header('cache-control', 'no-cache').send(FALLBACK);
+      return;
+    }
+    sendFile(reply, 'index.html');
+  });
   app.get('/index.html', (req, reply) => sendFile(reply, 'index.html'));
   app.get('/login.html', (req, reply) => sendFile(reply, 'login.html'));
   app.get('/dashboard', (req, reply) => sendFile(reply, 'dashboard.html'));

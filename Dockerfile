@@ -24,6 +24,9 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/apps/api ./apps/api
+# the web build ships too: hitting the API host at / serves the real site
+# (Netlify is the primary host; this is the fallback that keeps the link live)
+COPY --from=build /app/apps/web ./apps/web
 EXPOSE 8080
 # Migrations run at every instance start — idempotent, and a loud failure
 # if the database is unreachable. Never a silent schema drift.

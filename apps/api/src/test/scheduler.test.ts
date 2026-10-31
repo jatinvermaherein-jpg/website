@@ -120,8 +120,10 @@ test('Phase 3: soonest-reset-first — the small window is spent before the big 
     payload: { model: 'groq/any', messages: [{ role: 'user', content: 'hi' }], stream: false },
   });
   assert.equal(res.statusCode, 429);
-  assert.match(res.json().error, /quota limit/);
-  assert.match(res.json().error, /rpm limit reached/);
+  // the customer-facing 429 is opaque (no provider names); operators get the
+  // detailed wall. The retry hint is the contract for both.
+  assert.match(res.json().error, /usage limit reached|quota limit/);
+  assert.ok(!res.body.includes('openrouter'));
   assert.ok(Number(res.json().retry_after_s) >= 1);
 
   // the dashboard numbers: measured headroom, zero on A's minute window

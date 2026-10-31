@@ -34,6 +34,28 @@ const limitSchema = z.object({
   reservePct: z.number().int().min(0).max(50).default(5),
 });
 
+// Self-protecting defaults — the operator adds a key and does NOT type its
+// limits; the API applies them per category. Anything passed explicitly in
+// the request overrides the matching default.
+const DEFAULT_KEY_LIMITS: Record<'text' | 'search' | 'image', { kind: (typeof LIMIT_KINDS)[number]; limit: number }[]> = {
+  text: [
+    { kind: 'rpm', limit: 60 },
+    { kind: 'tpm', limit: 500_000 },
+    { kind: 'rpd', limit: 20_000 },
+    { kind: 'monthly_tokens', limit: 200_000_000 },
+    { kind: 'monthly_cost_cents', limit: 10_000 },
+  ],
+  search: [
+    { kind: 'rpm', limit: 30 },
+    { kind: 'rpd', limit: 5_000 },
+    { kind: 'monthly_cost_cents', limit: 2_000 },
+  ],
+  image: [
+    { kind: 'rpm', limit: 30 },
+    { kind: 'rpd', limit: 2_000 },
+  ],
+};
+
 const addKeySchema = z
   .object({
     provider: z.enum(PROVIDERS),
@@ -95,7 +117,7 @@ export async function accountRoutes(app: FastifyInstance) {
     const user = await requireUser(req, reply);
     if (!user) return;
     const parsed = addKeySchema.safeParse(req.body);
-    if (!parsed.success) return reply.code(422).send({ error: parsed.error.issues[0]?.message ?? 'invalid key' });
+    if (!parsed.success) return reply.code(422).send({ error: 'invalid key' });
     const membership = await orgOf(user.id);
     if (!membership) return reply.code(404).send({ error: 'no org' });
     const { provider, label, secret, projectId, limits } = parsed.data;
@@ -115,6 +137,19 @@ export async function accountRoutes(app: FastifyInstance) {
         update: { limit: l.limit, reservePct: l.reservePct },
         create: { credentialId: cred.id, kind: l.kind, limit: l.limit, reservePct: l.reservePct },
       });
+    }
+    // auto-apply the per-category defaults when the operator typed NONE —
+    // typed limits are exact (no mixing), so the pool always knows its
+    // numbers either way
+    if (!limits.length) {
+      const category = PROVIDER_CATEGORY[provider as Provider] ?? 'text';
+      for (const d of DEFAULT_KEY_LIMITS[category]) {
+        await prisma.keyLimit.upsert({
+          where: { credentialId_kind: { credentialId: cred.id, kind: d.kind } },
+          update: { limit: d.limit, reservePct: 5 },
+          create: { credentialId: cred.id, kind: d.kind, limit: d.limit, reservePct: 5 },
+        });
+      }
     }
     return reply.code(201).send({ id: cred.id, provider, label, keyMask, projectId: projectId ?? null });
   });
@@ -159,7 +194,7 @@ export async function accountRoutes(app: FastifyInstance) {
   });
   const aliasSchema = z.object({
     alias: z.string().regex(/^[a-z0-9][a-z0-9_-]{2,31}$/),
-    targets: z.array(aliasTargetSchema).min(1).max(4),
+    targets: z.array(aliasTargetSchema).min(1).max(5),
   });
 
   app.post('/aliases', async (req, reply) => {
@@ -168,7 +203,7 @@ export async function accountRoutes(app: FastifyInstance) {
     const membership = await orgOf(user.id);
     if (!membership) return reply.code(404).send({ error: 'no org' });
     const parsed = aliasSchema.safeParse(req.body ?? {});
-    if (!parsed.success) return reply.code(422).send({ error: parsed.error.issues[0]?.message ?? 'invalid alias' });
+    if (!parsed.success) return reply.code(422).send({ error: 'invalid alias' });
     const { alias, targets } = parsed.data;
 
     // replace-on-write: the alias's previous targets go away atomically-ish
@@ -216,7 +251,26 @@ export async function accountRoutes(app: FastifyInstance) {
       if (!grouped.has(a.alias)) grouped.set(a.alias, { alias: a.alias, targets: [] });
       grouped.get(a.alias)!.targets.push({ priority: a.priority, provider: m.provider, providerModelId: m.providerModelId });
     }
-    return { aliases: [...grouped.values()] };
+    const values = [...grouped.values()];
+    // opacity: a customer sees the model NAMES they may call — never the
+    // provider or model id behind them. Exception: a BYO account (the org
+    // holds its own provider keys) may see the targets IT assigned.
+    if (!user.isOperator) {
+      const hasOwnKeys = (await prisma.providerCredential.count({ where: { orgId: membership.orgId } })) > 0;
+      if (!hasOwnKeys) return { aliases: values.map((v) => ({ alias: v.alias })) };
+    }
+    return { aliases: values };
+  });
+
+  // the account's own limit windows — what the operator set, and how much
+  // has been used in each window right now (the member's "your limits")
+  app.get('/limits', async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    const membership = await orgOf(user.id);
+    if (!membership) return reply.code(404).send({ error: 'no org' });
+    const { orgWindows } = await import('../lib/quota.js');
+    return { orgWindows: await orgWindows(prisma, membership.orgId) };
   });
 
   app.patch('/keys/:id/limits', async (req, reply) => {

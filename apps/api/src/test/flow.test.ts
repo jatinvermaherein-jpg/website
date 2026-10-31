@@ -80,15 +80,18 @@ test('Phase 1: flow passthrough — stream, real usage, no key = honest refusal'
   const login = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { username, password: 'password123' } });
   const token: string = login.json().token;
 
-  // no key yet → the gateway says so plainly (degradation is never silent)
+  // no key on this account yet → a direct provider/model reference is
+  // refused without naming our stack (alias-only world); the refusal never
+  // leaks a provider name
   res = await app.inject({
     method: 'POST',
     url: '/api/flow/chat/completions',
     headers: { authorization: `Bearer ${token}` },
     payload: { model: 'groq/any-model', messages: [{ role: 'user', content: 'hi' }], stream: true },
   });
-  assert.equal(res.statusCode, 409);
-  assert.match(res.json().error, /no active groq key/);
+  assert.equal(res.statusCode, 400);
+  assert.match(res.json().error, /unknown model/);
+  assert.ok(!res.body.includes('openrouter'));
 
   // add the key, then stream
   res = await app.inject({

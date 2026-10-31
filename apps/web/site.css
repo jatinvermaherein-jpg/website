@@ -602,3 +602,44 @@ a { color: inherit; text-decoration: none; transition: color 160ms ease; }
   .key-row:hover, .desk-row:hover, .run-row:hover, .req-row:hover { transform: none; }
   .btn:active { transform: none; }
 }
+
+/* operator desk — account book, limit editors, model assignments */
+.user-row {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+  border-radius: 12px;
+}
+.limits-edit,
+.models-edit {
+  margin-top: 10px;
+  padding: 14px;
+  background: color-mix(in srgb, var(--ink) 35%, transparent);
+  border-radius: 10px;
+}
+.limits-edit .row2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.limits-edit label,
+.models-edit label { display: block; margin: 8px 0; font-size: 12.5px; color: #9aa1b5; }
+.limits-edit input,
+.models-edit input,
+.models-edit select {
+  width: 100%;
+  margin-top: 4px;
+}
+.alias-edit { margin: 8px 0; }
+.hint .err { color: #E08A7A; }
+.hint .ok { color: var(--jt-gold); }
+/* per-model limit matrix + model workbench */
+.scope-row { margin: 10px 0; padding-top: 8px; border-top: 1px solid color-mix(in srgb, #fff 8%, transparent); }
+.scope-name {
+  display: inline-block;
+  font-family: var(--jt-mono);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--jt-gold);
+  margin-bottom: 6px;
+}
+.workbench { margin-top: 12px; padding: 12px; background: color-mix(in srgb, var(--ink) 55%, transparent); border-radius: 10px; }
+.rungs { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.rungs .badge button { margin-left: 6px; padding: 0 5px; font-size: 11px; }

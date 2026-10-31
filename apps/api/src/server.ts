@@ -14,10 +14,23 @@ async function ensureOperator(): Promise<void> {
   }
   const existing = await prisma.user.findUnique({ where: { username: u } });
   if (!existing) {
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: { username: u, passHash: await hashPassword(pw), status: 'active', isOperator: true },
     });
-    console.log(`[jatin] bootstrapped operator account from env: ${u}`);
+    // Mirror the registration flow (auth.ts): the operator immediately owns
+    // their own org, so the dashboard works from first sign-in.
+    const org = await prisma.org.create({ data: { name: u } });
+    await prisma.membership.create({ data: { userId: user.id, orgId: org.id, role: 'owner' } });
+    console.log(`[jatin] bootstrapped operator account from env: ${u} (org ${org.id}, owner)`);
+    return;
+  }
+  // Self-heal: an operator bootstrapped before org provisioning (or any
+  // account without a membership) gets its org on boot — idempotent.
+  const hasOrg = await prisma.membership.findFirst({ where: { userId: existing.id } });
+  if (!hasOrg) {
+    const org = await prisma.org.create({ data: { name: u } });
+    await prisma.membership.create({ data: { userId: existing.id, orgId: org.id, role: 'owner' } });
+    console.log(`[jatin] provisioned missing org for operator ${u} (org ${org.id}, owner)`);
   }
 }
 

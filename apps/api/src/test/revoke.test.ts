@@ -91,18 +91,27 @@ test('Phase 5: revoke a key — locked out, archived, trail intact', async (t) =
   assert.equal(res.statusCode, 200);
   assert.equal(res.json().status, 'revoked');
 
-  // locked out — with the plain reason, and the key archived (still there)
+  // locked out — the revoked key never serves again. Depending on shared
+  // capacity the request is refused outright or served by another live key,
+  // but NEVER by the revoked one.
   res = await chat();
-  assert.equal(res.statusCode, 409);
-  assert.match(res.json().error, /no active groq key/);
+  if (res.statusCode === 200) {
+    const served = await prisma.request.findFirst({ where: { orgId: org.orgId }, orderBy: { createdAt: 'desc' } });
+    assert.notEqual(served!.credentialId, keyId, 'the revoked key must not serve');
+  } else {
+    assert.ok([409, 503].includes(res.statusCode), `expected a refusal, got ${res.statusCode}`);
+    assert.ok(!res.body.includes('openrouter'), 'the refusal must not name our providers');
+  }
   const row = await prisma.providerCredential.findUniqueOrThrow({ where: { id: keyId } });
   assert.equal(row.status, 'revoked');
   assert.ok(row.secretStored.length > 0, 'the archived row keeps its (encrypted) record');
 
   // the earlier request still reads back, crediting the revoked key
+  // (find the row by its own credential — a later shared-pool row may exist)
   res = await app.inject({ method: 'GET', url: '/api/flow/usage', headers: { authorization: `Bearer ${token}` } });
   const usage = res.json();
-  assert.equal(usage.requests[0].credential.id, keyId);
-  assert.equal(usage.requests[0].credential.status, 'revoked');
-  assert.equal(usage.requests[0].tokensIn, 4);
+  const own = (usage.requests || []).find((r: { credential?: { id: string } }) => r.credential?.id === keyId);
+  assert.ok(own, 'the original request still reads back');
+  assert.equal(own.credential!.status, 'revoked');
+  assert.equal(own.tokensIn, 4);
 });

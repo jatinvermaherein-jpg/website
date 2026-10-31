@@ -50,6 +50,25 @@ model Org {
   projects           Project[]
   apiKeys            ApiKey[]
   providerCreds      ProviderCredential[]
+  orgLimits          OrgLimit[]
+}
+
+// Operator-set, per-ACCOUNT usage limits. Every gateway key issued from the
+// account pools into these windows — the account is the billing unit.
+// kind: rpm | tpm | rpd | monthly_tokens | monthly_cost_cents |
+//       monthly_images | monthly_searches
+model OrgLimit {
+  id        String @id @default(cuid())
+  orgId     String
+  org       Org    @relation(fields: [orgId], references: [id])
+  // null = the whole account (all models). Otherwise the model NAME the
+  // customer calls (an alias, or the service names 'search' / 'image') —
+  // the operator's limit applies per model, pooled per account.
+  model     String?
+  kind      String
+  limit     Float? // null = unset / unlimited
+  reservePct Int   @default(5)
+  @@unique([orgId, model, kind])
 }
 
 model Membership {
@@ -165,6 +184,7 @@ model Request {
   credentialId   String?
   credential     ProviderCredential? @relation(fields: [credentialId], references: [id])
   source         String    @default("flow") // flow | project | external
+  category       String    @default("text") // text | image | search
   modelRequested String
   modelServed    String
   degraded       Boolean   @default(false)
