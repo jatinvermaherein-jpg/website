@@ -8,5 +8,3 @@ apps/api/data.json
 workspace/antherbrackets/
 runs/
 
-# build-time copy of the compiled API (created by the Netlify build)
-netlify/functions/_appdist/

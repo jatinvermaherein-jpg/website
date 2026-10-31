@@ -17,6 +17,30 @@ import { prisma } from './lib/prisma.js';
 export async function buildApp() {
   const app = Fastify({ logger: false });
 
+  // CORS for exactly one foreign origin: the deployed site (WEB_ORIGIN),
+  // for when the dashboard talks to the API directly (same-origin through
+  // a proxy needs none of this; direct calls do). No Origin header —
+  // tests, curl, other origins — gets no CORS headers at all.
+  const webOrigin = process.env.WEB_ORIGIN;
+  app.addHook('onRequest', async (req, reply) => {
+    if (req.method === 'OPTIONS' && webOrigin && req.headers.origin === webOrigin) {
+      reply
+        .header('access-control-allow-methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
+        .header('access-control-allow-headers', 'content-type,authorization')
+        .header('access-control-max-age', '86400')
+        .code(204)
+        .send();
+    }
+  });
+  app.addHook('onSend', async (req, reply) => {
+    // the header is needed on error responses too (the browser may only
+    // read the error body because of it) — and it only ever matches the
+    // one origin we trust, so it is inert everywhere else.
+    if (webOrigin && req.headers.origin === webOrigin) {
+      reply.header('access-control-allow-origin', req.headers.origin).header('vary', 'origin');
+    }
+  });
+
   // The dashboard always sends `content-type: application/json`, and some of
   // its actions (revoke, kill) send NO body. Fastify's default JSON parser
   // hard-fails those with FST_ERR_CTP_EMPTY_JSON_BODY before the route
