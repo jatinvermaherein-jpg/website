@@ -55,7 +55,7 @@ Auth (O3): `POST /api/auth/register` creates a **pending** account; the operator
    - `ADMIN_USERNAME` / `ADMIN_PASSWORD` — your operator login (bootstrapped at boot)
    - `WEB_ORIGIN` — your Netlify site URL (enables CORS for direct dashboard→API calls)
    Deploy — leave `JATIN_RUNTIME` **unset** so crews are live.
-3. **Netlify** → import this repo (no build command — `apps/web` is the publish dir) → replace `RENDER_API_HOST` in [netlify.toml](netlify.toml) with your `onrender.com` URL → deploy. The `/api/*` proxy keeps the dashboard same-origin (direct calls work too — CORS for `WEB_ORIGIN` is built in).
+3. **Netlify** → the site is already git-connected to this repo (auto-deploys on push) → the `/api/*` proxy in [netlify.toml](netlify.toml) points at `https://jatin-api.onrender.com` — **name your Render service exactly `jatin-api`** (if the name is taken, pick `jatin-api-<x>` and update the toml URL). The proxy keeps the dashboard same-origin (direct calls work too — CORS for `WEB_ORIGIN` is built in).
 4. Open the site, sign in, add a provider key, start a crew — the whole system, live, at $0.
 
 **CI** (`.github/workflows/ci.yml`) runs on every push to `master`: typecheck · 14 tests against a live seeded Postgres (fresh DB, `migrate deploy` + seed) · **grants gate** (append-only law verified against the live schema, all 32 models classified) · **migrations against a fresh database not named `jatin`** (the Railway trap) · **tree scan** (no caches/binaries/secrets in source, no literal masks in workflow YAML, build context excludes `workspace/` and `.env`).

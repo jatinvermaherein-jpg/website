@@ -6,15 +6,16 @@
 # (no CORS needed, SSE passes through as a plain stream). Direct calls
 # also work — the API answers CORS for WEB_ORIGIN (the site's URL).
 #
-# ONE manual step: after your first API deploy, replace RENDER_API_HOST
-# below with your https://<name>.onrender.com URL and redeploy.
+# ONE-time note: the API service on Render is named `jatin-api`, so the
+# proxy target below is final. (If the name was taken and you had to use
+# another, update the URL here and push again.)
 
 [build]
   publish = "apps/web"
 
 [[redirects]]
   from = "/api/*"
-  to = "https://RENDER_API_HOST/api/:splat"
+  to = "https://jatin-api.onrender.com/api/:splat"
   status = 200
 
 [[headers]]
