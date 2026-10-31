@@ -10,7 +10,8 @@ import { ORG_LIMIT_KINDS } from '../lib/quota.js';
 import { poolMatrix, scopeProviders, poolCapacity, grantedElsewhere, usage30d, fractionForUsage, reconcileLimit } from '../lib/poolcap.js';
 import { providerCatalog, refreshStalePoolCatalogs, refreshCatalogForCredential, catalogStatusForTargets } from '../lib/catalog.js';
 import { operatorOrgId } from './flow.js';
-import { TEXT_PROVIDERS as ALL_TEXT_PROVIDERS, SEARCH_PROVIDERS, IMAGE_PROVIDERS } from '../lib/upstream.js';
+import { TEXT_PROVIDERS as ALL_TEXT_PROVIDERS, SEARCH_PROVIDERS, IMAGE_PROVIDERS, upstreamBase } from '../lib/upstream.js';
+import { decryptSecret } from '../lib/vault.js';
 
 const limitSchema = z.object({
   // null / omitted = the whole account; otherwise the model name the
@@ -269,16 +270,72 @@ export async function adminRoutes(app: FastifyInstance) {
     const opOrg = (await operatorOrgId()) ?? '';
     const creds = await prisma.providerCredential.findMany({
       where: { orgId: opOrg, status: 'active' },
-      select: { id: true, provider: true, secretStored: true },
+      select: { id: true, provider: true, label: true, secretStored: true },
     });
     const results = [];
     for (const c of creds) {
       const models = await refreshCatalogForCredential(prisma, c);
-      results.push({ provider: c.provider, models: models.length, ok: models.length > 0 });
+      results.push({ id: c.id, provider: c.provider, label: c.label, models: models.length, ok: models.length > 0 });
     }
     // anything left stale after the pass (failing providers)
     const left = await refreshStalePoolCatalogs(prisma, [opOrg]).catch(() => 0);
     return { refreshed: results, morePending: left };
+  });
+
+  // One-shot health check for a single pool key: one upstream /models call,
+  // the provider's raw verdict. The operator's "Test" button; the catalog
+  // tick keeps its own pace and is untouched.
+  app.post('/keys/:id/test', async (req, reply) => {
+    const op = await requireOperator(req, reply);
+    if (!op) return;
+    const opOrg = (await operatorOrgId()) ?? '';
+    const { id } = req.params as { id: string };
+    const cred = await prisma.providerCredential.findFirst({
+      where: { id, orgId: opOrg, status: { in: ['active', 'cooldown'] } },
+    });
+    if (!cred) return reply.code(404).send({ error: 'credential not found' });
+    if (!ALL_TEXT_PROVIDERS.includes(cred.provider as (typeof ALL_TEXT_PROVIDERS)[number])) {
+      return reply.code(400).send({ error: 'this provider has no catalog to test' });
+    }
+    const base = upstreamBase(cred.provider);
+    if (!base) return reply.code(400).send({ error: 'no upstream for this provider' });
+    let secret: string;
+    try {
+      secret = decryptSecret(cred.secretStored, {
+        prisma,
+        actor: op.id,
+        action: 'credential.test',
+        target: cred.id,
+      });
+    } catch {
+      return reply.code(500).send({ error: 'secret unreadable' });
+    }
+    try {
+      const res = await fetch(`${base}/models`, {
+        headers: { authorization: `Bearer ${secret}` },
+        signal: AbortSignal.timeout(20_000),
+      });
+      const text = await res.text().catch(() => '');
+      if (res.ok) {
+        let count = 0;
+        try {
+          const j = JSON.parse(text) as { data?: { id?: string }[]; models?: { id?: string }[] };
+          count = (j.data ?? j.models ?? []).length;
+        } catch { /* non-JSON 200 — still a live key */ }
+        return { provider: cred.provider, label: cred.label, status: res.status, ok: true, models: count, error: null };
+      }
+      let message = text.slice(0, 200);
+      try {
+        const j = JSON.parse(text) as { error?: { message?: string }; message?: string };
+        message = j.error?.message ?? j.message ?? message;
+      } catch { /* keep raw body */ }
+      return { provider: cred.provider, label: cred.label, status: res.status, ok: false, models: 0, error: String(message).slice(0, 300) };
+    } catch (err) {
+      return {
+        provider: cred.provider, label: cred.label, status: null, ok: false, models: 0,
+        error: `network/timeout: ${String((err as Error)?.message ?? err).slice(0, 200)}`,
+      };
+    }
   });
 
   app.put('/users/:id/aliases', async (req, reply) => {
