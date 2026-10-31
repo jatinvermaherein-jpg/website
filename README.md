@@ -62,6 +62,20 @@ Auth (O3): `POST /api/auth/register` creates a **pending** account; the operator
 
 *Verified, on the record (2026-10-30):* **green** at `cd529cd2` (first green run — all jobs, step-level) · **red** at `26d55cda` (one broken assertion — the gate failed as it must) · **green** at `5139a8d4` (restored). A gate that has gone both green and red is a gate that discriminates.
 
+## The resale layer (Phase 5 / 5b)
+
+The operator resells capacity. A customer account gets **one** gateway key that spans three faces — text, web search, and image — and every request from every key of the account pools into **one set of per-model limits** the operator sets.
+
+- **One key, three faces.** `POST /api/flow/chat/completions` (text), `POST /api/flow/search`, and `POST /api/flow/image` all take the same `jkn_…` key. Usage is one ledger; the limits are one face.
+- **The customer picks the model by name.** The customer never sees a provider or a raw `provider/model-id`. They see the **real model name** the operator assigned (e.g. `gemini-2.5-flash`) plus the `search` and `image` faces. Behind each name is a ladder of up to **5 provider rungs** the gateway walks when one is exhausted.
+- **Per-model limits.** `OrgLimit` carries a nullable `model` (NULL = the whole account, otherwise the model name). The operator's numbers are applied **per model**, so the pooled capacity for a model must cover the account's use of that model.
+- **The pool is reconciled, not guessed.** A per-model grant can never exceed the pool's real capacity for that model. If it would, it is clamped to a fraction of the pool (80% of capacity for a fresh/light account, tapering to 30% as the account's 30-day usage grows) and never above the headroom left after the other accounts' grants. The cap is reported back on save and the editor shows the pool + headroom next to each input.
+- **Daily model catalogs.** Providers ship and retire models daily. The gateway fetches each pool key's `/models` **at most once every 20 h** (hourly tick, lazily on traffic, or an operator "check now") and records the sightings. The customer's model list shows a **verified** badge (confirmed in the upstream within 24 h); the workbench shows a green/grey dot per rung and flags a model that vanished from a catalog.
+- **The operator never types key limits.** Adding a provider key auto-applies self-protecting defaults per category (text / search / image), listed on the key.
+- **Opacity, everywhere.** Search and image responses, 429/502/503 errors, and the customer's usage series name only the model the customer called — never the provider behind it.
+
+**Keep-alive** (`.github/workflows/keepalive.yml`): the free Render instance sleeps after ~15 min idle. A GitHub Actions schedule (public repo = free) pings `/health` every 10 minutes so the API stays warm around the clock and a caller never eats a cold start. Disabling it only costs the first request a ~20–45 s wake.
+
 ## Layout
 
 ```
