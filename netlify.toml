@@ -1,53 +1,19 @@
-# Jatin — FULL-STACK deploy: the site AND the API, on Netlify.
+# Jatin — the WEBSITE on Netlify (free tier, no card). The API runs on
+# Render (see README → "Deploy — the free stack").
 #
-#   apps/web            → static site (landing, login, dashboard)
-#   /api/*              → netlify/functions/_api (catch-all bridging the
-#                         pre-built Fastify app — one function, all routes,
-#                         SSE streams intact)
+# The dashboard talks to /api/* same-origin; Netlify proxies it
+# SERVER-SIDE to the API, so the browser never leaves the site's origin
+# (no CORS, no cookie worries, SSE passes through as a plain stream).
 #
-# Migrations: Netlify has no prestart hook, so `prisma migrate deploy` runs
-# in the BUILD (official CLI, idempotent). If the DB is unreachable the
-# build fails loudly — a loud failure, never a silent schema drift.
-# Provision the database BEFORE the first deploy.
-#
-# Netlify env vars (site settings):
-#   DATABASE_URL         owner role (Netlify DB / any Postgres) — runs _migrate
-#   APP_DATABASE_URL     restricted role jatin_app (the API hot path)
-#   MASTER_KEY           openssl rand -base64 32
-#   JWT_SECRET           openssl rand -hex 32
-#   ADMIN_USERNAME       your operator login
-#   ADMIN_PASSWORD       (openssl rand -hex 12)
-#   WEB_ORIGIN           https://<your-site>.netlify.app
-#   JATIN_RUNTIME=serverless   (gates the two process-spawning routes: 501)
-#
-# Before the first deploy, in the Postgres SQL console:
-#   CREATE ROLE jatin_app LOGIN PASSWORD '<openssl rand -hex 24>';
-# (0002 then adds all grants; it deliberately does NOT set a password.)
-#
-# What runs on Netlify, honestly:
-#   ✓ auth · account keys · gateway keys · flow (SSE) · usage · stream ·
-#     bench · portfolio · verdicts (attested)
-#   ✗ crew runner + falsification RUN — they spawn processes, which a
-#     serverless function cannot do; they answer 501 with the reason.
-#     A persistent host (railway.json) runs the full set.
-#   ~ single-invocation ceiling: 10s on the free plan, 26s on paid —
-#     fast models fine; slow reasoning models can hit the wall.
+# ONE manual step: after your first API deploy, replace RENDER_API_HOST
+# below with your https://<name>.onrender.com URL and redeploy.
 
 [build]
-  command = """
-npm ci && npx prisma generate && npm run build \
-&& npx prisma migrate deploy --schema prisma/schema.prisma \
-&& mkdir -p netlify/functions/_appdist \
-&& cp -r apps/api/dist/. netlify/functions/_appdist/ \
-&& echo '{"type":"module"}' > netlify/functions/_appdist/package.json
-"""
   publish = "apps/web"
-  functions = "netlify/functions"
 
-# the whole API, one function
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/_api"
+  to = "https://RENDER_API_HOST/api/:splat"
   status = 200
 
 [[headers]]
