@@ -11,6 +11,8 @@ COPY . .
 RUN npx prisma generate && npm run build
 
 FROM node:20-slim
+# Prisma's query engine needs libssl, which node:20-slim does not ship.
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production PORT=8080
 WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
