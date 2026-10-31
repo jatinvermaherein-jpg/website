@@ -23,9 +23,9 @@ const APPEND_ONLY = [
 // someone grants them up AND classifies them here.
 const MUTABLE = [
   'ApiKey', 'Artifact', 'BenchManifest', 'Cursor', 'KeyLimit', 'Membership',
-  'Model', 'ModelAlias', 'Org', 'Project', 'ProjectEnv', 'ProjectModelRoute',
-  'ProviderCredential', 'QuotaWindow', 'Request', 'Seat', 'SeatKey', 'SeatProject',
-  'Session', 'Task', 'UsageRollup', 'User', 'Verification', 'Waiver',
+  'Model', 'ModelAlias', 'ModelSighting', 'Org', 'OrgLimit', 'Project', 'ProjectEnv',
+  'ProjectModelRoute', 'ProviderCredential', 'QuotaWindow', 'Request', 'Seat',
+  'SeatKey', 'SeatProject', 'Session', 'Task', 'UsageRollup', 'User', 'Verification', 'Waiver',
 ];
 
 const models = new Set(
