@@ -3,6 +3,11 @@
 # Multi-stage: dev deps and build tooling never ship in the runtime image.
 
 FROM node:20-slim AS build
+# openssl must be present at GENERATE time too — Prisma picks the query
+# engine (debian-openssl-3.0.x vs 1.1.x) based on what it detects here, and
+# the runtime stage has openssl 3.x. Mismatched stages = "could not locate
+# the Query Engine" on every query.
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
