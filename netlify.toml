@@ -1,19 +1,58 @@
-# Jatin — the WEBSITE on Netlify (free tier, no card). The API runs on
-# Render (see README → "Deploy — the free stack").
+# Jatin — FULL-STACK deploy: the site AND the API, on Netlify.
 #
-# The dashboard talks to /api/* same-origin; Netlify proxies it
-# SERVER-SIDE to the API, so the browser never leaves the site's origin
-# (no CORS, no cookie worries, SSE passes through as a plain stream).
+#   apps/web            → static site (landing, login, dashboard)
+#   /api/*              → netlify/functions/_api (catch-all bridging the
+#                         pre-built Fastify app — one function, all routes,
+#                         SSE streams intact)
 #
-# ONE manual step: after your first API deploy, replace RENDER_API_HOST
-# below with your https://<name>.onrender.com URL and redeploy.
+# Migrations: Netlify has no prestart hook, so `prisma migrate deploy` runs
+# in the BUILD (official CLI, idempotent). If the DB is unreachable the
+# build fails loudly — a loud failure, never a silent schema drift.
+# Provision the database BEFORE the first deploy.
+#
+# Netlify env vars (site settings):
+#   DATABASE_URL         Supabase DIRECT connection URI (Settings → Database →
+#                        Direct connection → URI, Session mode) — runs migrations
+#   APP_DATABASE_URL     same direct URI (least-privilege jatin_app role later)
+#   MASTER_KEY           openssl rand -base64 32
+#   JWT_SECRET           openssl rand -hex 32
+#   ADMIN_USERNAME       your operator login
+#   ADMIN_PASSWORD       (openssl rand -hex 12)
+#   WEB_ORIGIN           https://<your-site>.netlify.app
+#   JATIN_RUNTIME=serverless   (gates the two process-spawning routes: 501)
+#
+# Supabase specifics:
+#   • 0002 creates role jatin_app itself (Supabase's owner can do this from
+#     a connection string). If it can't on your project, create the role in
+#     the SQL editor first — 0002 then only adds the grants.
+#   • Free Supabase projects PAUSE after 7 idle days. If a deploy fails on
+#     "migrate deploy", resume the project in the dashboard and redeploy.
+#
+# What runs on Netlify, honestly:
+#   ✓ auth · account keys · gateway keys · flow (SSE) · usage · stream ·
+#     bench · portfolio · verdicts (attested)
+#   ✗ crew runner + falsification RUN — they spawn processes, which a
+#     serverless function cannot do; they answer 501 with the reason.
+#     The Dockerfile at the repo root is the path to the full set on any
+#     persistent host (env JATIN_RUNTIME unset).
+#   ~ single-invocation ceiling: 10s on the free plan, 26s on paid —
+#     fast models fine; slow reasoning models can hit the wall.
 
 [build]
+  command = """
+npm ci && npx prisma generate && npm run build \
+&& npx prisma migrate deploy --schema prisma/schema.prisma \
+&& mkdir -p netlify/functions/_appdist \
+&& cp -r apps/api/dist/. netlify/functions/_appdist/ \
+&& echo '{"type":"module"}' > netlify/functions/_appdist/package.json
+"""
   publish = "apps/web"
+  functions = "netlify/functions"
 
+# the whole API, one function
 [[redirects]]
   from = "/api/*"
-  to = "https://RENDER_API_HOST/api/:splat"
+  to = "/.netlify/functions/_api"
   status = 200
 
 [[headers]]
