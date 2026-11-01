@@ -84,6 +84,10 @@ try {
         stdio: 'ignore',
         env: {
           ...process.env,
+          // the project's own environment, decrypted by the API at spawn
+          // time — this is what gives an agent the same access the
+          // operator has. It arrives in a 0600 file, never argv.
+          ...(spec.env || {}),
           JATIN_API_BASE: apiBase,
           JATIN_PROJECT: spec.slug,
           JATIN_RUN: runId,

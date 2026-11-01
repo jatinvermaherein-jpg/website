@@ -271,6 +271,7 @@ model Project {
   handovers            Handover[]
   waivers              Waiver[]
   breaches             Breach[]
+  docs                 ProjectDoc[]
 }
 
 // The law book — versioned, append-only, injected into every seat's session.
@@ -370,6 +371,8 @@ model BenchManifest {
 
 model Task {
   id             String   @id @default(cuid())
+  // the crew run this task is — a real column, not a JSON path
+  runId          String?  @unique
   projectId      String
   project        Project  @relation(fields: [projectId], references: [id])
   title          String
@@ -387,6 +390,28 @@ model Task {
 
 // Append-only transition log. Current state = latest entry per rowId.
 // Counts are derived, never typed (law 2.1). No UPDATE/DELETE grant.
+// Versioned documents per project: rules, specs, attachments, references.
+// APPEND-ONLY — a new version supersedes, nothing is overwritten or deleted.
+// A seat reads the index on its brief and pulls only what it needs.
+model ProjectDoc {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id])
+  slug        String // stable key: "rules", "spec", "design-notes"
+  kind        String    @default("doc") // rules | doc | attachment | reference
+  title       String
+  version     Int
+  body        String // text/markdown; binary rides as base64 with its mime
+  mime        String    @default("text/markdown")
+  bytes       Int
+  contentHash String // sha256 of body — an agent can verify what it received
+  actor       String
+  ts          DateTime  @default(now())
+  archivedAt  DateTime?
+  @@unique([projectId, slug, version])
+  @@index([projectId, kind])
+}
+
 model LedgerRow {
   id          String   @id @default(cuid())
   projectId   String

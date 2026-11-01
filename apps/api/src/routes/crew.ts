@@ -19,6 +19,7 @@ import { dirname, join, resolve } from 'node:path';
 import { prisma } from '../lib/prisma.js';
 import { requireUser } from '../lib/auth.js';
 import { SEAT_SESSION_PREFIX, seatSha256 } from '../lib/seatauth.js';
+import { decryptSecret } from '../lib/vault.js';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
 const RUNS_DIR = process.env.JATIN_RUNS_DIR || join(REPO_ROOT, 'runs');
@@ -26,6 +27,15 @@ const SUPERVISOR = join(REPO_ROOT, 'scripts', 'crew-supervisor.mjs');
 const KILL_GRACE_MS = 5500;
 
 const killTimers = new Map<string, NodeJS.Timeout>();
+
+// D5 — find a run's task by its indexed column. Rows written before
+// migration 0009 carry the id only inside artifactRefs, so fall back to the
+// old JSON path once rather than losing an in-flight run.
+async function taskByRun(runId: string) {
+  const byColumn = await prisma.task.findUnique({ where: { runId } });
+  if (byColumn) return byColumn;
+  return prisma.task.findFirst({ where: { artifactRefs: { path: ['$taskId'], equals: runId } } });
+}
 
 function stateOf(runId: string): Record<string, unknown> | null {
   const f = join(RUNS_DIR, runId, 'state.json');
@@ -90,7 +100,7 @@ async function appendTaskEvent(projectId: string, body: Record<string, unknown>)
 // stream event. (The stream is append-only; a transition is recorded once.)
 async function recordState(runId: string, status: 'killed' | 'done') {
   const outDir = join(RUNS_DIR, runId);
-  const task = await prisma.task.findFirst({ where: { artifactRefs: { path: ['$taskId'], equals: runId } } });
+  const task = await taskByRun(runId);
   if (!task) return;
 
   const cas = await prisma.task.updateMany({
@@ -217,15 +227,37 @@ export async function crewRoutes(app: FastifyInstance) {
     const allSeats = [...seatSpecs.map((x) => x.name), ...externalSeats];
     if (roleList.length === 0 && allSeats.length === 0) return reply.code(422).send({ error: 'assign at least one worker or seat' });
 
-    const task = await prisma.task.create({
-      data: { projectId: project.id, title, status: 'in_progress' },
-    });
     const runId = randomUUID().replace(/-/g, '').slice(0, 12);
+    const task = await prisma.task.create({
+      data: { projectId: project.id, title, status: 'in_progress', runId },
+    });
     const outDir = join(RUNS_DIR, runId);
     mkdirSync(outDir, { recursive: true });
     if (seatSpecs.length) {
+      // project env: every spawned seat gets the project's environment, so
+      // an agent has the same access the operator does. Decrypted once, at
+      // spawn time, audited per value. The file is 0600 and holds secrets —
+      // same contract as the run tokens: never argv, never stdout.
+      const envRows = await prisma.projectEnv.findMany({ where: { projectId: project.id } });
+      const projectEnv: Record<string, string> = {};
+      for (const row of envRows) {
+        try {
+          projectEnv[row.name] = decryptSecret(row.valueStored, {
+            prisma,
+            actor: 'crew-runner',
+            action: 'env.inject',
+            target: `${project.slug}/${row.name}`,
+          });
+        } catch (e) {
+          console.error(`[crew] env ${row.name} could not be decrypted — run continues without it`, e);
+        }
+      }
       // the spec is a file, not argv — the tokens must not show in the process list
-      writeFileSync(join(outDir, 'seats.json'), JSON.stringify({ slug: project.slug, seats: seatSpecs }, null, 2), { mode: 0o600 });
+      writeFileSync(
+        join(outDir, 'seats.json'),
+        JSON.stringify({ slug: project.slug, seats: seatSpecs, env: projectEnv }, null, 2),
+        { mode: 0o600 },
+      );
     }
 
     const child = spawn(process.execPath, [SUPERVISOR, runId, outDir, String(roleList.length), title, String(durationSec * 1000), roleList.join(',')], {
@@ -322,7 +354,7 @@ export async function crewRoutes(app: FastifyInstance) {
     if (!state) return reply.code(404).send({ error: 'no such run' });
 
     const outDir = join(RUNS_DIR, runId);
-    const task = await prisma.task.findFirst({ where: { artifactRefs: { path: ['$taskId'], equals: runId } } });
+    const task = await taskByRun(runId);
     if (!task) return reply.code(404).send({ error: 'no such run' });
 
     // lazy sync: the supervisor wrote the final state; reflect it once

@@ -13,6 +13,16 @@
 //                                       `corrupt: true`; the stream never
 //                                       blocks. Cursor = last-seen seq per
 //                                       seat (the authenticated user).
+//
+// Hardening 2026-11-01:
+//   D1  a seat CANNOT speak as another name. `actor` is forced to the seat's
+//       own name and an attempt to set anything else is refused (422). The
+//       protocol doc always claimed this; the code now enforces it.
+//   D3  ADMISSION is enforced. A seat that has not admitted itself may read,
+//       ask questions, and declare — it may NOT file verdicts, tasks or
+//       ledger rows. Joining grants attention, not authority.
+//   D4  cursor ids are namespaced (`seat:<id>` / `user:<id>`) so the two id
+//       spaces can never collide.
 import type { FastifyInstance } from 'fastify';
 import { Prisma } from '@prisma/client';
 import type { InputJsonValue } from '@prisma/client/runtime/library';
@@ -22,6 +32,33 @@ import { seatFromBearer, touchSeat } from '../lib/seatauth.js';
 import { validateEvent, coerceVerdict, ENV_RANK, type EventType } from '../lib/envelope.js';
 
 const MAX_TAKE = 200;
+
+// D3 — what a seat may post BEFORE it has admitted itself. Everything else
+// is authority, and authority is earned by declaring yourself first.
+const PRE_ADMISSION_TYPES = new Set<string>(['admission', 'message', 'answer', 'correction', 'presence', 'system']);
+
+export type Admission = { takes: string; stale: string; doesNotUnderstand: string };
+
+// A declaration is only an admission if it actually declares something:
+// what it is taking, what it believes is stale, and what it does not
+// understand. "ok" is not an admission, it is a greeting.
+export function validateAdmission(body: unknown): string[] {
+  const errs: string[] = [];
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) return ['admission body must be an object'];
+  const b = body as Record<string, unknown>;
+  const need = (k: string, min = 3) => {
+    const v = b[k];
+    if (typeof v !== 'string' || v.trim().length < min) errs.push(`${k} must be a string of at least ${min} characters`);
+  };
+  need('takes');
+  need('stale');
+  need('doesNotUnderstand');
+  return errs;
+}
+
+// D4 — one cursor column, two id spaces. Namespace them.
+const seatCursorId = (seatId: string) => `seat:${seatId}`;
+const userCursorId = (userId: string) => `user:${userId}`;
 
 async function projectOf(orgId: string, slug: string) {
   return prisma.project.findFirst({ where: { slug, orgId } });
@@ -119,7 +156,7 @@ export async function streamRoutes(app: FastifyInstance) {
       const joined = p && (await prisma.seatProject.findUnique({ where: { seatId_projectId: { seatId: seat.id, projectId: p.id } } }));
       if (!p || !joined) return reply.code(404).send({ error: 'no such project for this seat' });
       project = p;
-      cursorId = seat.id;
+      cursorId = seatCursorId(seat.id); // D4
       touchSeat(seat.id); // read = heartbeat
     } else {
       const user = await requireUser(req, reply);
@@ -129,7 +166,7 @@ export async function streamRoutes(app: FastifyInstance) {
       const p = await projectOf(membership.orgId, slug);
       if (!p) return reply.code(404).send({ error: 'no such project' });
       project = p;
-      cursorId = user.id;
+      cursorId = userCursorId(user.id); // D4
     }
 
     const q = req.query as { afterSeq?: string; limit?: string };
@@ -163,6 +200,9 @@ export async function streamRoutes(app: FastifyInstance) {
       events: events.map(eventView),
       cursor: cursor.toString(),
       nextCursor: nextCursor.toString(),
+      // a seat that has never admitted itself is told so on every read,
+      // because the next thing it tries to do is probably a write.
+      ...(seat ? { seat: { name: seat.name, role: seat.role, admitted: seat.admittedAt !== null } } : {}),
     };
   });
 
@@ -191,10 +231,36 @@ export async function streamRoutes(app: FastifyInstance) {
 
     const b = (req.body ?? {}) as { type?: string; actor?: string; body?: unknown; refs?: Record<string, unknown> };
     const type = b.type as EventType;
-    // a seat posts under its own name — impersonation via b.actor is only
-    // allowed for humans (they post on their own behalf, seats don't)
-    const actor =
-      typeof b.actor === 'string' && b.actor.trim() ? b.actor : seat ? seat.name : humanActor!;
+    const claimedActor = typeof b.actor === 'string' && b.actor.trim() ? b.actor.trim() : null;
+
+    // D1 — a seat speaks only as itself. No exceptions, no override.
+    if (seat) {
+      if (claimedActor && claimedActor !== seat.name) {
+        return reply.code(422).send({
+          error: `a seat cannot speak as another name — this credential is "${seat.name}", not "${claimedActor}"`,
+          rule: 'D1: actor is the credential, never a field',
+        });
+      }
+    }
+    const actor = seat ? seat.name : claimedActor ?? humanActor!;
+
+    // D3 — admission before authority.
+    if (seat && type !== 'admission' && !seat.admittedAt && !PRE_ADMISSION_TYPES.has(String(type))) {
+      return reply.code(409).send({
+        error: `seat "${seat.name}" has not admitted itself — a "${type}" line is authority, and admission comes first`,
+        how: 'POST {"type":"admission","body":{"takes":"<what you are taking>","stale":"<what you believe is stale>","doesNotUnderstand":"<what you do not understand>"}}',
+        allowedBeforeAdmission: [...PRE_ADMISSION_TYPES],
+        rule: 'D3: joining grants attention, not authority',
+      });
+    }
+
+    if (type === 'admission') {
+      const admissionErrs = validateAdmission(b.body);
+      if (admissionErrs.length) {
+        return reply.code(422).send({ error: 'an admission must actually declare something', violations: admissionErrs });
+      }
+    }
+
     const violations = validateEvent(String(type), actor, b.body);
 
     // Phase 10 — the fidelity ladder: verdicts only run UP. A row that
@@ -233,12 +299,23 @@ export async function streamRoutes(app: FastifyInstance) {
     }
 
     const ev = await appendEvent(project.id, type, actor, b.body, b.refs);
+
+    // D3 — the admission becomes durable only after the line is written.
+    if (seat && type === 'admission' && !seat.admittedAt) {
+      await prisma.seat
+        .update({ where: { id: seat.id }, data: { admittedAt: new Date(), status: 'online' } })
+        .catch(() => {});
+    }
+
     const { verdict, coerced } = type === 'verdict' ? coerceVerdict(b.body as Record<string, unknown>) : { verdict: null, coerced: [] };
 
     return reply.code(201).send({
       project: project.slug,
       seq: ev.seq.toString(),
       type: ev.type,
+      // always echo the actor that was actually written — for a seat this is
+      // the credential's own name, and being told so is the point.
+      actor,
       ...(type === 'verdict' ? { verdict, coerced } : {}),
     });
   });

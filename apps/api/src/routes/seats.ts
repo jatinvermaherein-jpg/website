@@ -6,7 +6,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { randomBytes } from 'node:crypto';
 import { prisma } from '../lib/prisma.js';
-import { requireUser } from '../lib/auth.js';
+import { requireUser, requireOperator } from '../lib/auth.js';
 import { SEAT_KEY_PREFIX, seatSha256, SEAT_ONLINE_MS } from '../lib/seatauth.js';
 
 const ROLES = ['lead', 'builder', 'auditor', 'scribe', 'scout'] as const;
@@ -42,9 +42,12 @@ export async function seatRoutes(app: FastifyInstance) {
     return { project: ctx.project.slug, seats: seats.map(seatView) };
   });
 
-  // open a seat — the agent's identity + credential, key shown exactly once
+  // open a seat — the agent's identity + credential, key shown exactly once.
+  // D2: issuing a credential is an operator act. Any member could previously
+  // mint an `auditor` seat, list every seat, or revoke one — the dashboard
+  // hid the panel, the API did not care. Authorisation belongs in the API.
   app.post('/:slug/seats', async (req, reply) => {
-    const user = await requireUser(req, reply);
+    const user = await requireOperator(req, reply);
     if (!user) return;
     const ctx = await orgProject((req.params as { slug: string }).slug, user.id);
     if (!ctx) return reply.code(404).send({ error: 'no such project' });
@@ -66,9 +69,10 @@ export async function seatRoutes(app: FastifyInstance) {
     return reply.code(201).send({ seat: seatView(seat), key: plaintext, keyMask: plaintext.slice(0, 10) + '…' });
   });
 
-  // revoke — the credential dies, the seat goes vacant, the trail stays
+  // revoke — the credential dies, the seat goes vacant, the trail stays.
+  // D2: revoking a credential is an operator act.
   app.post('/:slug/seats/:seatId/revoke', async (req, reply) => {
-    const user = await requireUser(req, reply);
+    const user = await requireOperator(req, reply);
     if (!user) return;
     const { slug, seatId } = req.params as { slug: string; seatId: string };
     const ctx = await orgProject(slug, user.id);
