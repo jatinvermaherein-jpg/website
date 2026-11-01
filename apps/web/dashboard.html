@@ -269,6 +269,10 @@
   function chip(t, c, up) { return '<span class="chip ' + (c || '') + (up ? ' upper' : '') + '">' + esc(t) + '</span>'; }
   function okLine(t) { return '<span class="ok-line">✓ ' + esc(t) + '</span>'; }
   function errLine(t) { return '<span class="err-line" style="display:inline">✗ ' + esc(t) + '</span>'; }
+  var KIND_LABEL = { rpm: 'req/min', tpm: 'tok/min', rpd: 'req/day', monthly_tokens: 'tokens/mo', monthly_cost_cents: 'cost/mo', monthly_images: 'img/mo', monthly_searches: 'search/mo' };
+  function kindLabel(k) { return KIND_LABEL[k] || k; }
+  function moneyKind(k) { return k === 'monthly_cost_cents'; }
+  function amtS(k, v) { return v == null ? '∞' : (moneyKind(k) ? fUsd(v) : fN(v)); }
   function skel() { return '<div class="tbl-wrap"><div class="skel-block"><i class="skel"></i><i class="skel"></i><i class="skel"></i></div></div>'; }
   function empty(t, s) { return '<div class="tbl-wrap"><div class="empty"><b>' + esc(t) + '</b>' + esc(s || '') + '</div></div>'; }
   function tbl(head, rows) {
@@ -351,8 +355,8 @@
       $('windows-sub').textContent = 'What this account may use, and when it renews. Set by the operator.';
       var rows = (d.orgWindows || []).map(function (w) {
         var tight = w.headroom <= 0;
-        return '<tr><td class="name">' + (w.model && w.model !== 'all' ? esc(w.model) : 'all models') + '</td><td class="m">' + esc(w.kind) + '</td>' +
-          '<td class="r">' + chip(fN(w.used) + ' / ' + (w.effectiveLimit == null ? '∞' : fN(w.effectiveLimit)), tight ? 'red' : '', false) + '</td>' +
+        return '<tr><td class="name">' + (w.model && w.model !== 'all' ? '<span class="mono">' + esc(w.model) + '</span>' : 'everything <span class="m">(all models)</span>') + '</td><td class="m">' + kindLabel(w.kind) + '</td>' +
+          '<td class="r">' + chip(amtS(w.kind, w.used) + ' / ' + amtS(w.kind, w.effectiveLimit), tight ? 'red' : '', false) + '</td>' +
           '<td class="m">reset ' + esc(resetWhen(w)) + '</td></tr>';
       });
       $('windows').innerHTML = (d.orgWindows || []).length
@@ -363,7 +367,7 @@
       $('windows-sub').textContent = 'The shared capacity every customer pools into.';
       var prow = (d.keys || []).map(function (k) {
         var chips2 = (k.windows || []).map(function (w) {
-          return '<span class="pool-chip' + (w.headroom <= 0 ? ' over' : '') + '">' + (w.model && w.model !== 'all' ? esc(w.model) + ' · ' : '') + w.kind + ' ' + fN(w.used) + '/' + (w.effectiveLimit == null ? '∞' : fK(w.effectiveLimit)) + ' · reset ' + esc(resetWhen(w)) + '</span>';
+          return '<span class="pool-chip' + (w.headroom <= 0 ? ' over' : '') + '">' + (w.model && w.model !== 'all' ? esc(w.model) + ' · ' : '') + kindLabel(w.kind) + ' ' + amtS(w.kind, w.used) + '/' + amtS(w.kind, w.effectiveLimit) + ' · reset ' + esc(resetWhen(w)) + '</span>';
         }).join('') || '<span class="pool-chip">no limits</span>';
         return '<tr><td class="name">' + esc(k.provider) + ' · ' + esc(k.label) + ' <span class="m">' + esc(k.keyMask) + '</span></td>' +
           '<td class="r" colspan="3"><div class="chips">' + chips2 + '</div></td></tr>';
@@ -383,7 +387,7 @@
   function limitChips(limits) {
     if (!limits || !limits.length) return '<span class="m">—</span>';
     return '<div class="chips">' + limits.map(function (l) {
-      return '<span class="pool-chip">' + esc(l.kind) + ' ' + (l.limit == null ? '∞' : fK(l.limit)) + (l.reservePct ? ' · keep ' + l.reservePct + '%' : '') + '</span>';
+      return '<span class="pool-chip">' + kindLabel(l.kind) + ' ' + amtS(l.kind, l.limit) + (l.reservePct ? ' · keep ' + l.reservePct + '%' : '') + '</span>';
     }).join('') + '</div>';
   }
   async function loadKeys() {
@@ -541,11 +545,17 @@
 
   /* ================= limits editor (full view) ================= */
   var LIMIT_FIELDS = [
-    ['rpm', 'rpm'], ['tpm', 'tpm'], ['rpd', 'rpd'],
-    ['monthly_tokens', 'tok/mo'], ['monthly_cost_cents', 'cost ¢/mo'],
+    ['rpm', 'req/min'], ['tpm', 'tok/min'], ['rpd', 'req/day'],
+    ['monthly_tokens', 'tokens/mo'], ['monthly_cost_cents', 'cost/mo'],
     ['monthly_images', 'img/mo'], ['monthly_searches', 'search/mo']
   ];
   var limAccount = null;
+  function scopeLabel(key) {
+    if (key === 'all') return 'everything <span class="m">(all models)</span>';
+    if (key === 'search') return 'search calls';
+    if (key === 'image') return 'image calls';
+    return 'model <span class="mono">' + esc(key) + '</span>';
+  }
   async function openLimits(uid) {
     limAccount = uid;
     var u = deskUsers.find(function (x) { return x.id === uid; });
@@ -560,35 +570,39 @@
       var key = s === null ? 'all' : s;
       var inputs = LIMIT_FIELDS.map(function (f) {
         var l = byKey[key + '|' + f[0]];
-        return '<td class="r"><input class="cell-in" data-kind="' + f[0] + '" data-scope="' + key + '" type="number" min="1" step="any" placeholder="∞" value="' + (l && l.limit != null ? l.limit : '') + '"/></td>';
+        var isMoney = moneyKind(f[0]);
+        var val = l && l.limit != null ? (isMoney ? (l.limit / 100).toFixed(2) : l.limit) : '';
+        return '<td class="r"><input class="cell-in" data-kind="' + f[0] + '" data-scope="' + key + '"' + (isMoney ? ' data-money="1" min="0" ' : ' min="1" ') + 'step="any" placeholder="∞" value="' + val + '" title="' + (isMoney ? 'max cost this month, in dollars' : f[1] + ' — blank = unlimited') + '"/></td>';
       }).join('');
       var chips2 = (s !== null && d.pool && d.pool[s]) ? LIMIT_FIELDS.map(function (f) {
         var p = d.pool[s][f[0]]; if (!p) return '';
-        return '<span class="pool-chip" data-pool="' + key + '|' + f[0] + '" data-cap="' + (p.cap == null ? '' : p.cap) + '">' + f[0] + ' pool ' + (p.cap == null ? '∞' : fK(p.cap)) + (p.elsewhere ? ' · ' + fN(p.elsewhere) + ' elsewhere' : '') + '</span>';
+        var capS = p.cap == null ? '∞' : (moneyKind(f[0]) ? fUsd(p.cap) : fK(p.cap));
+        return '<span class="pool-chip" data-pool="' + key + '|' + f[0] + '" data-cap="' + (p.cap == null ? '' : p.cap) + '" title="the pool’s real capacity for ' + f[1] + '">' + kindLabel(f[0]) + ' pool ' + capS + (p.elsewhere ? ' · ' + (moneyKind(f[0]) ? fUsd(p.elsewhere) : fN(p.elsewhere)) + ' committed to others' : '') + '</span>';
       }).join('') : '';
-      return '<tr class="' + (s ? 'group' : '') + '"><td class="name">' + (s === null ? 'all models' : esc(s)) + '</td>' + inputs + '</tr>' +
+      return '<tr class="' + (s ? 'group' : '') + '"><td class="name">' + scopeLabel(key) + '</td>' + inputs + '</tr>' +
         (chips2 ? '<tr class="sub"><td colspan="' + (LIMIT_FIELDS.length + 1) + '"><div class="chips">' + chips2 + '</div></td></tr>' : '');
     }).join('');
     $('org-limits').innerHTML =
       '<div class="panel desk-mock">' +
-      '<div class="bar"><div><p class="eyebrow gold">Account · ' + esc(u ? u.username : uid) + '</p><p class="small" style="margin-top:4px">Limits matrix — per model, pooled. Blank = unlimited.</p></div>' +
+      '<div class="bar"><div><p class="eyebrow gold">Account · ' + esc(u ? u.username : uid) + '</p><p class="small" style="margin-top:4px">Blank = unlimited. Every grant is clamped to the pool’s real capacity — an over-grant shrinks to fit, it can never over-sell.</p></div>' +
       '<div class="clamp-note" title="grants are clamped to the pool’s real capacity"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 7v3M8 12v.01"/></svg>grant can never exceed the pool</div></div>' +
       '<div class="scroll-x"><table class="tbl"><thead><tr><th>Scope</th>' +
-      LIMIT_FIELDS.map(function (f) { return '<th class="r">' + f[1] + '</th>'; }).join('') +
+      LIMIT_FIELDS.map(function (f) { return '<th class="r" title="blank = unlimited">' + f[1] + (moneyKind(f[0]) ? ' ($)' : '') + '</th>'; }).join('') +
       '</tr></thead><tbody>' + body + '</tbody></table></div></div>';
-    $('lim-usage').textContent = 'rung ' + Math.round((d.fraction == null ? 0.8 : d.fraction) * 100) + '% · 30-day usage ' +
+    $('lim-usage').textContent = 'uses ' + Math.round((d.fraction == null ? 0.8 : d.fraction) * 100) + '% of the pool · 30-day: ' +
       (d.usage30d ? fN(d.usage30d.requests) + ' req · ' + fUsd(d.usage30d.costCents) : 'n/a');
     $('lim-clamps').textContent = '';
     $('lim-bar').hidden = false;
-    // over-pool flagging
+    // live over-pool flagging
     document.querySelectorAll('#org-limits .cell-in').forEach(function (i) {
       i.addEventListener('input', function () {
         var v = i.value ? Number(i.value) : null;
+        var vCmp = i.dataset.money === '1' && v != null ? v * 100 : v;
         document.querySelectorAll('#org-limits .pool-chip[data-pool]').forEach(function (c) {
           var parts = c.dataset.pool.split('|');
           var isMine = i.dataset.scope === parts[0] && i.dataset.kind === parts[1];
           var cap = c.dataset.cap === '' ? null : Number(c.dataset.cap);
-          var over = !!(isMine && v != null && cap != null && v > cap);
+          var over = !!(isMine && vCmp != null && cap != null && vCmp > cap);
           c.classList.toggle('over', over);
           if (isMine) i.classList.toggle('over', over);
         });
@@ -597,18 +611,26 @@
     $('lim-save').onclick = async function () {
       var btn = $('lim-save'); btn.disabled = true;
       var limits = Array.prototype.map.call(document.querySelectorAll('#org-limits .cell-in'), function (i) {
-        return { model: i.dataset.scope === 'all' ? null : i.dataset.scope, kind: i.dataset.kind, limit: i.value ? Number(i.value) : null, reservePct: 5 };
+        var v = i.value ? Number(i.value) : null;
+        return { model: i.dataset.scope === 'all' ? null : i.dataset.scope, kind: i.dataset.kind, limit: i.dataset.money === '1' ? (v == null ? null : Math.round(v * 100)) : v, reservePct: 5 };
       });
       var r2 = await api('/api/admin/users/' + uid + '/limits', { method: 'PUT', body: JSON.stringify({ limits: limits }) });
       btn.disabled = false;
       if (!r2.ok) { $('lim-clamps').innerHTML = errLine(r2.data.error || 'could not save'); return; }
       var caps = r2.data.caps || [];
       $('lim-clamps').innerHTML = caps.length
-        ? caps.map(function (c) { return '<span class="clamp">' + esc(c.model) + ' ' + esc(c.kind) + ': ' + esc(c.requested) + ' → ' + esc(c.effective) + (c.note ? ' — ' + esc(c.note) : '') + '</span>'; }).join(' · ')
+        ? caps.map(function (c) {
+            var body = c.kind === 'monthly_cost_cents'
+              ? '$' + (Number(c.requested) / 100).toFixed(2) + ' → $' + (Number(c.effective) / 100).toFixed(2)
+              : esc(c.requested) + ' → ' + esc(c.effective);
+            return '<span class="clamp">' + esc(c.model || 'all') + ' ' + kindLabel(c.kind) + ': ' + body + ' (pool)</span>';
+          }).join(' · ')
         : okLine('saved — ' + (r2.data.limits || []).length + ' active limit(s), applied per model');
       (r2.data.limits || []).forEach(function (l) {
         var input = document.querySelector('#org-limits .cell-in[data-scope="' + (l.model || 'all') + '"][data-kind="' + l.kind + '"]');
-        if (input) input.value = l.limit == null ? '' : l.limit;
+        if (!input) return;
+        if (input.dataset.money === '1') input.value = l.limit == null ? '' : (l.limit / 100).toFixed(2);
+        else input.value = l.limit == null ? '' : l.limit;
       });
     };
   }
@@ -649,48 +671,71 @@
     // editor
     var checked = Object.keys(cat || {}).filter(function (p) { return cat[p] && cat[p].checkedAt; })
       .map(function (p) { return p + ' · ' + fDT(cat[p].checkedAt).split(' · ')[0]; }).join(' · ') || 'not checked yet';
+    var provOptions = (cat ? Object.keys(cat) : []).concat(['google', 'groq', 'openrouter', 'mistral'])
+      .filter(function (p, i, arr) { return arr.indexOf(p) === i; }).sort();
     $('wb-editor').innerHTML =
       '<h3 style="font-size:18px">Assign / replace a ladder</h3>' +
-      '<div class="field"><label for="wb-name">Model name (what the customer calls)</label><input class="input mono" id="wb-name" maxlength="32" placeholder="the real model name — e.g. gemini-2.5-flash" /></div>' +
-      '<div class="field"><label for="wb-prov">Rung provider (hidden from the customer)</label>' +
-      '<select class="input" id="wb-prov"><option>google</option><option>groq</option><option>openrouter</option><option>mistral</option></select></div>' +
-      '<div class="field"><label for="wb-model">Rung model id — pick from the catalog</label>' +
-      '<input class="input mono" id="wb-model" list="cat-dl" placeholder="gemini-2.5-flash · llama-3.3-70b-versatile" /><datalist id="cat-dl"></datalist></div>' +
+      '<p class="note" style="margin-top:6px">Give a model a name the customer calls, then put 1–5 real models behind it. The gateway walks the list in order — when one is exhausted, the next takes over.</p>' +
+      '<div class="field"><label for="wb-name">Model name — what the customer calls</label>' +
+      '<input class="input mono" id="wb-name" maxlength="32" placeholder="gemini-2.5-flash" />' +
+      '<div id="wb-namehint" class="m" style="margin-top:6px;font-size:12px;line-height:1.7"></div></div>' +
+      '<div class="field"><label for="wb-prov">Real provider — hidden from the customer</label>' +
+      '<select class="input" id="wb-prov">' + provOptions.map(function (p) { return '<option>' + esc(p) + '</option>'; }).join('') + '</select></div>' +
+      '<div class="field"><label for="wb-model">Real model — picked from the catalog</label>' +
+      '<select class="input mono" id="wb-model"></select>' +
+      '<input class="input mono" id="wb-model-custom" maxlength="64" placeholder="type the model id — custom" hidden style="margin-top:8px" /></div>' +
       '<div class="ladder" id="wb-ladder"></div>' +
-      '<div class="form-row"><button type="button" class="btn btn-ghost btn-sm" id="wb-use">use model name</button>' +
-      '<button type="button" class="btn btn-ghost btn-sm" id="wb-add">+ add rung</button></div>' +
+      '<div class="form-row"><button type="button" class="btn btn-ghost btn-sm" id="wb-add">+ add rung</button>' +
+      '<span class="m" style="font-size:12px;align-self:center"><span id="wb-count">0</span> / 5 rungs</span></div>' +
       '<p class="err-line" id="wb-note" role="alert"></p>' +
       '<button type="button" class="btn btn-gold" id="wb-assign">Assign / replace ladder</button>' +
       '<div class="form-row"><button type="button" class="btn btn-ghost btn-sm" id="wb-check">check catalog now</button>' +
       '<span class="m" style="font-size:12px;align-self:center" id="wb-last">last checked: ' + esc(checked) + '</span></div>' +
-      '<p class="note">A name pools up to 5 provider rungs — the gateway walks them when one is exhausted. Re-saving a name replaces its whole ladder. Green dot: every rung is in its provider’s catalog today; gold: one is missing or the catalog is stale.</p>';
-    var provSel = $('wb-prov'), modelIn = $('wb-model'), dl = $('cat-dl');
+      '<p class="note">Re-saving a name replaces its whole ladder. Green dot: every rung is in its provider’s catalog today; gold: one is missing or the catalog is stale.</p>';
+    var provSel = $('wb-prov'), modelSel = $('wb-model'), modelCustom = $('wb-model-custom');
     function fillCat() {
       var c = (cat || {})[provSel.value];
-      dl.innerHTML = (c && c.models ? c.models : []).map(function (m) { return '<option value="' + esc(m) + '"></option>'; }).join('');
+      var opts = (c && c.models) ? c.models : [];
+      modelSel.innerHTML = '<option value="">— pick a model —</option>' +
+        opts.map(function (m) { return '<option value="' + esc(m) + '">' + esc(m) + '</option>'; }).join('') +
+        '<option value="__custom">…type it (custom id)</option>';
+      modelCustom.hidden = true;
     }
     provSel.addEventListener('change', fillCat); fillCat();
+    modelSel.addEventListener('change', function () {
+      modelCustom.hidden = modelSel.value !== '__custom';
+      if (!modelCustom.hidden) modelCustom.focus();
+    });
     function renderLadder() {
+      $('wb-count').textContent = wbRungs.length;
       $('wb-ladder').innerHTML = wbRungs.length
         ? wbRungs.map(function (t, i) { return '<span class="rung"><b>' + (i + 1) + '</b> ' + esc(t.provider) + '/' + esc(t.providerModelId) + '<button type="button" data-drop="' + i + '" aria-label="remove rung">×</button></span>'; }).join('')
-        : '<span class="note">no rungs yet — pick a provider + model id, then “+ add rung”</span>';
+        : '<span class="note">no rungs yet — pick a model above, then “+ add rung”</span>';
       document.querySelectorAll('#wb-ladder [data-drop]').forEach(function (b) {
         b.addEventListener('click', function () { wbRungs.splice(Number(b.dataset.drop), 1); renderLadder(); });
       });
     }
     renderLadder();
     $('wb-add').addEventListener('click', function () {
-      var m = modelIn.value.trim();
-      if (!m) return;
+      var m = modelSel.value === '__custom' ? modelCustom.value.trim() : modelSel.value;
+      if (!m) { $('wb-note').innerHTML = errLine('pick a real model first — or choose “type it”'); return; }
       if (wbRungs.length >= 5) { $('wb-note').innerHTML = errLine('a ladder pools at most 5 rungs'); return; }
       wbRungs.push({ provider: provSel.value, providerModelId: m, priority: wbRungs.length * 10 });
-      modelIn.value = ''; renderLadder(); $('wb-note').textContent = '';
+      modelSel.value = ''; modelCustom.value = ''; modelCustom.hidden = true;
+      renderLadder(); $('wb-note').textContent = '';
     });
-    $('wb-use').addEventListener('click', function () {
-      var raw = modelIn.value.trim();
-      if (!raw) return;
+    function nameHint() {
+      var raw = $('wb-name').value.trim();
+      var hint = $('wb-namehint');
+      if (!raw) { hint.innerHTML = ''; return; }
+      if (/^[a-z0-9][a-z0-9_-]{2,31}$/.test(raw)) { hint.innerHTML = 'customers will call <span class="mono">' + esc(raw) + '</span> — ok'; return; }
       var slug = raw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
-      if (slug.length >= 3) $('wb-name').value = slug;
+      var fix = slug.length >= 3 ? ' · <button type="button" class="btn btn-ghost btn-sm" id="wb-namefix" data-slug="' + esc(slug) + '" style="padding:2px 10px">use “' + esc(slug) + '”</button>' : '';
+      hint.innerHTML = 'Names must be lowercase a–z, 0–9, - or _ (3–32 chars).' + fix;
+    }
+    $('wb-name').addEventListener('input', nameHint);
+    $('wb-namehint').addEventListener('click', function (e) {
+      if (e.target && e.target.id === 'wb-namefix') { $('wb-name').value = e.target.dataset.slug; nameHint(); }
     });
     $('wb-check').addEventListener('click', async function () {
       var btn = $('wb-check'); btn.disabled = true; btn.textContent = 'checking…';
@@ -708,8 +753,11 @@
       b.addEventListener('click', function () {
         var al = aliases.find(function (x) { return x.alias === b.dataset.edit; });
         if (!al) return;
-        $('wb-name').value = al.alias;
+        $('wb-name').value = al.alias; nameHint();
         wbRungs = (al.targets || []).map(function (t, i) { return { provider: t.provider, providerModelId: t.providerModelId, priority: t.priority != null ? t.priority : i * 10 }; });
+        if (wbRungs.length && Array.prototype.some.call(provSel.options, function (o) { return o.value === wbRungs[0].provider; })) {
+          provSel.value = wbRungs[0].provider; fillCat();
+        }
         renderLadder();
         $('wb-note').innerHTML = okLine('editing “' + al.alias + '” — saving replaces its ladder');
       });
@@ -718,12 +766,17 @@
       var btn = $('wb-assign'), note = $('wb-note');
       var alias = $('wb-name').value.trim();
       if (!alias) { note.innerHTML = errLine('model name required'); return; }
+      if (!/^[a-z0-9][a-z0-9_-]{2,31}$/.test(alias)) { note.innerHTML = errLine('that name is not allowed — lowercase a–z, 0–9, - or _ (3–32 chars). Fix it in the hint above.'); return; }
       if (!wbRungs.length) { note.innerHTML = errLine('add at least one rung first'); return; }
       btn.disabled = true;
       var r = await api('/api/admin/users/' + uid + '/aliases', { method: 'PUT', body: JSON.stringify({ alias: alias, targets: wbRungs }) });
       btn.disabled = false;
       if (r.ok) { note.innerHTML = okLine('assigned — “' + alias + '” pools ' + (r.data.targets || wbRungs).length + ' rung(s)'); openWorkbench(uid); }
-      else note.innerHTML = errLine(r.data.error || 'could not assign');
+      else {
+        var e = r.data.error || 'could not assign';
+        if (/pattern/i.test(e)) e = 'that name is not allowed — lowercase a–z, 0–9, - or _ (3–32 chars)';
+        note.innerHTML = errLine(e);
+      }
     });
   }
 
