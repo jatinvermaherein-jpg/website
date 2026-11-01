@@ -1,133 +1,83 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>JATIN — Dashboard</title>
-<meta name="robots" content="noindex">
-<meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0B0E1A">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/preloader.css">
-<link rel="stylesheet" href="/site.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — JATIN</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#0B0E1A" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B0E1A'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23D4AF6A'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23F5F1E8' stroke-width='1.5' stroke-dasharray='28 28'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="preloader.css" />
+  <link rel="stylesheet" href="site.css" />
+  <script src="preloader.js"></script>
 </head>
-<body>
-<div class="grain" aria-hidden="true"></div>
-
-<div class="shell">
-  <!-- ══ the sidebar — the one honest place the two products coexist ══ -->
-  <aside class="side" aria-label="Navigation">
-    <a class="side-brand" href="/" aria-label="Jatin, home">
-      <svg class="jt-mark" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true" focusable="false">
-        <circle cx="16" cy="16" r="11" opacity="0.25"/>
-        <circle cx="16" cy="16" r="7" opacity="0.5"/>
-        <circle class="jt-mark-core" cx="16" cy="16" r="3.4"/>
-      </svg>
-      <span>Jatin<i></i></span>
+<body class="app">
+  <aside class="side" id="side" aria-label="Application">
+    <a class="brand" href="index.html" aria-label="JATIN — home">
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 3a13 13 0 0 1 13 13" stroke="#F5F1E8" stroke-width="1.5" stroke-linecap="round"/><path d="M16 29A13 13 0 0 1 3 16" stroke="#F5F1E8" stroke-opacity=".55" stroke-width="1.5" stroke-linecap="round"/><path d="M16 8a8 8 0 0 1 8 8" stroke="#F5F1E8" stroke-opacity=".8" stroke-width="1.5" stroke-linecap="round"/><path d="M16 24a8 8 0 0 1-8-8" stroke="#F5F1E8" stroke-opacity=".4" stroke-width="1.5" stroke-linecap="round"/><circle cx="16" cy="16" r="3" fill="#D4AF6A"/></svg>
+      JATIN
     </a>
 
-    <p class="side-cap">Instruments</p>
-    <nav class="side-prod" aria-label="Product">
-      <button class="side-entry on" type="button" data-prod="flow" id="prod-flow">
-        <span class="pe-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="16.5" cy="7.5" r="3.5"/><path d="m14 10-9 9v4h4l2-2h4v-3l2-2"/><circle cx="8" cy="18" r="1" fill="currentColor" stroke="none"/></svg></span>
-        Flow
-        <span class="pe-tag">gateway</span>
+    <div class="switch" role="group" aria-label="Instrument">
+      <button type="button" id="sw-flow" data-product="flow" aria-pressed="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="16.5" cy="7.5" r="3.5"/><path d="m14 10-9 9v4h4l2-2h4v-3l2-2"/><circle cx="8" cy="18" r="1" fill="currentColor" stroke="none"/></svg>
+        Flow <small>gateway</small>
       </button>
-      <button class="side-entry" type="button" data-prod="crew" id="prod-crew">
-        <span class="pe-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="7" cy="8" r="2.6"/><circle cx="17" cy="8" r="2.6"/><path d="M2.5 19c.9-2.7 2.6-4 4.5-4s3.6 1.3 4.5 4M12.5 19c.9-2.7 2.6-4 4.5-4s3.6 1.3 4.5 4"/></svg></span>
-        Crew
-        <span class="pe-tag">seats</span>
+      <button type="button" id="sw-crew" data-product="crew" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="8" r="2.6"/><circle cx="17" cy="8" r="2.6"/><path d="M2.5 19c.9-2.7 2.6-4 4.5-4s3.6 1.3 4.5 4M12.5 19c.9-2.7 2.6-4 4.5-4s3.6 1.3 4.5 4"/></svg>
+        Crew <small>seats</small>
       </button>
-    </nav>
+    </div>
 
-    <p class="side-cap" id="cap-flow">Flow</p>
-    <nav class="side-nav" id="nav-flow" aria-label="Flow sections">
-      <a class="side-link on" href="#flow/overview"><span class="sl-dot"></span>Overview</a>
-      <a class="side-link" href="#flow/keys"><span class="sl-dot"></span>Keys</a>
-      <a class="side-link" href="#flow/models"><span class="sl-dot"></span>Models</a>
-      <a class="side-link" href="#flow/usage"><span class="sl-dot"></span>Usage</a>
-      <a class="side-link op-only" href="#flow/desk" hidden><span class="sl-dot"></span>Desk</a>
-      <a class="side-link op-only" href="#flow/catalog" hidden><span class="sl-dot"></span>Catalog</a>
-    </nav>
+    <nav class="snav" id="snav" aria-label="Sections"></nav>
 
-    <p class="side-cap" id="cap-crew" hidden>Crew</p>
-    <nav class="side-nav" id="nav-crew" hidden aria-label="Crew sections">
-      <a class="side-link" href="#crew/board"><span class="sl-dot"></span>Board</a>
-      <a class="side-link" href="#crew/feed"><span class="sl-dot"></span>Feed</a>
-      <a class="side-link" href="#crew/portfolio"><span class="sl-dot"></span>Portfolio</a>
-    </nav>
-
-    <div class="side-foot">
-      <div class="side-acct">
-        <span class="acct-dot" id="acct-dot" aria-hidden="true"></span>
-        <span class="acct-name" id="who">&hellip;</span>
-        <span class="badge" id="rank-badge">&mdash;</span>
-      </div>
-      <button class="side-signout" type="button" id="signout">Sign out</button>
+    <div class="acct">
+      <div class="who"><span id="hello">…</span></div>
+      <div id="status-marks"></div>
+      <button type="button" class="btn btn-ghost btn-sm" id="signout">Sign out</button>
     </div>
   </aside>
+  <div class="side-scrim" id="side-scrim" aria-hidden="true"></div>
 
-  <!-- ══ the stage ══════════════════════════════════════════════════ -->
-  <div class="stage">
-    <header class="topbar">
-      <div>
-        <h1 id="view-title">Loading&hellip;</h1>
-        <p class="tb-sub" id="view-sub">&nbsp;</p>
-      </div>
-      <div class="tb-chips" id="view-chips"></div>
+  <div class="main" id="main">
+    <div class="mtop">
+      <button type="button" id="navtoggle" aria-label="Open menu" aria-controls="side"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 5h14M2 9h14M2 13h14"/></svg></button>
+      <span class="mtop-title" id="mtop-title">Flow</span>
+    </div>
+
+    <header class="vhead" id="vhead">
+      <div><h1 id="v-title">&nbsp;</h1><p id="v-sub"></p></div>
+      <div class="chips" id="v-chips"></div>
     </header>
 
-    <div class="content">
+    <!-- ===== FLOW · Overview ===== -->
+    <section class="view" data-view="flow/overview" hidden>
+      <div class="pending-box" id="pending-note" hidden><span class="dot gold" aria-hidden="true"></span>Your account is pending verification by the operator — usage unlocks once you are verified.</div>
+      <div class="grid4" id="gk-usage" aria-live="polite">
+        <div class="panel scard"><span class="label">requests · 30d</span><span class="v">—</span><span class="s">loading</span></div>
+        <div class="panel scard"><span class="label">tokens · 30d</span><span class="v">—</span><span class="s">loading</span></div>
+        <div class="panel scard"><span class="label">cost · 30d</span><span class="v">—</span><span class="s">loading</span></div>
+        <div class="panel scard"><span class="label">gateway keys</span><span class="v">—</span><span class="s">loading</span></div>
+      </div>
+      <div id="usage-chart"><div class="skel-block"><i class="skel"></i><i class="skel"></i><i class="skel"></i></div></div>
+      <div class="group"><header><h2>Recent activity</h2><p>Latest requests, newest first. The full ledger lives in Usage.</p></header>
+        <div id="reqs-recent"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i><i class="skel"></i></div></div></div></div>
+    </section>
 
-      <!-- ═ FLOW · OVERVIEW ═══════════════════════════════════════ -->
-      <section class="view on" id="v-flow-overview">
-        <p class="eyebrow">Flow &middot; overview</p>
-        <h2 class="greet" id="hello" style="font-size:clamp(24px,3.4vw,36px);font-weight:800;text-transform:uppercase;letter-spacing:-.035em;margin:0 0 4px">Loading&hellip;</h2>
-        <div class="marks" id="status-marks"></div>
-        <p class="pending-note" id="pending-note" hidden>Your account is pending verification by the operator &mdash; you can use the dashboard once it is verified.</p>
-
-        <div class="stats" id="ov-stats">
-          <div class="stat"><span class="st-num" id="ov-req">&mdash;</span><span class="st-label">requests &middot; 30d</span></div>
-          <div class="stat"><span class="st-num" id="ov-tok">&mdash;</span><span class="st-label">tokens &middot; 30d</span></div>
-          <div class="stat"><span class="st-num" id="ov-cost">&mdash;</span><span class="st-label">cost &middot; 30d</span></div>
-          <div class="stat"><span class="st-num" id="ov-keys">&mdash;</span><span class="st-label">gateway keys</span></div>
-        </div>
-
-        <div id="ov-charts"></div>
-
-        <div>
-          <p class="eyebrow">Recent activity</p>
-          <div class="tbl-wrap"><div class="tbl-scroll">
-            <table class="tbl">
-              <thead><tr><th>Time</th><th>Model</th><th class="num">Tokens</th><th class="num">Latency</th><th>Status</th><th>Via</th></tr></thead>
-              <tbody id="reqs"><tr><td colspan="6" class="empty">loading&hellip;</td></tr></tbody>
-            </table>
-          </div></div>
-        </div>
-      </section>
-
-      <!-- ═ FLOW · KEYS ═══════════════════════════════════════════ -->
-      <section class="view" id="v-flow-keys">
-        <!-- BYO provider keys — the operator's pool (members never see it) -->
-        <div id="byo-sec">
-          <p class="eyebrow">Provider keys &mdash; the pool</p>
-          <p class="fine">Keys for this account. Stored encrypted, write-only &mdash; no screen, endpoint, or log ever shows the secret again. Limits are applied automatically per provider; they are listed on each key, never typed.</p>
-          <div class="tbl-wrap"><div class="tbl-scroll">
-            <table class="tbl">
-              <thead><tr><th>Provider</th><th>Label</th><th>Mask</th><th>Auto-limits</th><th>Status</th><th></th></tr></thead>
-              <tbody id="keys"><tr><td colspan="6" class="empty">loading&hellip;</td></tr></tbody>
-            </table>
-          </div></div>
-
-          <form id="add-key" class="form-panel" autocomplete="off">
-            <h3>Add a pool key</h3>
-            <div class="row2">
-              <label class="field">Provider
-                <select name="provider" required>
-                  <optgroup label="AI &middot; text &middot; reasoning">
+    <!-- ===== FLOW · Keys ===== -->
+    <section class="view" data-view="flow/keys" hidden>
+      <div id="byo-sec">
+        <div class="group"><header><h2>Provider keys — the pool</h2><p>Stored encrypted, write-only. Limits are applied per provider and never typed.</p></header>
+          <div id="keys"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i><i class="skel"></i></div></div></div>
+          <form class="panel card form-stack" id="add-key" novalidate style="margin-top:16px">
+            <h3 style="font-size:18px">Add a pool key</h3>
+            <div class="form-row">
+              <div class="field"><label for="ak-provider">Provider</label>
+                <select class="input" id="ak-provider" name="provider">
+                  <optgroup label="AI · text · reasoning">
                     <option value="google">Google Gemini</option>
                     <option value="groq">Groq</option>
-                    <option value="openrouter">OpenRouter &middot; free models</option>
+                    <option value="openrouter">OpenRouter · free models</option>
                     <option value="mistral">Mistral</option>
                   </optgroup>
                   <optgroup label="Web search">
@@ -135,1216 +85,895 @@
                     <option value="serper">Serper.dev</option>
                   </optgroup>
                   <optgroup label="Image">
-                    <option value="pollinations">Pollinations &middot; no key needed</option>
+                    <option value="pollinations">Pollinations · no key needed</option>
                   </optgroup>
-                </select>
-              </label>
-              <label class="field">Label
-                <input name="label" placeholder="workhorse" maxlength="64" required>
-              </label>
+                </select></div>
+              <div class="field"><label for="ak-label">Label</label><input class="input" id="ak-label" name="label" maxlength="64" placeholder="workhorse" /></div>
             </div>
-            <label class="field">Secret
-              <input name="secret" type="password" placeholder="sk-…" autocomplete="off" minlength="8" required>
-            </label>
-            <p class="fine" style="margin-top:0">Limits are applied automatically per provider type (requests/min, tokens/min, per day, monthly tokens + cost) &mdash; you never type them. They are listed on the key once saved.</p>
-            <div class="form-cta">
-              <button class="btn" type="submit">Add key</button>
-              <span class="hint" id="add-note">&nbsp;</span>
-            </div>
+            <div class="field"><label for="ak-secret">Secret</label><input class="input mono" id="ak-secret" name="secret" type="password" autocomplete="off" placeholder="sk-…" /></div>
+            <p class="note">Limits are applied automatically per provider type (rpm, tpm, rpd, monthly tokens + cost) — listed on the key once saved, never typed.</p>
+            <p class="err-line" id="add-note" role="alert"></p>
+            <button class="btn btn-gold" type="submit">Add key</button>
           </form>
         </div>
-
-        <!-- gateway keys — the keys clients use -->
-        <p class="eyebrow" style="margin-top:10px">Gateway keys &mdash; what your clients call with</p>
-        <p class="fine">Keys you hand to your clients so they can call <code>POST&nbsp;/api/flow/chat/completions</code> with <code>Authorization:&nbsp;Bearer&nbsp;jkn_&hellip;</code> &mdash; the same OpenAI-shaped gateway, no browser session. The key is shown <strong>exactly once</strong>; each key&rsquo;s usage is measured in <a href="#flow/usage" style="color:var(--jt-gold)">Usage</a>.</p>
-        <div class="tbl-wrap"><div class="tbl-scroll">
-          <table class="tbl">
-            <thead><tr><th>Name</th><th>Prefix</th><th>Issued</th><th>Status</th><th></th></tr></thead>
-            <tbody id="gk-keys"><tr><td colspan="5" class="empty">loading&hellip;</td></tr></tbody>
-          </table>
-        </div></div>
-
-        <form id="add-gk" class="form-panel" autocomplete="off">
-          <h3>Issue a gateway key</h3>
-          <div class="row2">
-            <label class="field">Name
-              <input name="name" placeholder="mobile-app &middot; ci &middot; a partner" maxlength="80" required>
-            </label>
-            <label class="field">Default model for the ready-to-paste sample
-              <select id="gk-model"><option value="">(pick one&hellip;)</option></select>
-            </label>
+      </div>
+      <div class="group"><header><h2>Gateway keys — what your clients call with</h2><p><code style="font-family:var(--mono);font-size:.85em">POST /api/flow/chat/completions</code> with <code style="font-family:var(--mono);font-size:.85em">Bearer jkn_…</code>. Shown exactly once — copy at issue.</p></header>
+        <div id="gk-keys"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i><i class="skel"></i></div></div></div>
+        <form class="panel card form-stack" id="add-gk" novalidate style="margin-top:16px">
+          <h3 style="font-size:18px">Issue a gateway key</h3>
+          <div class="form-row">
+            <div class="field"><label for="gk-name">Name</label><input class="input" id="gk-name" name="name" maxlength="80" placeholder="mobile-app · ci · a partner" /></div>
+            <div class="field"><label for="gk-model">Default model for the sample</label><select class="input" id="gk-model"><option value="">(pick one…)</option></select></div>
           </div>
-          <p class="fine" style="margin-top:0">One key covers every face &mdash; text (a model name from your Models tab), <code>model:"search"</code> and <code>model:"image"</code>. The list is the real catalog, checked daily; &ldquo;verified&rdquo; means the gateway confirmed the model in its upstream today.</p>
-          <div class="form-cta">
-            <button class="btn" type="submit">Issue key</button>
-            <span class="hint" id="gk-note">&nbsp;</span>
-          </div>
+          <p class="note">One key covers every face — a model name from Models, plus <code style="font-family:var(--mono);font-size:.85em">search</code> and <code style="font-family:var(--mono);font-size:.85em">image</code>. Names are the real catalog, checked daily.</p>
+          <p class="err-line" id="gk-note" role="alert"></p>
+          <button class="btn btn-gold" type="submit">Issue key</button>
         </form>
-
-        <div class="gk-reveal" id="gk-reveal" hidden>
-          <p class="fine" style="margin:0">Your new key &mdash; <strong>copy it now</strong>. It is shown exactly once; there is no read path that returns it again.</p>
-          <div class="gk-plain">
-            <code id="gk-plain"></code>
-            <button type="button" class="btn-ghost" id="gk-copy">Copy</button>
-          </div>
-          <pre class="gk-curl" id="gk-curl">curl https://&lt;your-gateway&gt;/api/flow/chat/completions \
-  -H "Authorization: Bearer jkn_&hellip;" \
-  -H "Content-Type: application/json" \
-  -d '{"model":"gemini-2.5-flash","stream":false,"messages":[{"role":"user","content":"hi"}]}'</pre>
-        </div>
-      </section>
-
-      <!-- ═ FLOW · MODELS ═════════════════════════════════════════ -->
-      <section class="view" id="v-flow-models">
-        <p class="eyebrow">Flow &middot; models</p>
-        <div class="tbl-wrap"><div class="tbl-scroll">
-          <table class="tbl">
-            <thead><tr id="models-head"><th>Name</th><th>Status</th><th>Faces</th></tr></thead>
-            <tbody id="alias-list"><tr><td colspan="3" class="empty">loading&hellip;</td></tr></tbody>
-          </table>
-        </div></div>
-        <p class="fine" id="api-model-note">OpenAI-compatible, streaming. <code>model</code> is one of the names above, plus <code>search</code> and <code>image</code>. These are the real model names, checked daily against the catalog.</p>
-      </section>
-
-      <!-- ═ FLOW · USAGE ══════════════════════════════════════════ -->
-      <section class="view" id="v-flow-usage">
-        <p class="eyebrow">Flow &middot; usage</p>
-        <div id="usage-chart"></div>
-
-        <div>
-          <p class="eyebrow" id="windows-cap">Limit windows</p>
-          <div class="tbl-wrap"><div class="tbl-scroll">
-            <table class="tbl">
-              <thead><tr><th>Scope / key</th><th class="num">Used / limit</th><th>Resets in</th></tr></thead>
-              <tbody id="windows"><tr><td colspan="3" class="empty">loading&hellip;</td></tr></tbody>
-            </table>
-          </div></div>
-        </div>
-
-        <!-- member's own account limits, as set by the operator -->
-        <div id="org-limits-wrap" hidden>
-          <p class="eyebrow">Your limits &mdash; set by the operator</p>
-          <div class="tbl-wrap"><div class="tbl-scroll">
-            <table class="tbl">
-              <thead><tr><th>Scope</th><th>Kind</th><th class="num">Used / limit</th><th>Resets in</th></tr></thead>
-              <tbody id="org-limits"><tr><td colspan="4" class="empty">loading&hellip;</td></tr></tbody>
-            </table>
-          </div></div>
-        </div>
-
-        <div>
-          <p class="eyebrow">Per gateway key</p>
-          <div class="tbl-wrap"><div class="tbl-scroll">
-            <table class="tbl">
-              <thead><tr><th>Key</th><th class="num">Requests</th><th class="num">Tokens in&rarr;out</th><th class="num">Cost</th><th>Last used</th><th>Status</th></tr></thead>
-              <tbody id="gk-usage"><tr><td colspan="6" class="empty">loading&hellip;</td></tr></tbody>
-            </table>
-          </div></div>
-        </div>
-
-        <div>
-          <p class="eyebrow">Request ledger</p>
-          <div class="tbl-wrap"><div class="tbl-scroll">
-            <table class="tbl">
-              <thead><tr><th>Time</th><th>Model</th><th class="num">Tokens</th><th class="num">Latency</th><th>Status</th><th>Via</th></tr></thead>
-              <tbody id="ledger"><tr><td colspan="6" class="empty">loading&hellip;</td></tr></tbody>
-            </table>
-          </div></div>
-        </div>
-      </section>
-
-      <!-- ═ FLOW · DESK (operator) ════════════════════════════════ -->
-      <section class="view" id="v-flow-desk">
-        <div id="desk-sec">
-          <p class="eyebrow">Pending &mdash; accounts waiting for a decision</p>
-          <div class="tbl-wrap"><div class="tbl-scroll">
-            <table class="tbl">
-              <thead><tr><th>Account</th><th class="num">Waiting</th><th></th></tr></thead>
-              <tbody id="desk"><tr><td colspan="3" class="empty">loading&hellip;</td></tr></tbody>
-            </table>
-          </div></div>
-
-          <p class="eyebrow" style="margin-top:8px">Accounts</p>
-          <p class="fine">Every account: verify or suspend it, set the usage limits all of its keys pool into, and assign the model names it may call. Blank limit = unlimited.</p>
-          <div class="tbl-wrap"><div class="tbl-scroll">
-            <table class="tbl">
-              <thead><tr><th>Account</th><th>Status</th><th>Org</th><th class="num">Gateway keys</th><th class="num">30d usage</th><th></th></tr></thead>
-              <tbody id="desk-users"><tr><td colspan="6" class="empty">loading&hellip;</td></tr></tbody>
-            </table>
-          </div></div>
-        </div>
-      </section>
-
-      <!-- ═ FLOW · LIMITS (operator, per account — a full view) ═══ -->
-      <section class="view" id="v-flow-limits">
-        <div id="limits-sec">
-          <a href="#flow/desk" class="btn-ghost" style="margin-bottom:6px">&larr; back to desk</a>
-          <div id="limits-box"><p class="empty">pick an account from the desk</p></div>
-        </div>
-      </section>
-
-      <!-- ═ FLOW · MODEL WORKBENCH (operator, per account) ════════ -->
-      <section class="view" id="v-flow-workbench">
-        <a href="#flow/desk" class="btn-ghost" style="margin-bottom:6px">&larr; back to desk</a>
-        <div id="workbench-box"><p class="empty">pick an account from the desk</p></div>
-      </section>
-
-      <!-- ═ FLOW · CATALOG (operator) ═════════════════════════════ -->
-      <section class="view" id="v-flow-catalog">
-        <p class="eyebrow">Flow &middot; catalog</p>
-        <p class="fine">What the pool can serve, per provider. The catalog is checked daily for every pool key; a model is &ldquo;verified&rdquo; when a fresh check saw it in that provider&rsquo;s upstream.</p>
-        <div class="cat-actions">
-          <button class="btn" type="button" id="cat-refresh">Check all now</button>
-          <span class="hint" id="cat-note">&nbsp;</span>
-        </div>
-        <div class="tbl-wrap"><div class="tbl-scroll">
-          <table class="tbl">
-            <thead><tr><th>Provider</th><th>Pool key</th><th class="num">Models</th><th>Last checked</th><th>Fresh</th></tr></thead>
-            <tbody id="catalog-box"><tr><td colspan="5" class="empty">loading&hellip;</td></tr></tbody>
-          </table>
-        </div></div>
-      </section>
-
-      <!-- ═ CREW · BOARD ══════════════════════════════════════════ -->
-      <section class="view" id="v-crew-board">
-        <div class="crew-grid">
-          <div>
-            <p class="eyebrow">Crew &middot; board &mdash; <span id="board-project" class="mono-faint" style="text-transform:none">project</span></p>
-            <div class="tbl-wrap"><div class="tbl-scroll">
-              <table class="tbl">
-                <thead><tr><th>Task</th><th>Status</th><th class="num">Partials</th><th>Started</th><th></th></tr></thead>
-                <tbody id="runs"><tr><td colspan="5" class="empty">pick a project</td></tr></tbody>
-              </table>
-            </div></div>
-          </div>
-          <div class="crew-side">
-            <form id="crew-start" class="form-panel" autocomplete="off">
-              <h3>Start a crew</h3>
-              <label class="field">Project
-                <select name="project" id="crew-project" required><option value="">project&hellip;</option></select>
-              </label>
-              <label class="field">Task title
-                <input name="title" placeholder="task title" maxlength="120" style="width:100%">
-              </label>
-              <div class="row2">
-                <label class="field inline">Workers (1&ndash;8)
-                  <input name="workers" type="number" min="1" max="8" value="2" style="width:100%">
-                </label>
-                <label class="field inline">Run window (s)
-                  <input name="duration" type="number" min="1" max="600" value="30" style="width:100%">
-                </label>
-              </div>
-              <div class="form-cta">
-                <button class="btn" type="submit">Start crew</button>
-              </div>
-              <p class="hint" id="crew-note">&nbsp;</p>
-            </form>
-          </div>
-        </div>
-      </section>
-
-      <!-- ═ CREW · FEED ═══════════════════════════════════════════ -->
-      <section class="view" id="v-crew-feed">
-        <div class="crew-grid">
-          <div>
-            <p class="eyebrow">Crew &middot; feed &mdash; the live project stream</p>
-            <div class="feed-pane">
-              <div class="feed" id="feed"><p class="empty">pick a project</p></div>
-            </div>
-          </div>
-          <div class="crew-side">
-            <form id="feed-post" class="form-panel" autocomplete="off">
-              <h3>Post a line</h3>
-              <label class="field">Project
-                <select id="feed-project" required><option value="">project&hellip;</option></select>
-              </label>
-              <label class="field">Type
-                <select name="type">
-                  <option value="message">message</option>
-                  <option value="answer">answer</option>
-                  <option value="correction">correction</option>
-                  <option value="system">system</option>
-                </select>
-              </label>
-              <label class="field">Line
-                <input name="text" placeholder="say it" maxlength="500" style="width:100%">
-              </label>
-              <label class="field inline"><input type="checkbox" name="raw" style="width:auto"> raw (post the text as the body)</label>
-              <div class="form-cta">
-                <button class="btn" type="submit">Post</button>
-              </div>
-              <p class="hint" id="feed-note">&nbsp;</p>
-              <p class="fine" style="margin-top:4px">A malformed line is refused at post &mdash; the refusal appears in the stream within seconds. The stream never blocks on a bad line.</p>
-            </form>
-          </div>
-        </div>
-      </section>
-
-      <!-- ═ CREW · PORTFOLIO ══════════════════════════════════════ -->
-      <section class="view" id="v-crew-portfolio">
-        <p class="eyebrow">Crew &middot; portfolio</p>
-        <p class="fine">Every project in this account &mdash; and the next human decision each one is waiting on. Open work outranks green.</p>
-        <p id="pf-next" class="pf-next"></p>
-        <div class="tbl-wrap"><div class="tbl-scroll">
-          <table class="tbl">
-            <thead><tr><th>Project</th><th>Status</th><th>Resolved rows</th><th>Next for this account</th></tr></thead>
-            <tbody id="portfolio"><tr><td colspan="4" class="empty">loading&hellip;</td></tr></tbody>
-          </table>
-        </div></div>
-      </section>
-
-    </div>
-  </div>
-</div>
-
-<script>
-  // ── helpers ───────────────────────────────────────────────────────
-  const $ = (id) => document.getElementById(id);
-  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const fmt = (n) => Number(n || 0).toLocaleString();
-
-  async function api(url, opts) {
-    const res = await fetch(url, { headers: { "content-type": "application/json" }, ...opts });
-    const data = await res.json().catch(() => ({}));
-    return { ok: res.ok, status: res.status, data };
-  }
-
-  let IS_OP = false;
-  const loaded = {};
-
-  // ── the 30-day usage chart (inline SVG, no libs) ─────────────────
-  // data.series = { days: [{date, requests, tokens, costCents}…30],
-  //                 models: [{model, requests, tokens, costCents}…] }
-  function areaPath(vals, w, h, pad) {
-    if (!vals.length) return "";
-    const max = Math.max(1, ...vals);
-    const step = (w - pad * 2) / Math.max(1, vals.length - 1);
-    const pts = vals.map((v, i) => [pad + i * step, h - pad - (v / max) * (h - pad * 2)]);
-    const line = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
-    const area = `${line} L${pts[pts.length - 1][0].toFixed(1)},${(h - pad).toFixed(1)} L${pad},${(h - pad).toFixed(1)} Z`;
-    return { line, area, max };
-  }
-  function renderUsageChart(series, target) {
-    const el = $(target);
-    if (!el) return;
-    if (!series || !series.days?.length) { el.innerHTML = ""; return; }
-    const W = 720, H = 180, PAD = 26;
-    const reqVals = series.days.map((d) => d.requests);
-    const costVals = series.days.map((d) => d.costCents);
-    const r = areaPath(reqVals, W, H, PAD);
-    const c = areaPath(costVals, W, H, PAD);
-    const xFor = (i) => PAD + (i * (W - PAD * 2)) / Math.max(1, series.days.length - 1);
-    const xticks = series.days
-      .map((d, i) => ({ d, i }))
-      .filter((_, i) => i % 5 === 0 || i === series.days.length - 1)
-      .map(({ d, i }) => `<text x="${xFor(i).toFixed(1)}" y="${H - 8}" class="tick" text-anchor="middle">${esc(d.date.slice(5))}</text>`)
-      .join("");
-    const totalReq = reqVals.reduce((a, b) => a + b, 0);
-    const totalCost = costVals.reduce((a, b) => a + b, 0);
-    const modelBars = (series.models || [])
-      .slice(0, 6)
-      .map((m) => {
-        const maxReq = Math.max(1, ...(series.models || []).map((x) => x.requests));
-        const pct = Math.round((m.requests / maxReq) * 100);
-        return `<div class="mrow">
-          <span class="mname">${esc(m.model)}</span>
-          <span class="mbar"><span class="mfill" style="width:${pct}%"></span></span>
-          <span class="mstat">${fmt(m.requests)} req &middot; ${fmt(m.tokens)} tok &middot; ${(m.costCents / 100).toFixed(2)}&cent;</span>
-        </div>`;
-      })
-      .join("") || `<p class="empty">no traffic in the last 30 days</p>`;
-    el.innerHTML = `
-      <div class="chart-grid">
-        <div class="chart-card">
-          <p class="eyebrow">Requests &middot; last 30 days <span class="chart-total">${fmt(totalReq)} total</span></p>
-          <svg viewBox="0 0 ${W} ${H}" class="chart-svg" role="img" aria-label="daily requests">
-            <path d="${r.area}" class="area-req"/>
-            <path d="${r.line}" class="line-req"/>
-            ${xticks}
-            <text x="${PAD}" y="${PAD - 8}" class="tick tickmax">${fmt(r.max)} max/day</text>
-          </svg>
-        </div>
-        <div class="chart-card">
-          <p class="eyebrow">Cost &middot; last 30 days <span class="chart-total">${(totalCost / 100).toFixed(2)}&cent; total</span></p>
-          <svg viewBox="0 0 ${W} ${H}" class="chart-svg" role="img" aria-label="daily cost">
-            <path d="${c.area}" class="area-cost"/>
-            <path d="${c.line}" class="line-cost"/>
-            ${xticks}
-            <text x="${PAD}" y="${PAD - 8}" class="tick tickmax">${(c.max / 100).toFixed(2)}&cent; max/day</text>
-          </svg>
+        <div class="reveal" id="gk-reveal" hidden>
+          <p class="note" style="margin:0">Your new key — <b style="color:var(--ink)">copy it now</b>. It is shown exactly once; there is no read path that returns it again.</p>
+          <div class="keybox"><code id="gk-plain"></code><button type="button" class="btn btn-ghost btn-sm" id="gk-copy">Copy</button></div>
+          <div><p class="label" style="margin-bottom:8px">Ready to paste</p><pre class="curl" id="gk-curl"></pre></div>
         </div>
       </div>
-      <div class="chart-card" style="margin-top:16px">
-        <p class="eyebrow">By model &middot; 30 days</p>
-        ${modelBars}
-      </div>`;
+    </section>
+
+    <!-- ===== FLOW · Models ===== -->
+    <section class="view" data-view="flow/models" hidden>
+      <div class="group"><header><h2>Model names</h2><p>What your account may call. Checked daily against the upstream catalog.</p></header>
+        <div id="alias-list"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i><i class="skel"></i></div></div></div>
+        <p class="note" id="api-model-note" style="margin-top:12px">These are the real model names, checked daily against the catalog.</p>
+      </div>
+    </section>
+
+    <!-- ===== FLOW · Usage ===== -->
+    <section class="view" data-view="flow/usage" hidden>
+      <div id="usage-charts-full"><div class="skel-block"><i class="skel"></i><i class="skel"></i><i class="skel"></i></div></div>
+      <div class="group"><header><h2 id="windows-cap">Limit windows</h2><p id="windows-sub">What you may use, and when it renews.</p></header>
+        <div id="windows"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i><i class="skel"></i></div></div></div></div>
+      <div class="group"><header><h2>Per gateway key</h2><p>Every key your clients use, pooled and measured.</p></header>
+        <div id="gk-usage-tbl"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i></div></div></div></div>
+      <div class="group"><header><h2>Request ledger</h2><p>The latest requests, newest first.</p></header>
+        <div id="reqs"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i><i class="skel"></i></div></div></div></div>
+    </section>
+
+    <!-- ===== FLOW · Desk (operator) ===== -->
+    <section class="view" id="desk-sec" data-view="flow/desk" data-op hidden>
+      <div class="group"><header><h2>Pending accounts</h2><p>Verify to let them in. Suspend to turn them away.</p></header><div id="desk"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i></div></div></div></div>
+      <div class="group"><header><h2>Accounts</h2><p>Limits and Models open as full screens.</p></header><div id="desk-users"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i><i class="skel"></i></div></div></div></div>
+    </section>
+
+    <!-- ===== FLOW · Limits editor (operator) ===== -->
+    <section class="view" id="limits-sec" data-view="flow/limits" data-op hidden>
+      <button type="button" class="back" data-act="to-desk">← Desk</button>
+      <div id="org-limits"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i><i class="skel"></i><i class="skel"></i></div></div></div>
+      <div class="savebar" id="lim-bar" hidden>
+        <div class="msgs"><span class="clamp" id="lim-clamps"></span><span class="use" id="lim-usage"></span></div>
+        <button type="button" class="btn btn-gold" id="lim-save">Save limits</button>
+      </div>
+    </section>
+
+    <!-- ===== FLOW · Model workbench (operator) ===== -->
+    <section class="view" data-view="flow/workbench" data-op hidden>
+      <button type="button" class="back" data-act="to-desk">← Desk</button>
+      <div class="cols wb">
+        <div>
+          <p class="label" style="margin-bottom:12px;display:block">Existing names</p>
+          <div class="tbl-wrap" id="wb-list"><div class="skel-block"><i class="skel"></i><i class="skel"></i></div></div>
+        </div>
+        <div class="panel card form-stack" id="wb-editor"><div class="skel-block"><i class="skel"></i><i class="skel"></i><i class="skel"></i></div></div>
+      </div>
+    </section>
+
+    <!-- ===== FLOW · Catalog (operator) ===== -->
+    <section class="view" data-view="flow/catalog" data-op hidden>
+      <div class="group">
+        <header><h2>Upstream catalog</h2><button type="button" class="btn btn-gold btn-sm" id="cat-all">Check all now</button></header>
+        <div id="cat-list"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i><i class="skel"></i></div></div></div>
+        <p class="note" style="margin-top:12px">Checked daily for every pool key. A model is “verified” when a fresh check saw it in its provider’s upstream.</p>
+        <p class="err-line" id="cat-note" role="alert"></p>
+      </div>
+    </section>
+
+    <!-- ===== CREW · Board ===== -->
+    <section class="view" data-view="crew/board" hidden>
+      <div class="picker"><div class="field"><label for="crew-project">Project</label><select class="input" id="crew-project"><option value="">project…</option></select></div></div>
+      <div class="cols">
+        <div class="group"><header><h2>Runs</h2><p>Kill stops the run; its partials stay.</p></header><div id="runs"><div class="tbl-wrap"><div class="empty">pick a project</div></div></div></div>
+        <form class="panel card form-stack" id="crew-start" novalidate>
+          <h3>Start a crew</h3>
+          <div class="field"><label for="cs-title">Title</label><input class="input" id="cs-title" name="title" maxlength="120" placeholder="Grade the batch" /></div>
+          <div class="form-row" style="grid-template-columns:1fr 1fr">
+            <div class="field"><label for="cs-workers">Workers · 1–8</label><input class="input mono" id="cs-workers" name="workers" type="number" min="1" max="8" value="3" /></div>
+            <div class="field"><label for="cs-secs">Run seconds</label><input class="input mono" id="cs-secs" name="durationSec" type="number" min="1" max="600" value="30" /></div>
+          </div>
+          <p class="note" id="crew-note">Identical agents, five seats, one stream. SIGTERM to the group, then the grace, then SIGKILL.</p>
+          <button class="btn btn-gold" type="submit">Start crew</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===== CREW · Feed ===== -->
+    <section class="view" data-view="crew/feed" hidden>
+      <div class="picker"><div class="field"><label for="feed-project">Project</label><select class="input" id="feed-project"><option value="">project…</option></select></div></div>
+      <div class="cols feed-cols">
+        <div class="term">
+          <div class="term-bar"><i></i><i></i><i></i><span id="feed-state">pick a project</span></div>
+          <div class="term-body feed feed-pane" id="feed" aria-live="polite" aria-label="Live project stream"></div>
+        </div>
+        <form class="panel card form-stack" id="feed-post" novalidate>
+          <h3>Post to the stream</h3>
+          <div class="field"><label for="fp-type">Type</label>
+            <select class="input" id="fp-type" name="type"><option value="message">message</option><option value="answer">answer</option><option value="correction">correction</option><option value="system">system</option></select></div>
+          <div class="field"><label for="fp-text">Line</label><textarea class="input" id="fp-text" name="text" placeholder="say it" maxlength="500"></textarea></div>
+          <label class="toggle"><input type="checkbox" id="fp-raw" name="raw" /> Raw — post as written</label>
+          <p class="note" id="feed-note">A malformed line is refused at post — the refusal appears in the stream within seconds. The stream never blocks.</p>
+          <button class="btn btn-gold" type="submit">Post line</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===== CREW · Portfolio ===== -->
+    <section class="view" data-view="crew/portfolio" hidden>
+      <div class="decide" id="pf-next" role="status"><span class="eyebrow">next for this account</span><span>…</span></div>
+      <div id="portfolio" style="display:grid;gap:16px"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i><i class="skel"></i></div></div></div>
+    </section>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ================= utilities ================= */
+  var $ = function (id) { return document.getElementById(id); };
+  var IS_OP = false;
+  var USERNAME = '';
+  var nf = new Intl.NumberFormat('en-US');
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function fN(n) { return nf.format(Math.round(Number(n) || 0)); }
+  function fK(n) { n = Number(n) || 0; if (n >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B'; if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'k'; return String(Math.round(n)); }
+  function fUsd(c) { return '$' + ((Number(c) || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function fDT(v) { var d = new Date(v); return isNaN(d) ? '—' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+  function fTime(v) { var d = new Date(v); return isNaN(d) ? '—' : d.toLocaleTimeString('en-GB', { hour12: false }); }
+  function ago(v) { var s = Math.max(0, (Date.now() - new Date(v).getTime()) / 1000); if (s < 60) return 'just now'; if (s < 3600) return Math.floor(s / 60) + 'm ago'; if (s < 86400) return Math.floor(s / 3600) + 'h ago'; return Math.floor(s / 86400) + 'd ago'; }
+  function resetWhen(w) { var s = Math.max(0, Math.round((w.windowEnd - Date.now()) / 1000)); var m = Math.floor(s / 60); return s < 90 ? s + 's' : m < 90 ? m + 'm' : Math.floor(m / 60) + 'h' + (m % 60 ? (m % 60) + 'm' : ''); }
+  function chip(t, c, up) { return '<span class="chip ' + (c || '') + (up ? ' upper' : '') + '">' + esc(t) + '</span>'; }
+  function okLine(t) { return '<span class="ok-line">✓ ' + esc(t) + '</span>'; }
+  function errLine(t) { return '<span class="err-line" style="display:inline">✗ ' + esc(t) + '</span>'; }
+  function skel() { return '<div class="tbl-wrap"><div class="skel-block"><i class="skel"></i><i class="skel"></i><i class="skel"></i></div></div>'; }
+  function empty(t, s) { return '<div class="tbl-wrap"><div class="empty"><b>' + esc(t) + '</b>' + esc(s || '') + '</div></div>'; }
+  function tbl(head, rows) {
+    if (!rows.length) return empty('Nothing here yet', '');
+    return '<div class="tbl-wrap"><div class="scroll-x"><table class="tbl"><thead><tr>' +
+      head.map(function (h) { return '<th' + (h[1] ? ' class="' + h[1] + '"' : '') + '>' + h[0] + '</th>'; }).join('') +
+      '</tr></thead><tbody>' + rows.join('') + '</tbody></table></div></div>';
+  }
+  function api(url, opts) {
+    return fetch(url, Object.assign({ credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } }, opts || {}))
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, status: r.status, data: d }; }); });
+  }
+  function statusChip(s) { return s === 'active' ? chip('active', 'green', true) : s === 'pending' ? chip('pending', 'gold', true) : chip(s || 'suspended', 'red', true); }
+
+  /* ================= 30-day charts (B geometry) ================= */
+  function chartSVG(vals, color, gid, fmt) {
+    var X0 = 44, X1 = 512, Y0 = 10, Y1 = 164, n = vals.length;
+    var max = Math.max.apply(null, [1].concat(vals));
+    var pts = vals.map(function (v, i) { return [X0 + (n > 1 ? i * (X1 - X0) / (n - 1) : 0.5 * (X1 - X0)), Y1 - (v / max) * (Y1 - Y0)]; });
+    var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+    var area = line + ' L' + pts[pts.length - 1][0].toFixed(1) + ' ' + Y1 + ' L' + X0 + ' ' + Y1 + ' Z';
+    var mid = (Y0 + Y1) / 2, last = pts[pts.length - 1];
+    return '<svg class="chart" viewBox="0 0 520 190" role="img">' +
+      '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + color + '" stop-opacity=".3"/><stop offset="1" stop-color="' + color + '" stop-opacity="0"/></linearGradient></defs>' +
+      '<line class="grid" x1="' + X0 + '" x2="' + X1 + '" y1="' + Y0 + '" y2="' + Y0 + '"/><line class="grid" x1="' + X0 + '" x2="' + X1 + '" y1="' + mid + '" y2="' + mid + '"/><line class="grid" x1="' + X0 + '" x2="' + X1 + '" y1="' + Y1 + '" y2="' + Y1 + '"/>' +
+      '<text x="36" y="' + (Y0 + 4) + '" text-anchor="end">' + fmt(max) + '</text><text x="36" y="' + (mid + 4) + '" text-anchor="end">' + fmt(max / 2) + '</text><text x="36" y="' + (Y1 + 4) + '" text-anchor="end">0</text>' +
+      '<path d="' + area + '" fill="url(#' + gid + ')"/><path d="' + line + '" fill="none" stroke="' + color + '" stroke-width="1.75" stroke-linejoin="round"/>' +
+      '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="3.5" fill="' + color + '"/>' +
+      '<text x="' + X0 + '" y="184">−30d</text><text x="278" y="184" text-anchor="middle">−15d</text><text x="' + X1 + '" y="184" text-anchor="end">today</text></svg>';
+  }
+  function renderUsageChart(series, target, suf) {
+    var el = $(target); if (!el) return;
+    if (!series || !(series.days || []).length) { el.innerHTML = empty('No traffic in the last 30 days', 'the ledger is empty'); return; }
+    var req = series.days.map(function (d) { return d.requests || 0; });
+    var cost = series.days.map(function (d) { return d.costCents || 0; });
+    var totalReq = req.reduce(function (a, b) { return a + b; }, 0);
+    var totalCost = cost.reduce(function (a, b) { return a + b; }, 0);
+    var bars = (series.models || []).slice(0, 6).map(function (m) {
+      var mx = Math.max.apply(null, [1].concat((series.models || []).map(function (x) { return x.requests || 0; })));
+      return '<div class="bar-row"><span class="nm">' + esc(m.model) + '</span><span class="tr"><i style="width:' + Math.max(1, Math.round((m.requests || 0) / mx * 100)) + '%"></i></span><span class="v">' + fN(m.requests) + ' req · ' + fUsd(m.costCents) + '</span></div>';
+    }).join('') || '<p class="note">no traffic in the last 30 days</p>';
+    el.innerHTML =
+      '<div class="charts">' +
+      '<figure class="panel chart-card" style="margin:0"><header><span class="label">Requests · 30 days</span><span class="big">' + fN(totalReq) + '</span></header>' + chartSVG(req, '#D4AF6A', 'gA' + suf, fK) + '</figure>' +
+      '<figure class="panel chart-card" style="margin:0"><header><span class="label">Cost · 30 days</span><span class="big">' + fUsd(totalCost) + '</span></header>' + chartSVG(cost, '#7FB4E6', 'gB' + suf, function (v) { return '$' + (v / 100).toFixed(2).replace(/\.?0+$/, ''); }) + '</figure>' +
+      '</div>' +
+      '<div class="panel card" style="margin-top:16px"><p class="label" style="margin-bottom:18px;display:block">By model · 30 days</p><div class="bars">' + bars + '</div></div>';
   }
 
-  // ── limit-window rows (scope · kind · used/limit · resets in) ────
-  function resetWhen(w) {
-    const secs = Math.max(0, Math.round((w.windowEnd - Date.now()) / 1000));
-    const mm = Math.floor(secs / 60);
-    return secs < 90 ? `${secs}s` : mm < 90 ? `${mm}m` : `${Math.floor(mm / 60)}h${mm % 60 ? (mm % 60) + "m" : ""}`;
+  /* ================= request rows ================= */
+  function reqRow(r) {
+    var st = r.status === 'ok' ? '' : r.status === 'fallback' ? 'blue' : 'red';
+    return '<tr><td class="m">' + esc(fDT(r.createdAt)) + '</td><td class="name">' + esc(r.modelServed) + '</td>' +
+      '<td class="r">' + fN(r.tokensIn) + ' → ' + fN(r.tokensOut) + '</td><td class="r">' + fN(r.latencyMs) + ' ms</td>' +
+      '<td>' + chip(r.status, st, true) + (r.degraded ? ' ' + chip('degraded', 'gold', true) : '') + '</td>' +
+      '<td class="m">' + esc(r.credential ? r.credential.label : '—') + (r.apiKey ? ' · via ' + esc(r.apiKey.name) : '') + '</td></tr>';
   }
-  function windowRows(windows, scopeLabel) {
-    if (!windows?.length) return `<tr><td colspan="3" class="empty">no limits set</td></tr>`;
-    return windows.map((w) => {
-      const tight = w.headroom <= 0;
-      const scope = w.model && w.model !== "all" ? `${scopeLabel ? esc(w.model) + " · " : ""}${esc(w.kind)}` : esc(w.kind);
-      return `<tr>
-        <td class="name">${scope}</td>
-        <td class="num"><span class="badge ${tight ? "err" : ""}" style="margin:0">${fmt(w.used)} / ${w.effectiveLimit === null || w.effectiveLimit === undefined ? "∞" : fmt(w.effectiveLimit)}</span></td>
-        <td class="mono">reset ${resetWhen(w)}</td>
-      </tr>`;
-    }).join("");
+  var REQ_HEAD = [['Time'], ['Model'], ['Tokens', 'r'], ['Latency', 'r'], ['Status'], ['Via']];
+
+  /* ================= usage (overview + usage views) ================= */
+  async function loadUsage() {
+    var r = await api('/api/flow/usage');
+    if (!r.ok) { $('usage-chart').innerHTML = empty('could not load usage', ''); return; }
+    var d = r.data;
+    var days = (d.series && d.series.days) || [];
+    var sum = function (f) { return days.reduce(function (a, x) { return a + (x[f] || 0); }, 0); };
+    var gk = (d.gatewayKeys || []), active = gk.filter(function (k) { return !k.revokedAt; });
+    $('gk-usage').innerHTML =
+      '<div class="panel scard"><span class="label">requests · 30d</span><span class="v">' + fK(sum('requests')) + '</span><span class="s">' + fN(sum('requests')) + ' total</span></div>' +
+      '<div class="panel scard"><span class="label">tokens · 30d</span><span class="v">' + fK(sum('tokens')) + '</span><span class="s">' + fN(sum('tokens')) + ' total</span></div>' +
+      '<div class="panel scard"><span class="label">cost · 30d</span><span class="v">' + fUsd(sum('costCents')) + '</span><span class="s">provider-reported</span></div>' +
+      '<div class="panel scard"><span class="label">gateway keys</span><span class="v">' + active.length + '</span><span class="s">' + (gk.length - active.length) + ' revoked</span></div>';
+    renderUsageChart(d.series, 'usage-chart', 'ov');
+    renderUsageChart(d.series, 'usage-charts-full', 'fu');
+    $('reqs-recent').innerHTML = tbl(REQ_HEAD, (d.requests || []).slice(0, 15).map(reqRow));
+    $('reqs').innerHTML = tbl(REQ_HEAD, (d.requests || []).map(reqRow));
+    // limit windows
+    if (d.orgWindows !== undefined) {
+      $('windows-cap').textContent = 'Limit windows';
+      $('windows-sub').textContent = 'What this account may use, and when it renews. Set by the operator.';
+      var rows = (d.orgWindows || []).map(function (w) {
+        var tight = w.headroom <= 0;
+        return '<tr><td class="name">' + (w.model && w.model !== 'all' ? esc(w.model) : 'all models') + '</td><td class="m">' + esc(w.kind) + '</td>' +
+          '<td class="r">' + chip(fN(w.used) + ' / ' + (w.effectiveLimit == null ? '∞' : fN(w.effectiveLimit)), tight ? 'red' : '', false) + '</td>' +
+          '<td class="m">reset ' + esc(resetWhen(w)) + '</td></tr>';
+      });
+      $('windows').innerHTML = (d.orgWindows || []).length
+        ? tbl([['Scope'], ['Kind'], ['Used / limit', 'r'], ['Resets in']], rows)
+        : empty('No limits set yet', 'your account draws on the operator’s shared capacity');
+    } else {
+      $('windows-cap').textContent = 'Pool key windows';
+      $('windows-sub').textContent = 'The shared capacity every customer pools into.';
+      var prow = (d.keys || []).map(function (k) {
+        var chips2 = (k.windows || []).map(function (w) {
+          return '<span class="pool-chip' + (w.headroom <= 0 ? ' over' : '') + '">' + (w.model && w.model !== 'all' ? esc(w.model) + ' · ' : '') + w.kind + ' ' + fN(w.used) + '/' + (w.effectiveLimit == null ? '∞' : fK(w.effectiveLimit)) + ' · reset ' + esc(resetWhen(w)) + '</span>';
+        }).join('') || '<span class="pool-chip">no limits</span>';
+        return '<tr><td class="name">' + esc(k.provider) + ' · ' + esc(k.label) + ' <span class="m">' + esc(k.keyMask) + '</span></td>' +
+          '<td class="r" colspan="3"><div class="chips">' + chips2 + '</div></td></tr>';
+      });
+      $('windows').innerHTML = prow.length ? tbl([['Key'], ['Windows', 'r'], ['', 'r'], ['', 'r']], prow) : empty('No pool keys yet', '');
+    }
+    $('gk-usage-tbl').innerHTML = tbl([['Key'], ['Requests', 'r'], ['Tokens in→out', 'r'], ['Cost', 'r'], ['Last used'], ['Status']],
+      gk.map(function (k) {
+        return '<tr><td class="name">' + esc(k.name) + ' <span class="m">· ' + esc(k.prefix) + '…</span></td><td class="r">' + fN(k.requests) + '</td>' +
+          '<td class="r">' + fN(k.tokensIn) + ' → ' + fN(k.tokensOut) + '</td><td class="r">' + fUsd(k.costCents) + '</td>' +
+          '<td class="m">' + esc(k.lastUsedAt ? fDT(k.lastUsedAt) : 'never used') + '</td>' +
+          '<td>' + (k.revokedAt ? chip('revoked', 'red', true) : chip('active', 'green', true)) + '</td></tr>';
+      }));
   }
 
-  function reqRows(rows) {
-    return rows.map((r) => {
-      const st = r.status === "ok" ? "" : r.status === "fallback" ? "live" : "err";
-      return `<tr>
-        <td class="mono">${esc(new Date(r.createdAt).toLocaleString())}</td>
-        <td class="name">${esc(r.modelServed)}</td>
-        <td class="num">${fmt(r.tokensIn)} &rarr; ${fmt(r.tokensOut)}</td>
-        <td class="num">${fmt(r.latencyMs)} ms</td>
-        <td><span class="badge ${st}">${esc(r.status)}</span>${r.degraded ? ' <span class="badge live">degraded</span>' : ""}</td>
-        <td class="mono">${r.credential ? esc(r.credential.label) : "—"}${r.apiKey ? ` &middot; via ${esc(r.apiKey.name)}` : ""}</td>
-      </tr>`;
-    }).join("") || `<tr><td colspan="6" class="empty">no requests yet — the ledger is empty</td></tr>`;
-  }
-
-  // ── provider keys (the operator's pool) ───────────────────────────
+  /* ================= provider keys (the pool — operator) ================= */
   function limitChips(limits) {
-    if (!limits?.length) return `<span class="mono">—</span>`;
-    return `<div class="cell-chips">${limits.map((l) => `<span class="badge">${esc(l.kind)} ${l.limit ?? "∞"}${l.reservePct ? ` &middot; keep ${l.reservePct}%` : ""}</span>`).join("")}</div>`;
+    if (!limits || !limits.length) return '<span class="m">—</span>';
+    return '<div class="chips">' + limits.map(function (l) {
+      return '<span class="pool-chip">' + esc(l.kind) + ' ' + (l.limit == null ? '∞' : fK(l.limit)) + (l.reservePct ? ' · keep ' + l.reservePct + '%' : '') + '</span>';
+    }).join('') + '</div>';
   }
   async function loadKeys() {
-    const { ok, data } = await api("/api/account/keys");
-    if (!ok) { $("keys").innerHTML = `<tr><td colspan="6" class="empty">could not load keys</td></tr>`; return; }
-    if (!data.keys.length) {
-      $("keys").innerHTML = `<tr><td colspan="6" class="empty">no pool keys yet — add the first one below. It is encrypted the moment it arrives.</td></tr>`;
-      return;
-    }
-    $("keys").innerHTML = data.keys.map((k) => `
-      <tr>
-        <td class="name">${esc(k.provider)}</td>
-        <td class="name">${esc(k.label)}</td>
-        <td class="mono">${esc(k.keyMask)}</td>
-        <td>${limitChips(k.limits)}</td>
-        <td>${k.status === "revoked" ? '<span class="badge err">revoked</span>' : k.status === "dead" ? '<span class="badge err">dead</span>' : '<span class="badge ok">active</span>'}</td>
-        <td>${k.status === "revoked" ? "" : `<div class="rowact"><button class="btn-ghost danger" data-revoke="${esc(k.id)}">Revoke</button></div>`}</td>
-      </tr>`).join("");
-    $("keys").querySelectorAll("button[data-revoke]").forEach((b) =>
-      b.addEventListener("click", async () => {
-        b.disabled = true;
-        const { ok } = await api(`/api/account/keys/${b.dataset.revoke}/revoke`, { method: "POST" });
-        if (ok) loadKeys(); else b.disabled = false;
-      }));
-  }
-
-  const provSel = document.querySelector("#add-key select[name=provider]");
-  const secretIn = document.querySelector("#add-key input[name=secret]");
-  function syncSecret() {
-    const noKey = provSel.value === "pollinations";
-    secretIn.required = !noKey;
-    secretIn.placeholder = noKey ? "not needed" : "sk-…";
-  }
-  provSel.addEventListener("change", syncSecret);
-  syncSecret();
-
-  $("add-key").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const { ok, status, data } = await api("/api/account/keys", {
-      method: "POST",
-      body: JSON.stringify({
-        provider: fd.get("provider"),
-        label: fd.get("label"),
-        secret: fd.get("secret") || undefined,
-      }),
+    var r = await api('/api/account/keys');
+    if (!r.ok) { $('keys').innerHTML = empty('could not load keys', ''); return; }
+    var rows = r.data.keys.map(function (k) {
+      return '<tr><td class="name">' + esc(k.provider) + '</td><td class="name">' + esc(k.label) + '</td><td class="m">' + esc(k.keyMask) + '</td>' +
+        '<td>' + limitChips(k.limits) + '</td>' +
+        '<td>' + (k.status === 'revoked' ? chip('revoked', 'red', true) : k.status === 'dead' ? chip('dead', 'red', true) : chip('active', 'green', true)) + '</td>' +
+        '<td class="act">' + (k.status === 'revoked' ? '' : '<button type="button" class="btn btn-danger btn-sm" data-revoke="' + esc(k.id) + '">Revoke</button>') + '</td></tr>';
     });
-    $("add-note").innerHTML = ok
-      ? `<span class="ok">✓ added — ${esc(data.keyMask)}</span>`
-      : status === 409 ? `<span class="err">label exists</span>` : `<span class="err">${esc(data.error || "could not add key")}</span>`;
-    if (ok) { e.target.reset(); loadKeys(); loadUsage(); }
+    $('keys').innerHTML = r.data.keys.length ? tbl([['Provider'], ['Label'], ['Mask'], ['Auto-limits'], ['Status'], ['']], rows)
+      : empty('No pool keys yet', 'add the first one below — it is encrypted the moment it arrives');
+    document.querySelectorAll('#keys [data-revoke]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        b.disabled = true;
+        api('/api/account/keys/' + b.dataset.revoke + '/revoke', { method: 'POST' }).then(function (x) { if (x.ok) { loadKeys(); loadUsage(); } else b.disabled = false; });
+      });
+    });
+  }
+  var akProvider = $('ak-provider'), akSecret = $('ak-secret');
+  function syncSecret() {
+    var noKey = akProvider.value === 'pollinations';
+    akSecret.required = !noKey;
+    akSecret.placeholder = noKey ? 'not needed' : 'sk-…';
+  }
+  akProvider.addEventListener('change', syncSecret); syncSecret();
+  $('add-key').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var note = $('add-note');
+    var r = await api('/api/account/keys', { method: 'POST', body: JSON.stringify({
+      provider: akProvider.value, label: $('ak-label').value.trim(), secret: akSecret.value || undefined
+    }) });
+    if (r.ok) { note.innerHTML = okLine('added — ' + (r.data.keyMask || '')); e.target.reset(); syncSecret(); loadKeys(); loadUsage(); }
+    else note.innerHTML = errLine(r.status === 409 ? 'label exists' : (r.data.error || 'could not add key'));
   });
 
-  // ── gateway keys ──────────────────────────────────────────────────
+  /* ================= gateway keys ================= */
   async function loadGatewayKeys() {
-    const { ok, data } = await api("/api/flow/keys");
-    if (!ok) { $("gk-keys").innerHTML = `<tr><td colspan="5" class="empty">could not load gateway keys</td></tr>`; return; }
-    if (!data.keys.length) {
-      $("gk-keys").innerHTML = `<tr><td colspan="5" class="empty">no gateway keys yet — issue the first one below. Your clients use it against /api/flow exactly like an OpenAI key.</td></tr>`;
-      return;
-    }
-    $("gk-keys").innerHTML = data.keys.map((k) => `
-      <tr>
-        <td class="name">${esc(k.name)}</td>
-        <td class="mono">${esc(k.prefix)}&hellip;</td>
-        <td class="mono">${esc(new Date(k.createdAt).toLocaleDateString())}</td>
-        <td>${k.revokedAt ? '<span class="badge err">revoked</span>' : '<span class="badge ok">active</span>'}</td>
-        <td>${k.revokedAt ? "" : `<div class="rowact"><button class="btn-ghost danger" data-gk-revoke="${esc(k.id)}">Revoke</button></div>`}</td>
-      </tr>`).join("");
-    $("gk-keys").querySelectorAll("button[data-gk-revoke]").forEach((b) =>
-      b.addEventListener("click", async () => {
+    var r = await api('/api/flow/keys');
+    if (!r.ok) { $('gk-keys').innerHTML = empty('could not load gateway keys', ''); return; }
+    var rows = r.data.keys.map(function (k) {
+      return '<tr><td class="name">' + esc(k.name) + '</td><td class="m">' + esc(k.prefix) + '…</td><td class="m">' + esc(fDT(k.createdAt)) + '</td>' +
+        '<td>' + (k.revokedAt ? chip('revoked', 'red', true) : chip('active', 'green', true)) + '</td>' +
+        '<td class="act">' + (k.revokedAt ? '' : '<button type="button" class="btn btn-danger btn-sm" data-gk="' + esc(k.id) + '">Revoke</button>') + '</td></tr>';
+    });
+    $('gk-keys').innerHTML = r.data.keys.length ? tbl([['Name'], ['Prefix'], ['Issued'], ['Status'], ['']], rows)
+      : empty('No gateway keys yet', 'issue the first one below — clients use it against /api/flow exactly like an OpenAI key');
+    document.querySelectorAll('#gk-keys [data-gk]').forEach(function (b) {
+      b.addEventListener('click', function () {
         b.disabled = true;
-        const { ok } = await api(`/api/flow/keys/${b.dataset.gkRevoke}/revoke`, { method: "POST" });
-        if (ok) { loadGatewayKeys(); loadUsage(); } else b.disabled = false;
-      }));
+        api('/api/flow/keys/' + b.dataset.gk + '/revoke', { method: 'POST' }).then(function (x) { if (x.ok) { loadGatewayKeys(); loadUsage(); } else b.disabled = false; });
+      });
+    });
   }
-
-  $("add-gk").addEventListener("submit", async (e) => {
+  $('add-gk').addEventListener('submit', async function (e) {
     e.preventDefault();
-    const f = e.target;
-    const note = $("gk-note");
-    note.innerHTML = "&nbsp;";
-    const { ok, status, data } = await api("/api/flow/keys", { method: "POST", body: JSON.stringify({ name: f.name.value }) });
-    if (!ok) {
-      note.innerHTML = `<span class="err">${status} — ${esc(data.error ?? "could not issue key")}</span>`;
-      return;
-    }
-    $("gk-plain").textContent = data.key;
-    const pick = $("gk-model");
-    const model = (pick && pick.value) || "";
-    $("gk-curl").textContent =
-      'curl https://<your-gateway>/api/flow/chat/completions \\\n' +
-      '  -H "Authorization: Bearer ' + data.key + '" \\\n' +
-      '  -H "Content-Type: application/json" \\\n' +
-      '  -d \'{\"model\":\"' + (model || "gemini-2.5-flash") + "\",\"stream\":false,\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}\'";
-    $("gk-reveal").hidden = false;
-    $("gk-copy").onclick = async () => {
-      try { await navigator.clipboard.writeText(data.key); $("gk-copy").textContent = "Copied"; }
-      catch { $("gk-copy").textContent = "select it and copy manually"; }
+    var note = $('gk-note'), name = $('gk-name').value.trim();
+    if (!name) { note.innerHTML = errLine('name the key first'); return; }
+    var r = await api('/api/flow/keys', { method: 'POST', body: JSON.stringify({ name: name }) });
+    if (!r.ok) { note.innerHTML = errLine((r.status || '') + ' — ' + (r.data.error || 'could not issue key')); return; }
+    $('gk-plain').textContent = r.data.key;
+    var model = $('gk-model').value || 'gemini-2.5-flash';
+    $('gk-curl').textContent =
+      'curl -X POST https://<your-gateway>/api/flow/chat/completions \\\n' +
+      '    -H "Authorization: Bearer ' + r.data.key + '" \\\n' +
+      '    -H "Content-Type: application/json" \\\n' +
+      '    -d \'{"model": "' + model + '", "messages": [{"role": "user", "content": "hi"}]} \'';
+    $('gk-reveal').hidden = false;
+    $('gk-copy').onclick = async function () {
+      try { await navigator.clipboard.writeText(r.data.key); $('gk-copy').textContent = 'Copied'; }
+      catch (err) { $('gk-copy').textContent = 'select & copy manually'; }
     };
-    f.reset();
-    note.innerHTML = '<span class="ok">issued — copy the key now; it will not be shown again</span>';
+    e.target.reset();
+    note.innerHTML = okLine('issued — copy the key now; it will not be shown again');
     loadGatewayKeys();
   });
 
-  // ── usage (charts + windows + ledger + aliases) ──────────────────
-  function renderAliasesView(names, services) {
-    const head = $("models-head");
-    if (IS_OP && head) head.innerHTML = `<th>Name</th><th>Status</th><th>Faces</th><th>Behind it (you only)</th>`;
-    const rows = (names || []).map((a) => {
-      const verified = a.verified
-        ? `<span class="badge ok" title="confirmed in the upstream catalog">✓ ${a.verifiedAt ? esc(new Date(a.verifiedAt).toLocaleDateString()) : "verified"}</span>`
-        : `<span class="badge" title="not yet confirmed against the catalog">checking&hellip;</span>`;
-      const faces = services.filter((s) => s.available).map((s) => `<span class="badge">${esc(s.name)}</span><span class="badge live">live</span>`).join(" ");
-      const rungs = a.targets && IS_OP ? `<span class="mono">${a.targets.map((t) => esc(t.provider)).join(" &rarr; ")}</span>` : "";
-      return `<tr>
-        <td class="name">${esc(a.alias)}</td>
-        <td>${verified}</td>
-        <td>${faces || '<span class="mono">—</span>'}</td>
-        ${IS_OP ? `<td>${rungs}</td>` : ""}
-      </tr>`;
-    }).join("");
-    const svcRows = (services || []).filter((s) => s.available && !(names || []).some((n) => n.alias === s.name)).map((s) =>
-      `<tr><td class="name">${esc(s.name)}</td><td><span class="badge live">live</span></td><td><span class="mono">service face</span></td>${IS_OP ? "<td></td>" : ""}</tr>`
-    ).join("");
-    $("alias-list").innerHTML = (rows + svcRows) || `<tr><td colspan="${IS_OP ? 4 : 3}" class="empty">${IS_OP ? "no aliases — the operator can call provider/model directly" : "no model names assigned to your account yet"}</td></tr>`;
-    const sel = $("gk-model");
-    if (sel) {
-      sel.innerHTML = '<option value="">(pick one…)</option>' +
-        (names || []).map((a) => `<option value="${esc(a.alias)}">${esc(a.alias)}${a.verified ? "" : " (unverified)"}</option>`).join("") +
-        (services || []).filter((s) => s.available).map((s) => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join("");
-    }
-  }
-
-  async function loadUsage() {
-    const { ok, data } = await api("/api/flow/usage");
-    if (!ok) {
-      $("windows").innerHTML = `<tr><td colspan="3" class="empty">could not load usage</td></tr>`;
-      return;
-    }
-    // charts — overview + usage view
-    renderUsageChart(data.series, "ov-charts");
-    renderUsageChart(data.series, "usage-chart");
-    // overview stats
-    const days = data.series?.days || [];
-    $("ov-req").textContent = fmt(days.reduce((a, d) => a + (d.requests || 0), 0));
-    $("ov-tok").textContent = fmt(days.reduce((a, d) => a + (d.tokens || 0), 0));
-    $("ov-cost").innerHTML = "$" + (days.reduce((a, d) => a + (d.costCents || 0), 0) / 100).toFixed(2);
-    $("ov-keys").textContent = (data.gatewayKeys || []).filter((k) => !k.revokedAt).length;
-    // recent activity (overview) + full ledger (usage)
-    $("reqs").innerHTML = reqRows((data.requests || []).slice(0, 15));
-    $("ledger").innerHTML = reqRows(data.requests || []);
-    // per-gateway-key aggregates
-    $("gk-usage").innerHTML = (data.gatewayKeys || []).map((k) => `
-      <tr>
-        <td class="name">${esc(k.name)} <span class="mono">&middot; ${esc(k.prefix)}&hellip;</span></td>
-        <td class="num">${fmt(k.requests)}</td>
-        <td class="num">${fmt(k.tokensIn)} &rarr; ${fmt(k.tokensOut)}</td>
-        <td class="num">${k.costCents.toFixed(2)}&cent;</td>
-        <td class="mono">${k.lastUsedAt ? esc(new Date(k.lastUsedAt).toLocaleString()) : "never used"}</td>
-        <td>${k.revokedAt ? '<span class="badge err">revoked</span>' : '<span class="badge ok">active</span>'}</td>
-      </tr>`).join("") || `<tr><td colspan="6" class="empty">no gateway keys yet — issue one in Keys</td></tr>`;
-    if (data.orgWindows !== undefined) {
-      // member: the account's own windows
-      $("windows").innerHTML = (data.orgWindows || []).length
-        ? windowRows(data.orgWindows)
-        : `<tr><td colspan="3" class="empty">no limits set yet — your account draws on the operator's shared capacity</td></tr>`;
-    } else {
-      // operator: the pool keys' windows
-      $("windows-cap").textContent = "Pool key windows";
-      $("windows").innerHTML = (data.keys || []).map((k) => `
-        <tr>
-          <td class="name">${esc(k.provider)} &middot; ${esc(k.label)} <span class="mono">${esc(k.keyMask)}</span></td>
-          <td class="num" colspan="2"><div class="cell-chips">${(k.windows || []).length
-            ? k.windows.map((w) => `<span class="badge ${w.headroom <= 0 ? "err" : ""}">${w.model && w.model !== "all" ? esc(w.model) + " · " : ""}${esc(w.kind)} ${fmt(w.used)}/${w.effectiveLimit === null || w.effectiveLimit === undefined ? "∞" : fmt(w.effectiveLimit)} · reset ${resetWhen(w)}</span>`).join("")
-            : '<span class="badge">no limits</span>'}</div></td>
-        </tr>`).join("") || `<tr><td colspan="3" class="empty">no pool keys yet</td></tr>`;
-    }
-    const aliases = await api("/api/account/aliases");
-    if (aliases.ok) {
-      const names = aliases.data.aliases || [];
-      const services = aliases.data.services || [];
-      renderAliasesView(names, services);
-      if (!IS_OP) {
-        $("api-model-note").innerHTML =
-          `OpenAI-compatible, streaming. <code>model</code> is one of the <strong>names above</strong> — ` +
-          `text models, plus <code>search</code> and <code>image</code>. One key, three faces; every number is measured.`;
-      }
-    }
-  }
-
-  // the member's own account limits (as set by the operator)
-  async function loadOrgLimits() {
-    const { ok, data } = await api("/api/account/limits");
-    if (!ok) { $("org-limits").innerHTML = `<tr><td colspan="4" class="empty">could not load limits</td></tr>`; return; }
-    $("org-limits-wrap").hidden = IS_OP;
-    $("org-limits").innerHTML = (data.orgWindows || []).length
-      ? data.orgWindows.map((w) => `<tr>
-          <td class="name">${w.model && w.model !== "all" ? esc(w.model) : "all models"}</td>
-          <td class="mono">${esc(w.kind)}</td>
-          <td class="num">${fmt(w.used)} / ${w.effectiveLimit === null || w.effectiveLimit === undefined ? "∞" : fmt(w.effectiveLimit)}</td>
-          <td class="mono">reset ${resetWhen(w)}</td>
-        </tr>`).join("")
-      : `<tr><td colspan="4" class="empty">no limits set on your account yet — the operator has not assigned usage limits</td></tr>`;
-  }
-
-  // ── crew board ────────────────────────────────────────────────────
-  let crewPoll = null;
-  async function loadCrewProjects() {
-    const { ok, data } = await api("/api/account/projects");
-    if (!ok) return;
-    for (const id of ["crew-project", "feed-project"]) {
-      const sel = $(id);
-      const cur = sel.value;
-      sel.innerHTML = (data.projects || []).map((p) => `<option value="${esc(p.slug)}">${esc(p.name)}</option>`).join("") || '<option value="">no projects</option>';
-      if (cur) sel.value = cur;
-    }
-  }
-  async function loadCrewRuns() {
-    const slug = $("crew-project").value;
-    if (!slug) { $("runs").innerHTML = `<tr><td colspan="5" class="empty">pick a project</td></tr>`; return; }
-    const { ok, data } = await api(`/api/crew?slug=${encodeURIComponent(slug)}`);
-    if (!ok) return;
-    $("board-project").textContent = data.project || slug;
-    $("runs").innerHTML = (data.runs || []).map((r) => `
-      <tr>
-        <td class="name">${esc(r.title)}</td>
-        <td><span class="badge ${r.crewStatus === "running" ? "live" : r.crewStatus === "killed" ? "err" : r.crewStatus === "done" ? "ok" : ""}">${esc(r.crewStatus)}</span></td>
-        <td class="num">${r.partials.length ? r.partials.map((p) => `${fmt(p.lines)} lines`).join(" &middot; ") : "no partials yet"}</td>
-        <td class="mono">${esc(new Date(r.createdAt).toLocaleString())}</td>
-        <td>${r.runId ? `<div class="rowact"><button class="btn-ghost danger" data-kill="${esc(r.runId)}" ${r.crewStatus !== "running" ? "disabled" : ""}>Kill</button></div>` : ""}</td>
-      </tr>` + (r.partials.some((p) => p.tail?.length)
-        ? `<tr><td colspan="5" style="padding-top:2px"><div style="display:grid;gap:8px">${r.partials.filter((p) => p.tail?.length).map((p) => `<pre class="partial">${esc((p.tail || []).join("\n"))}</pre>`).join("")}</div></td></tr>`
-        : ""))
-      .join("") || `<tr><td colspan="5" class="empty">no crew runs yet</td></tr>`;
-    $("runs").querySelectorAll("button[data-kill]").forEach((b) =>
-      b.addEventListener("click", async () => {
-        b.disabled = true;
-        const { ok } = await api(`/api/crew/${b.dataset.kill}/kill`, { method: "POST", body: "{}" });
-        $("crew-note").innerHTML = ok ? '<span class="ok">kill in flight — SIGTERM, then the grace, then SIGKILL to the group</span>' : '<span class="err">could not kill</span>';
-        setTimeout(loadCrewRuns, 400);
-      }));
-    const anyRunning = (data.runs || []).some((r) => r.crewStatus === "running");
-    if (anyRunning && !crewPoll) crewPoll = setInterval(loadCrewRuns, 2500);
-    if (!anyRunning && crewPoll) { clearInterval(crewPoll); crewPoll = null; }
-  }
-  $("crew-project").addEventListener("change", loadCrewRuns);
-  $("crew-start").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const f = e.target;
-    const { ok, data } = await api("/api/crew", {
-      method: "POST",
-      body: JSON.stringify({
-        slug: f.project.value,
-        title: f.title.value.trim() || "crew task",
-        workers: Number(f.workers.value) || 2,
-        durationSec: Number(f.duration.value) || 30,
-      }),
+  /* ================= model names (aliases) ================= */
+  var aliasCache = { aliases: [], services: [] };
+  async function loadAliases() {
+    var r = await api('/api/account/aliases');
+    if (!r.ok) { $('alias-list').innerHTML = empty('could not load model names', ''); return; }
+    var names = (aliasCache.aliases = r.data.aliases || []);
+    var services = (aliasCache.services = r.data.services || []);
+    var faces = services.filter(function (s) { return s.available; }).map(function (s) { return chip(s.name) + ' ' + chip('live', 'green', true); }).join(' ');
+    var rows = names.map(function (a) {
+      var verified = a.verified
+        ? chip('✓ ' + (a.verifiedAt ? fDT(a.verifiedAt).split(' · ')[0] : 'verified'), 'green')
+        : chip('checking…');
+      return '<tr><td class="name">' + esc(a.alias) + '</td><td>' + verified + '</td><td>' + (faces || '<span class="m">—</span>') + '</td>' +
+        (IS_OP ? '<td class="m">' + esc((a.targets || []).map(function (t) { return t.provider; }).join(' → ')) + '</td>' : '') + '</tr>';
     });
-    $("crew-note").innerHTML = ok
-      ? `<span class="ok">✓ crew ${esc(data.runId)} — process group ${esc(String(data.pgid))}</span>`
-      : `<span class="err">${esc(data.error || "could not start crew")}</span>`;
-    if (ok) setTimeout(loadCrewRuns, 500);
-  });
-  loadCrewProjects().then(loadCrewRuns);
-
-  // ── live feed ─────────────────────────────────────────────────────
-  let feedCursor = "0";
-  function feedSummary(type, body) {
-    if (!body || typeof body !== "object") return String(body).slice(0, 140);
-    if (body.rejection) return `refused a ${esc(body.type)} line — ${esc((body.violations || []).join("; "))}`;
-    if (typeof body.text === "string") return esc(body.text.slice(0, 140));
-    if (body.rowId) return `${esc(body.rowId)} → ${esc(body.status ?? body.verdict ?? "")}`;
-    return esc(JSON.stringify(body).slice(0, 140));
+    services.filter(function (s) { return s.available && !names.some(function (n) { return n.alias === s.name; }) })
+      .forEach(function (s) { rows.push('<tr><td class="name">' + esc(s.name) + '</td><td>' + chip('live', 'green', true) + '</td><td><span class="m">service face</span></td>' + (IS_OP ? '<td></td>' : '') + '</tr>'); });
+    $('alias-list').innerHTML = rows.length
+      ? tbl(IS_OP ? [['Name'], ['Status'], ['Faces'], ['Rungs (you only)']] : [['Name'], ['Status'], ['Faces']], rows)
+      : empty(IS_OP ? 'No aliases yet' : 'No model names assigned to your account yet', IS_OP ? 'the operator can call provider/model directly' : 'the operator will assign them from the desk');
+    $('api-model-note').innerHTML = IS_OP
+      ? 'OpenAI-compatible, streaming. <code>model</code> is one of the names above, plus <code>search</code> and <code>image</code>. “Verified” means a fresh catalog check saw it upstream today.'
+      : 'OpenAI-compatible, streaming. <code>model</code> is one of the <b>names above</b> — text models, plus <code>search</code> and <code>image</code>. One key, three faces; every number is measured.';
+    var sel = $('gk-model');
+    sel.innerHTML = '<option value="">(pick one…)</option>' +
+      names.map(function (a) { return '<option value="' + esc(a.alias) + '">' + esc(a.alias) + (a.verified ? '' : ' (unverified)') + '</option>'; }).join('') +
+      services.filter(function (s) { return s.available; }).map(function (s) { return '<option value="' + esc(s.name) + '">' + esc(s.name) + '</option>'; }).join('');
   }
-  async function loadFeed() {
-    const slug = $("feed-project").value;
-    if (!slug) return;
-    const { ok, data } = await api(`/api/projects/${encodeURIComponent(slug)}/stream?afterSeq=${encodeURIComponent(feedCursor)}`);
-    if (!ok) return;
-    if (!data.events.length) return;
-    feedCursor = data.nextCursor;
-    const box = $("feed");
-    for (const e of data.events.reverse()) {
-      const rejected = e.type === "system" && e.body?.rejection;
-      const div = document.createElement("div");
-      div.className = "feed-line" + (rejected ? " rejected" : "") + (e.corrupt ? " corrupt" : "");
-      div.innerHTML =
-        `<span class="badge ${rejected ? "err" : e.body?.status === "accepted" || e.body?.verdict === "accepted" ? "ok" : e.body?.verdict === "falsified" ? "err" : "info"}">${rejected ? "refused" : esc(e.type)}</span>` +
-        `<span class="key-mask">${esc(e.actor)}</span>` +
-        `<span class="fine feed-text">${feedSummary(e.type, e.body)}</span>` +
-        `<span class="feed-ts">${new Date(e.ts).toLocaleTimeString()}</span>`;
-      box.prepend(div);
-    }
-    while (box.children.length > 60) box.lastElementChild.remove();
-  }
-  $("feed-project").addEventListener("change", () => { feedCursor = "0"; loadFeed(); });
-  $("feed-post").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const f = e.target;
-    const text = f.text.value.trim();
-    if (!f.project.value || !text) return;
-    const payload = { type: f.type.value, body: f.raw.checked ? text : { text } };
-    const { ok, data } = await api(`/api/projects/${encodeURIComponent(f.project.value)}/stream`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-    $("feed-note").innerHTML = ok
-      ? `<span class="ok">✓ posted — seq ${esc(String(data.seq))}</span>`
-      : `<span class="err">✗ ${esc(data.error ?? "rejected")}${data.violations ? " — " + esc(data.violations.join("; ")) : ""}</span>`;
-    f.text.value = "";
-    setTimeout(loadFeed, 120);
-  });
-  setInterval(loadFeed, 2000);
 
-  // ── portfolio ─────────────────────────────────────────────────────
-  async function loadPortfolio() {
-    const { ok, data } = await api("/api/portfolio");
-    if (!ok) return;
-    $("portfolio").innerHTML = (data.projects || []).map((p) => `
-      <tr>
-        <td class="name">${esc(p.name)}</td>
-        <td><span class="badge ${p.status === "done" ? "ok" : p.status === "running" ? "live" : "err"}">${esc(p.status)}</span></td>
-        <td class="mono">${(p.rows || []).map((r) => `${esc(r.rowId)} <b>${esc(r.resolved)}</b>${r.witnessedBy ? " ✓" : ""}`).join(" &middot; ") || "no rows"}</td>
-        <td>${p.nextDecision
-          ? `<span class="badge ${p.nextDecision.kind === "ship" ? "" : "live"}">${esc(p.nextDecision.kind)}</span> <span class="fine" style="display:inline">${esc(p.nextDecision.prompt)}</span>`
-          : '<span class="fine" style="display:inline">nothing to decide</span>'}</td>
-      </tr>`).join("") || `<tr><td colspan="4" class="empty">no projects yet</td></tr>`;
-    const nd = data.nextDecision;
-    $("pf-next").innerHTML = nd
-      ? `Next for this account: <span class="badge live">${esc(nd.project)}</span> <span class="badge">${esc(nd.kind)}</span> ${esc(nd.prompt)} &mdash; ${nd.options.map((o) => `<span class="badge">${esc(o)}</span>`).join(" ")}`
-      : "Nothing is waiting on a human — the crew has the wheel.";
-  }
-  loadPortfolio();
-
-  // ── operator desk ─────────────────────────────────────────────────
+  /* ================= operator desk ================= */
   async function loadDesk() {
-    const { ok, data } = await api("/api/admin/pending");
-    if (!ok) { $("desk").innerHTML = `<tr><td colspan="3" class="empty">desk unavailable</td></tr>`; return; }
-    $("desk").innerHTML = data.pending.length
-      ? data.pending.map((u) => `
-        <tr>
-          <td class="name">${esc(u.username)}</td>
-          <td class="num">waiting ${Math.max(0, Math.round((Date.now() - new Date(u.createdAt).getTime()) / 60000))} min</td>
-          <td><div class="rowact">
-            <button class="btn-ghost" data-act="verify" data-id="${esc(u.id)}">Verify</button>
-            <button class="btn-ghost danger" data-act="suspend" data-id="${esc(u.id)}">Suspend</button>
-          </div></td>
-        </tr>`).join("")
-      : `<tr><td colspan="3" class="empty">no one is waiting</td></tr>`;
-    $("desk").querySelectorAll("button[data-act]").forEach((b) =>
-      b.addEventListener("click", async () => {
+    var r = await api('/api/admin/pending');
+    if (!r.ok) { $('desk').innerHTML = empty('desk unavailable', ''); return; }
+    var rows = r.data.pending.map(function (u) {
+      return '<tr><td class="name">' + esc(u.username) + '</td><td class="r">' + esc(ago(u.createdAt)) + '</td>' +
+        '<td class="act"><button type="button" class="btn btn-ghost btn-sm" data-act="verify" data-id="' + esc(u.id) + '">Verify</button>' +
+        '<button type="button" class="btn btn-danger btn-sm" data-act="suspend" data-id="' + esc(u.id) + '" style="margin-left:6px">Suspend</button></td></tr>';
+    });
+    $('desk').innerHTML = rows.length ? tbl([['Account'], ['Waiting', 'r'], ['']], rows) : empty('No one is waiting', '');
+    deskActs($('desk'));
+  }
+  var deskUsers = [];
+  async function loadDeskUsers() {
+    var r = await api('/api/admin/users');
+    if (!r.ok) { $('desk-users').innerHTML = empty('desk unavailable', ''); return; }
+    deskUsers = (r.data.users || []).filter(function (u) { return !u.isOperator; });
+    var rows = deskUsers.map(function (u) {
+      return '<tr><td class="name">' + esc(u.username) + '</td><td>' + statusChip(u.status) + '</td>' +
+        '<td class="m">' + esc(u.org && u.org.name ? u.org.name : '—') + '</td><td class="r">' + (u.gatewayKeys || 0) + '</td>' +
+        '<td class="r">' + fN(u.usage && u.usage.requests) + ' req · ' + fUsd(u.usage && u.usage.costCents) + '</td>' +
+        '<td class="act">' +
+          (u.status === 'pending' ? '<button type="button" class="btn btn-ghost btn-sm" data-act="verify" data-id="' + esc(u.id) + '">Verify</button> ' : '') +
+          '<button type="button" class="btn btn-ghost btn-sm" data-open-limits="' + esc(u.id) + '">Limits</button>' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-open-models="' + esc(u.id) + '" style="margin-left:6px">Models</button>' +
+          '<button type="button" class="btn btn-danger btn-sm" data-act="suspend" data-id="' + esc(u.id) + '" style="margin-left:6px">Suspend</button>' +
+        '</td></tr>';
+    });
+    $('desk-users').innerHTML = rows.length ? tbl([['Account'], ['Status'], ['Org'], ['Gateway keys', 'r'], ['30d usage', 'r'], ['']], rows)
+      : empty('No accounts yet', 'sign-ups appear here first, pending');
+    deskActs($('desk-users'));
+    document.querySelectorAll('#desk-users [data-open-limits]').forEach(function (b) {
+      b.addEventListener('click', function () { location.hash = 'flow/limits/' + b.dataset.openLimits; });
+    });
+    document.querySelectorAll('#desk-users [data-open-models]').forEach(function (b) {
+      b.addEventListener('click', function () { location.hash = 'flow/workbench/' + b.dataset.openModels; });
+    });
+  }
+  function deskActs(scope) {
+    scope.querySelectorAll('[data-act]').forEach(function (b) {
+      b.addEventListener('click', function () {
         b.disabled = true;
-        const { ok: done } = await api(`/api/admin/users/${b.dataset.id}/${b.dataset.act}`, { method: "POST" });
-        if (done) { loadDesk(); loadDeskUsers(); } else b.disabled = false;
-      }));
+        api('/api/admin/users/' + b.dataset.id + '/' + b.dataset.act, { method: 'POST' })
+          .then(function (x) { if (x.ok) { loadDesk(); loadDeskUsers(); } else b.disabled = false; });
+      });
+    });
   }
 
-  const LIMIT_FIELDS = [
-    ["rpm", "rpm"],
-    ["tpm", "tpm"],
-    ["rpd", "rpd"],
-    ["monthly_tokens", "tok/mo"],
-    ["monthly_cost_cents", "cost ¢/mo"],
-    ["monthly_images", "img/mo"],
-    ["monthly_searches", "search/mo"],
+  /* ================= limits editor (full view) ================= */
+  var LIMIT_FIELDS = [
+    ['rpm', 'rpm'], ['tpm', 'tpm'], ['rpd', 'rpd'],
+    ['monthly_tokens', 'tok/mo'], ['monthly_cost_cents', 'cost ¢/mo'],
+    ['monthly_images', 'img/mo'], ['monthly_searches', 'search/mo']
   ];
-  const PROVIDERS = ["google", "groq", "openrouter", "mistral"];
-
-  // the limit matrix as a real table — one scope row group at a time,
-  // pool chips under each model scope, over-pool flagged as typed
-  function limitsEditor(u, ld) {
-    const scopes = ld.scopes?.length ? ld.scopes : [null, "search", "image"];
-    const byKey = Object.fromEntries((ld.limits || []).map((l) => [`${l.model ?? "all"}|${l.kind}`, l]));
-    const pool = ld.pool || {};
-    const poolChips = (s) => {
-      if (s === null || !pool[s]) return "";
-      return `<div class="pool-chips">${LIMIT_FIELDS
-        .map(([kind]) => {
-          const p = pool[s][kind];
-          if (!p) return "";
-          const capTxt = p.cap === null || p.cap === undefined ? "∞" : fmt(p.cap);
-          const others = p.elsewhere ? ` &middot; ${fmt(p.elsewhere)} granted elsewhere` : "";
-          return `<span class="badge" data-poolcap="${s === null ? "all" : s}|${kind}" title="total pool capacity for this model · headroom left after other accounts">${kind} pool ${capTxt}${others}</span>`;
-        })
-        .join("")}</div>`;
-    };
-    return `
-      <div class="matrix-note">
-        Per-model grants are reconciled against the pool: a value above what the pool can back is clamped to
-        <b>${Math.round((ld.fraction ?? 0.8) * 100)}%</b> of the pool for this account
-        (its 30-day usage: ${ld.usage30d ? `<b>${fmt(ld.usage30d.requests)} req &middot; ${(ld.usage30d.costCents / 100).toFixed(2)}&cent;</b>` : "n/a"}).
-        Blank = unlimited.
-      </div>
-      <div class="matrix" style="margin-top:14px">
-        <div class="matrix-scroll">
-          <table class="tbl limits-table">
-            <thead>
-              <tr><th>Scope</th>${LIMIT_FIELDS.map(([k, label]) => `<th class="num">${label}</th>`).join("")}</tr>
-            </thead>
-            <tbody>
-              ${scopes.map((s) => `
-                <tr class="scope-head">
-                  <td colspan="${LIMIT_FIELDS.length + 1}">
-                    <span class="scope-name">${s === null ? "all models" : esc(s)}</span>
-                    ${poolChips(s)}
-                  </td>
-                </tr>
-                <tr>
-                  <td class="name">${s === null ? "all models" : esc(s)}</td>
-                  ${LIMIT_FIELDS.map(([kind]) => `
-                    <td class="num"><input data-kind="${kind}" data-scope="${s === null ? "all" : s}" type="number" min="1" step="any" placeholder="∞"
-                      value="${byKey[`${s === null ? "all" : s}|${kind}`]?.limit ?? ""}"></td>`).join("")}
-                </tr>`).join("")}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div class="save-bar">
-        <button class="btn" data-save-limits="${esc(u.id)}">Save limits</button>
-        <span class="hint" data-limits-note="${esc(u.id)}">&nbsp;</span>
-      </div>`;
-  }
-
-  function wireLimits(el, id) {
-    el.querySelectorAll("input[data-kind]").forEach((i) => {
-      i.addEventListener("input", () => {
-        const v = i.value ? Number(i.value) : null;
-        el.querySelectorAll(".pool-chips .badge[data-poolcap]").forEach((c) => {
-          const [scope, kind] = c.dataset.poolcap.split("|");
-          const input = el.querySelector(`input[data-scope="${CSS.escape(scope)}"][data-kind="${CSS.escape(kind)}"]`);
-          const capTxt = (c.textContent.match(/pool ([∞0-9.,]+)/) || [])[1];
-          const cap = capTxt === "∞" ? null : Number(String(capTxt).replace(/[.,]/g, ""));
-          const isMine = input && input === i;
-          c.classList.toggle("over", !!isMine && v !== null && cap !== null && v > cap);
+  var limAccount = null;
+  async function openLimits(uid) {
+    limAccount = uid;
+    var u = deskUsers.find(function (x) { return x.id === uid; });
+    $('org-limits').innerHTML = skel();
+    var r = await api('/api/admin/users/' + uid + '/limits');
+    if (!r.ok) { $('org-limits').innerHTML = empty('could not load limits', ''); $('lim-bar').hidden = true; return; }
+    var d = r.data;
+    var scopes = (d.scopes && d.scopes.length) ? d.scopes : [null, 'search', 'image'];
+    var byKey = {};
+    (d.limits || []).forEach(function (l) { byKey[(l.model || 'all') + '|' + l.kind] = l; });
+    var body = scopes.map(function (s) {
+      var key = s === null ? 'all' : s;
+      var inputs = LIMIT_FIELDS.map(function (f) {
+        var l = byKey[key + '|' + f[0]];
+        return '<td class="r"><input class="cell-in" data-kind="' + f[0] + '" data-scope="' + key + '" type="number" min="1" step="any" placeholder="∞" value="' + (l && l.limit != null ? l.limit : '') + '"/></td>';
+      }).join('');
+      var chips2 = (s !== null && d.pool && d.pool[s]) ? LIMIT_FIELDS.map(function (f) {
+        var p = d.pool[s][f[0]]; if (!p) return '';
+        return '<span class="pool-chip" data-pool="' + key + '|' + f[0] + '" data-cap="' + (p.cap == null ? '' : p.cap) + '">' + f[0] + ' pool ' + (p.cap == null ? '∞' : fK(p.cap)) + (p.elsewhere ? ' · ' + fN(p.elsewhere) + ' elsewhere' : '') + '</span>';
+      }).join('') : '';
+      return '<tr class="' + (s ? 'group' : '') + '"><td class="name">' + (s === null ? 'all models' : esc(s)) + '</td>' + inputs + '</tr>' +
+        (chips2 ? '<tr class="sub"><td colspan="' + (LIMIT_FIELDS.length + 1) + '"><div class="chips">' + chips2 + '</div></td></tr>' : '');
+    }).join('');
+    $('org-limits').innerHTML =
+      '<div class="panel desk-mock">' +
+      '<div class="bar"><div><p class="eyebrow gold">Account · ' + esc(u ? u.username : uid) + '</p><p class="small" style="margin-top:4px">Limits matrix — per model, pooled. Blank = unlimited.</p></div>' +
+      '<div class="clamp-note" title="grants are clamped to the pool’s real capacity"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 7v3M8 12v.01"/></svg>grant can never exceed the pool</div></div>' +
+      '<div class="scroll-x"><table class="tbl"><thead><tr><th>Scope</th>' +
+      LIMIT_FIELDS.map(function (f) { return '<th class="r">' + f[1] + '</th>'; }).join('') +
+      '</tr></thead><tbody>' + body + '</tbody></table></div></div>';
+    $('lim-usage').textContent = 'rung ' + Math.round((d.fraction == null ? 0.8 : d.fraction) * 100) + '% · 30-day usage ' +
+      (d.usage30d ? fN(d.usage30d.requests) + ' req · ' + fUsd(d.usage30d.costCents) : 'n/a');
+    $('lim-clamps').textContent = '';
+    $('lim-bar').hidden = false;
+    // over-pool flagging
+    document.querySelectorAll('#org-limits .cell-in').forEach(function (i) {
+      i.addEventListener('input', function () {
+        var v = i.value ? Number(i.value) : null;
+        document.querySelectorAll('#org-limits .pool-chip[data-pool]').forEach(function (c) {
+          var parts = c.dataset.pool.split('|');
+          var isMine = i.dataset.scope === parts[0] && i.dataset.kind === parts[1];
+          var cap = c.dataset.cap === '' ? null : Number(c.dataset.cap);
+          var over = !!(isMine && v != null && cap != null && v > cap);
+          c.classList.toggle('over', over);
+          if (isMine) i.classList.toggle('over', over);
         });
       });
     });
-    el.querySelector(`[data-save-limits="${id}"]`).addEventListener("click", async (e) => {
-      const btn = e.currentTarget;
-      const note = el.querySelector(`[data-limits-note="${id}"]`);
-      const limits = [...el.querySelectorAll("input[data-kind]")].map((i) => ({
-        model: i.dataset.scope === "all" ? null : i.dataset.scope,
-        kind: i.dataset.kind,
-        limit: i.value ? Number(i.value) : null,
-        reservePct: 5,
-      }));
-      btn.disabled = true;
-      const { ok, data } = await api(`/api/admin/users/${id}/limits`, { method: "PUT", body: JSON.stringify({ limits }) });
+    $('lim-save').onclick = async function () {
+      var btn = $('lim-save'); btn.disabled = true;
+      var limits = Array.prototype.map.call(document.querySelectorAll('#org-limits .cell-in'), function (i) {
+        return { model: i.dataset.scope === 'all' ? null : i.dataset.scope, kind: i.dataset.kind, limit: i.value ? Number(i.value) : null, reservePct: 5 };
+      });
+      var r2 = await api('/api/admin/users/' + uid + '/limits', { method: 'PUT', body: JSON.stringify({ limits: limits }) });
       btn.disabled = false;
-      if (!ok) { note.innerHTML = `<span class="err">${esc(data.error ?? "could not save")}</span>`; return; }
-      const caps = data.caps || [];
-      const capHtml = caps.length
-        ? caps.map((c) => `<span class="err">${esc(c.model)} ${esc(c.kind)}: ${c.requested} → ${c.effective} — ${esc(c.note ?? "capped to pool")}</span>`).join(" &middot; ")
-        : "";
-      note.innerHTML = `<span class="ok">saved — ${data.limits.length} active limit(s), applied per model</span> ${capHtml}`;
-      (data.limits || []).forEach((l) => {
-        const input = el.querySelector(`input[data-scope="${CSS.escape(l.model ?? "all")}"][data-kind="${CSS.escape(l.kind)}"]`);
-        if (input) input.value = l.limit ?? "";
+      if (!r2.ok) { $('lim-clamps').innerHTML = errLine(r2.data.error || 'could not save'); return; }
+      var caps = r2.data.caps || [];
+      $('lim-clamps').innerHTML = caps.length
+        ? caps.map(function (c) { return '<span class="clamp">' + esc(c.model) + ' ' + esc(c.kind) + ': ' + esc(c.requested) + ' → ' + esc(c.effective) + (c.note ? ' — ' + esc(c.note) : '') + '</span>'; }).join(' · ')
+        : okLine('saved — ' + (r2.data.limits || []).length + ' active limit(s), applied per model');
+      (r2.data.limits || []).forEach(function (l) {
+        var input = document.querySelector('#org-limits .cell-in[data-scope="' + (l.model || 'all') + '"][data-kind="' + l.kind + '"]');
+        if (input) input.value = l.limit == null ? '' : l.limit;
+      });
+    };
+  }
+
+  /* ================= model workbench (full view) ================= */
+  var catalogCache = null;
+  function fetchCatalog() {
+    if (catalogCache) return Promise.resolve(catalogCache);
+    return api('/api/admin/catalog').then(function (r) {
+      if (r.ok) {
+        catalogCache = {};
+        (r.data.catalog || []).forEach(function (row) {
+          catalogCache[row.provider] = { checkedAt: row.checkedAt, models: row.models.map(function (m) { return m.model; }) };
+        });
+      }
+      return catalogCache;
+    });
+  }
+  var wbRungs = [], wbAccount = null;
+  async function openWorkbench(uid) {
+    wbAccount = uid; wbRungs = [];
+    $('wb-list').innerHTML = skel(); $('wb-editor').innerHTML = '<div class="skel-block"><i class="skel"></i><i class="skel"></i></div>';
+    var a = await api('/api/admin/users/' + uid + '/aliases');
+    var cat = await fetchCatalog();
+    var aliases = a.ok ? a.data.aliases || [] : [];
+    var u = deskUsers.find(function (x) { return x.id === uid; });
+    var rows = aliases.map(function (al) {
+      var st = al.catalog && al.catalog.status;
+      var missing = al.catalog && al.catalog.missing && al.catalog.missing.length
+        ? '<span class="m">missing today: ' + al.catalog.missing.map(function (m) { return '<span class="m">' + esc(m) + '</span>'; }).join(', ') + '</span>'
+        : '<span class="m">—</span>';
+      return '<tr><td class="name"><span class="catdot ' + (st === 'ok' ? 'ok' : st === 'warn' ? 'warn' : '') + '" title="catalog: ' + esc(st || 'unknown') + '"></span>' + esc(al.alias) + '</td>' +
+        '<td>' + missing + '</td><td class="m">' + esc((al.targets || []).map(function (t) { return t.provider + '/' + t.providerModelId; }).join('<br>')) + '</td>' +
+        '<td class="act"><button type="button" class="btn btn-ghost btn-sm" data-edit="' + esc(al.alias) + '">edit</button></td></tr>';
+    });
+    $('wb-list').innerHTML = rows.length ? tbl([['Name'], ['Catalog'], ['Rungs (hidden from the customer)'], ['']], rows)
+      : empty('No model names yet', 'assign the first ladder on the right');
+    // editor
+    var checked = Object.keys(cat || {}).filter(function (p) { return cat[p] && cat[p].checkedAt; })
+      .map(function (p) { return p + ' · ' + fDT(cat[p].checkedAt).split(' · ')[0]; }).join(' · ') || 'not checked yet';
+    $('wb-editor').innerHTML =
+      '<h3 style="font-size:18px">Assign / replace a ladder</h3>' +
+      '<div class="field"><label for="wb-name">Model name (what the customer calls)</label><input class="input mono" id="wb-name" maxlength="32" placeholder="the real model name — e.g. gemini-2.5-flash" /></div>' +
+      '<div class="field"><label for="wb-prov">Rung provider (hidden from the customer)</label>' +
+      '<select class="input" id="wb-prov"><option>google</option><option>groq</option><option>openrouter</option><option>mistral</option></select></div>' +
+      '<div class="field"><label for="wb-model">Rung model id — pick from the catalog</label>' +
+      '<input class="input mono" id="wb-model" list="cat-dl" placeholder="gemini-2.5-flash · llama-3.3-70b-versatile" /><datalist id="cat-dl"></datalist></div>' +
+      '<div class="ladder" id="wb-ladder"></div>' +
+      '<div class="form-row"><button type="button" class="btn btn-ghost btn-sm" id="wb-use">use model name</button>' +
+      '<button type="button" class="btn btn-ghost btn-sm" id="wb-add">+ add rung</button></div>' +
+      '<p class="err-line" id="wb-note" role="alert"></p>' +
+      '<button type="button" class="btn btn-gold" id="wb-assign">Assign / replace ladder</button>' +
+      '<div class="form-row"><button type="button" class="btn btn-ghost btn-sm" id="wb-check">check catalog now</button>' +
+      '<span class="m" style="font-size:12px;align-self:center" id="wb-last">last checked: ' + esc(checked) + '</span></div>' +
+      '<p class="note">A name pools up to 5 provider rungs — the gateway walks them when one is exhausted. Re-saving a name replaces its whole ladder. Green dot: every rung is in its provider’s catalog today; gold: one is missing or the catalog is stale.</p>';
+    var provSel = $('wb-prov'), modelIn = $('wb-model'), dl = $('cat-dl');
+    function fillCat() {
+      var c = (cat || {})[provSel.value];
+      dl.innerHTML = (c && c.models ? c.models : []).map(function (m) { return '<option value="' + esc(m) + '"></option>'; }).join('');
+    }
+    provSel.addEventListener('change', fillCat); fillCat();
+    function renderLadder() {
+      $('wb-ladder').innerHTML = wbRungs.length
+        ? wbRungs.map(function (t, i) { return '<span class="rung"><b>' + (i + 1) + '</b> ' + esc(t.provider) + '/' + esc(t.providerModelId) + '<button type="button" data-drop="' + i + '" aria-label="remove rung">×</button></span>'; }).join('')
+        : '<span class="note">no rungs yet — pick a provider + model id, then “+ add rung”</span>';
+      document.querySelectorAll('#wb-ladder [data-drop]').forEach(function (b) {
+        b.addEventListener('click', function () { wbRungs.splice(Number(b.dataset.drop), 1); renderLadder(); });
+      });
+    }
+    renderLadder();
+    $('wb-add').addEventListener('click', function () {
+      var m = modelIn.value.trim();
+      if (!m) return;
+      if (wbRungs.length >= 5) { $('wb-note').innerHTML = errLine('a ladder pools at most 5 rungs'); return; }
+      wbRungs.push({ provider: provSel.value, providerModelId: m, priority: wbRungs.length * 10 });
+      modelIn.value = ''; renderLadder(); $('wb-note').textContent = '';
+    });
+    $('wb-use').addEventListener('click', function () {
+      var raw = modelIn.value.trim();
+      if (!raw) return;
+      var slug = raw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
+      if (slug.length >= 3) $('wb-name').value = slug;
+    });
+    $('wb-check').addEventListener('click', async function () {
+      var btn = $('wb-check'); btn.disabled = true; btn.textContent = 'checking…';
+      var r = await api('/api/admin/catalog/refresh', { method: 'POST' });
+      btn.disabled = false; btn.textContent = 'check catalog now';
+      if (r.ok) {
+        var good = (r.data.refreshed || []).filter(function (x) { return x.ok; }).length;
+        var bad = (r.data.refreshed || []).length - good;
+        $('wb-note').innerHTML = okLine('catalog checked — ' + good + ' key(s) answered' + (bad ? ', ' + bad + ' unreachable (stays stale, retried hourly)' : ''));
+        catalogCache = null;
+        cat = await fetchCatalog(); fillCat();
+      } else $('wb-note').innerHTML = errLine('catalog check failed');
+    });
+    document.querySelectorAll('#wb-list [data-edit]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var al = aliases.find(function (x) { return x.alias === b.dataset.edit; });
+        if (!al) return;
+        $('wb-name').value = al.alias;
+        wbRungs = (al.targets || []).map(function (t, i) { return { provider: t.provider, providerModelId: t.providerModelId, priority: t.priority != null ? t.priority : i * 10 }; });
+        renderLadder();
+        $('wb-note').innerHTML = okLine('editing “' + al.alias + '” — saving replaces its ladder');
       });
     });
-  }
-
-  // ── the model workbench — the customer's names, the pool's rungs ──
-  function modelsEditor(u, aliases, catalog) {
-    const cat = catalog || {};
-    const checkedNote = Object.keys(cat)
-      .filter((p) => cat[p] && cat[p].checkedAt)
-      .map((p) => `${p} · ${new Date(cat[p].checkedAt).toLocaleDateString()}`)
-      .join(" · ") || "catalog not checked yet";
-    return `<div class="bench">
-      <div>
-        <p class="eyebrow">Assigned names</p>
-        <div class="tbl-wrap"><div class="tbl-scroll">
-          <table class="tbl">
-            <thead><tr><th>Name</th><th>Catalog</th><th>Rungs (hidden from the customer)</th><th></th></tr></thead>
-            <tbody>
-              ${(aliases || []).map((a) => {
-                const st = a.catalog?.status || "unknown";
-                const missing = (a.catalog?.missing || []).length
-                  ? `<span class="catalog-note" style="display:block">missing from today&rsquo;s catalog: ${a.catalog.missing.map((m) => `<span class="mono">${esc(m)}</span>`).join(", ")}</span>`
-                  : "";
-                return `<tr>
-                  <td class="name"><span class="cat-dot ${st}" title="catalog status: ${st}"></span>${esc(a.alias)}</td>
-                  <td>${missing || '<span class="mono">—</span>'}</td>
-                  <td class="mono">${a.targets.map((t) => esc(t.provider) + "/" + esc(t.providerModelId)).join("<br>")}</td>
-                  <td><div class="rowact"><button class="btn-ghost" data-load-alias="${esc(u.id)}" data-alias="${esc(a.alias)}">edit</button></div></td>
-                </tr>`;
-              }).join("") || `<tr><td colspan="4" class="empty">no model names assigned to this account yet</td></tr>`}
-            </tbody>
-          </table>
-        </div></div>
-      </div>
-      <div class="form-panel">
-        <h3>Assign / replace a ladder</h3>
-        <label class="field">Model name (what the customer calls)
-          <input data-alias-name placeholder="use the real model name — e.g. gemini-2.5-flash" pattern="[a-z0-9][a-z0-9_-]{2,31}" style="width:100%">
-        </label>
-        <label class="field">Rung provider (hidden from the customer)
-          <select data-rung-provider>${PROVIDERS.map((p) => `<option>${p}</option>`).join("")}</select>
-        </label>
-        <label class="field">Rung model id — pick from the catalog (checked daily)
-          <input data-rung-model list="cat-dl" placeholder="gemini-2.5-flash · llama-3.3-70b-versatile · deepseek/deepseek-r1:free" style="width:100%">
-          <datalist id="cat-dl"></datalist>
-        </label>
-        <div class="rungs" data-rungs></div>
-        <div class="form-cta">
-          <button class="btn-ghost" type="button" data-use-name>use model name</button>
-          <button class="btn-ghost" type="button" data-add-rung>+ add rung</button>
-          <span class="hint" data-alias-note="${esc(u.id)}">&nbsp;</span>
-        </div>
-        <div class="form-cta">
-          <button class="btn" data-save-alias="${esc(u.id)}">Assign / replace ladder</button>
-        </div>
-        <div class="form-cta" style="margin-top:2px">
-          <button class="btn-ghost" type="button" data-check-catalog>check catalog now</button>
-          <span class="catalog-note">last checked: ${esc(checkedNote)}</span>
-        </div>
-        <p class="fine workbench-note" style="margin-top:6px">A model name pools up to 5 provider rungs — the gateway walks them when one is exhausted. Re-saving a name replaces its whole ladder. The green dot means every rung&rsquo;s model is in its provider&rsquo;s catalog as of today; gold means one is missing or the catalog is stale.</p>
-      </div>
-    </div>`;
-  }
-
-  function wireWorkbench(el, u, catalog) {
-    let rungs = [];
-    const rungBox = el.querySelector("[data-rungs]");
-    const catDl = el.querySelector("#cat-dl");
-    const fillCatalog = () => {
-      if (!catDl) return;
-      const p = el.querySelector("[data-rung-provider]");
-      const models = (catalog && catalog[p.value] && catalog[p.value].models) || [];
-      catDl.innerHTML = models.map((m) => `<option value="${esc(m)}"></option>`).join("");
-    };
-    el.querySelector("[data-rung-provider]")?.addEventListener("change", fillCatalog);
-    fillCatalog();
-
-    el.querySelector("[data-use-name]")?.addEventListener("click", () => {
-      const raw = el.querySelector("[data-rung-model]").value.trim();
-      if (!raw) return;
-      const slug = raw.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
-      if (slug.length >= 3) el.querySelector("[data-alias-name]").value = slug;
-    });
-
-    el.querySelector("[data-check-catalog]")?.addEventListener("click", async (e) => {
-      const btn = e.currentTarget;
+    $('wb-assign').addEventListener('click', async function () {
+      var btn = $('wb-assign'), note = $('wb-note');
+      var alias = $('wb-name').value.trim();
+      if (!alias) { note.innerHTML = errLine('model name required'); return; }
+      if (!wbRungs.length) { note.innerHTML = errLine('add at least one rung first'); return; }
       btn.disabled = true;
-      btn.textContent = "checking…";
-      const { ok, data } = await api("/api/admin/catalog/refresh", { method: "POST" });
+      var r = await api('/api/admin/users/' + uid + '/aliases', { method: 'PUT', body: JSON.stringify({ alias: alias, targets: wbRungs }) });
       btn.disabled = false;
-      btn.textContent = "check catalog now";
-      const note = el.querySelector(`[data-alias-note="${u.id}"]`);
-      if (ok) {
-        const good = (data.refreshed || []).filter((r) => r.ok).length;
-        const bad = (data.refreshed || []).length - good;
-        note.innerHTML = `<span class="ok">catalog checked — ${good} key(s) answered${bad ? `, ${bad} unreachable (stays stale, retried hourly)` : ""}</span>`;
-        const c = await api("/api/admin/catalog");
-        if (c.ok) {
-          for (const row of c.data.catalog || []) {
-            catalog[row.provider] = { checkedAt: row.checkedAt, models: row.models.map((m) => m.model) };
-          }
-          fillCatalog();
-        }
-      } else {
-        note.innerHTML = `<span class="err">catalog check failed</span>`;
-      }
+      if (r.ok) { note.innerHTML = okLine('assigned — “' + alias + '” pools ' + (r.data.targets || wbRungs).length + ' rung(s)'); openWorkbench(uid); }
+      else note.innerHTML = errLine(r.data.error || 'could not assign');
     });
-    const renderRungs = () => {
-      rungBox.innerHTML = rungs.length
-        ? rungs.map((t, i) => `<span class="badge">${i + 1} &middot; ${esc(t.provider)}/${esc(t.providerModelId)} <button type="button" class="btn-ghost" data-drop-rung="${i}">&times;</button></span>`).join(" ")
-        : `<span class="fine">no rungs yet — pick a provider + model id, then “+ add rung”</span>`;
-      rungBox.querySelectorAll("button[data-drop-rung]").forEach((b) =>
-        b.addEventListener("click", () => {
-          rungs.splice(Number(b.dataset.dropRung), 1);
-          renderRungs();
-        }));
-    };
-    el.querySelector("[data-add-rung]").addEventListener("click", () => {
-      const provider = el.querySelector("[data-rung-provider]").value;
-      const providerModelId = el.querySelector("[data-rung-model]").value.trim();
-      if (!providerModelId) return;
-      if (rungs.length >= 5) return;
-      rungs.push({ provider, providerModelId, priority: rungs.length * 10 });
-      el.querySelector("[data-rung-model]").value = "";
-      renderRungs();
-    });
-    el.querySelectorAll("button[data-load-alias]").forEach((b) =>
-      b.addEventListener("click", async () => {
-        const { ok, data } = await api(`/api/admin/users/${u.id}/aliases`);
-        if (!ok) return;
-        const a = (data.aliases || []).find((x) => x.alias === b.dataset.alias);
-        if (!a) return;
-        el.querySelector("[data-alias-name]").value = a.alias;
-        rungs = a.targets.map((t, i) => ({ provider: t.provider, providerModelId: t.providerModelId, priority: t.priority ?? i * 10 }));
-        renderRungs();
-        const note = el.querySelector(`[data-alias-note="${u.id}"]`);
-        note.innerHTML = `<span class="ok">editing “${esc(a.alias)}” — saving replaces its ladder</span>`;
-      }));
-    el.querySelector(`[data-save-alias="${u.id}"]`).addEventListener("click", async (e) => {
-      const btn = e.currentTarget;
-      const note = el.querySelector(`[data-alias-note="${u.id}"]`);
-      const alias = el.querySelector("[data-alias-name]").value.trim();
-      if (!alias) { note.innerHTML = `<span class="err">model name required</span>`; return; }
-      if (!rungs.length) { note.innerHTML = `<span class="err">add at least one rung first</span>`; return; }
-      btn.disabled = true;
-      const r = await api(`/api/admin/users/${u.id}/aliases`, { method: "PUT", body: JSON.stringify({ alias, targets: rungs }) });
-      btn.disabled = false;
-      if (r.ok) {
-        note.innerHTML = `<span class="ok">assigned — “${esc(alias)}” pools ${r.data.targets.length} rung(s); the account can call it now</span>`;
-        rungs = [];
-        el.querySelector("[data-alias-name]").value = "";
-        renderRungs();
-        openWorkbench(u.id); // re-render the names table fresh
-      } else {
-        note.innerHTML = `<span class="err">${esc(r.data.error ?? "could not assign")}</span>`;
-      }
-    });
-    renderRungs();
   }
 
-  let catalogCache = null;
-  async function fetchCatalog() {
-    if (catalogCache) return catalogCache;
-    const { ok, data } = await api("/api/admin/catalog");
-    if (ok) {
-      catalogCache = {};
-      for (const row of data.catalog || []) {
-        catalogCache[row.provider] = { checkedAt: row.checkedAt, models: row.models.map((m) => m.model) };
-      }
-    }
-    return catalogCache;
-  }
-
-  function userNameById(id) {
-    return deskUsersCache.find((u) => u.id === id)?.username || "account";
-  }
-  let deskUsersCache = [];
-
-  async function loadDeskUsers() {
-    catalogCache = null; // a fresh desk load gets a fresh catalog
-    const { ok, data } = await api("/api/admin/users");
-    if (!ok) { $("desk-users").innerHTML = `<tr><td colspan="6" class="empty">desk unavailable</td></tr>`; return; }
-    const users = (data.users || []).filter((u) => !u.isOperator);
-    deskUsersCache = users;
-    $("desk-users").innerHTML = users.map((u) => `
-      <tr>
-        <td class="name">${esc(u.username)}</td>
-        <td><span class="badge ${u.status === "active" ? "ok" : u.status === "pending" ? "live" : "err"}">${esc(u.status)}</span></td>
-        <td class="mono">${esc(u.org?.name ?? "—")}</td>
-        <td class="num">${u.gatewayKeys}</td>
-        <td class="num">${fmt(u.usage.requests)} req &middot; ${u.usage.costCents.toFixed(0)}&cent;</td>
-        <td><div class="rowact">
-          ${u.status === "pending" ? `<button class="btn-ghost" data-act="verify" data-id="${esc(u.id)}">Verify</button>` : ""}
-          <button class="btn-ghost" data-open-limits="${esc(u.id)}">Limits</button>
-          <button class="btn-ghost" data-open-models="${esc(u.id)}">Models</button>
-          <button class="btn-ghost danger" data-act="suspend" data-id="${esc(u.id)}">Suspend</button>
-        </div></td>
-      </tr>`).join("") || `<tr><td colspan="6" class="empty">no accounts yet — sign-ups appear here first, pending</td></tr>`;
-    $("desk-users").querySelectorAll("button[data-act]").forEach((b) =>
-      b.addEventListener("click", async () => {
-        b.disabled = true;
-        const { ok: done } = await api(`/api/admin/users/${b.dataset.id}/${b.dataset.act}`, { method: "POST" });
-        if (done) { loadDesk(); loadDeskUsers(); } else b.disabled = false;
-      }));
-    $("desk-users").querySelectorAll("button[data-open-limits]").forEach((b) =>
-      b.addEventListener("click", () => { location.hash = `flow/limits/${b.dataset.openLimits}`; }));
-    $("desk-users").querySelectorAll("button[data-open-models]").forEach((b) =>
-      b.addEventListener("click", () => { location.hash = `flow/models/${b.dataset.openModels}`; }));
-  }
-
-  // the per-account full views (operator)
-  async function openLimits(id) {
-    const box = $("limits-box");
-    box.innerHTML = `<p class="empty">loading ${esc(userNameById(id))}&rsquo;s limits&hellip;</p>`;
-    const { ok, data } = await api(`/api/admin/users/${id}/limits`);
-    if (!ok) { box.innerHTML = `<p class="empty">could not load limits</p>`; return; }
-    const u = deskUsersCache.find((x) => x.id === id) || { id, username: "account" };
-    box.innerHTML = limitsEditor(u, data);
-    wireLimits(box, id);
-  }
-  async function openWorkbench(id) {
-    const box = $("workbench-box");
-    box.innerHTML = `<p class="empty">loading ${esc(userNameById(id))}&rsquo;s model names&hellip;</p>`;
-    const [ad, cat] = await Promise.all([api(`/api/admin/users/${id}/aliases`), fetchCatalog()]);
-    const u = deskUsersCache.find((x) => x.id === id) || { id, username: "account" };
-    box.innerHTML = modelsEditor(u, ad.ok ? ad.aliases : [], cat);
-    wireWorkbench(box, u, cat);
-  }
-
-  // ── catalog view (operator) ───────────────────────────────────────
+  /* ================= catalog view ================= */
   async function loadCatalogView() {
-    const { ok, data } = await api("/api/admin/catalog");
-    if (!ok) { $("catalog-box").innerHTML = `<tr><td colspan="5" class="empty">could not load the catalog</td></tr>`; return; }
-    const rows = (data.catalog || []).filter((c) => c.hasPoolKey);
-    $("catalog-box").innerHTML = rows.map((c) => `
-      <tr>
-        <td class="name">${esc(c.provider)}</td>
-        <td><span class="badge ok">present</span></td>
-        <td class="num">${c.count}</td>
-        <td class="mono">${c.checkedAt ? esc(new Date(c.checkedAt).toLocaleString()) : "never"}</td>
-        <td>${c.fresh ? '<span class="badge ok">fresh</span>' : '<span class="badge live">stale — retried hourly</span>'}</td>
-      </tr>`).join("") || `<tr><td colspan="5" class="empty">no pool keys with a catalog yet</td></tr>`;
+    var r = await api('/api/admin/catalog');
+    if (!r.ok) { $('cat-list').innerHTML = empty('could not load the catalog', ''); return; }
+    var rows = (r.data.catalog || []).filter(function (c) { return c.hasPoolKey; }).map(function (c) {
+      return '<tr><td class="name">' + esc(c.provider) + '</td><td>' + chip('present', 'green', true) + '</td><td class="r">' + (c.count || 0) + '</td>' +
+        '<td class="m">' + esc(c.checkedAt ? fDT(c.checkedAt) : 'never') + '</td>' +
+        '<td>' + (c.fresh ? chip('fresh', 'green', true) : chip('stale — retried hourly', 'gold', true)) + '</td></tr>';
+    });
+    $('cat-list').innerHTML = rows.length ? tbl([['Provider'], ['Pool key'], ['Models', 'r'], ['Last checked'], ['Fresh']], rows)
+      : empty('No pool keys with a catalog yet', '');
   }
-  $("cat-refresh").addEventListener("click", async (e) => {
-    const btn = e.currentTarget;
-    btn.disabled = true;
-    const { ok, data } = await api("/api/admin/catalog/refresh", { method: "POST" });
+  $('cat-all').addEventListener('click', async function () {
+    var btn = $('cat-all'); btn.disabled = true;
+    var r = await api('/api/admin/catalog/refresh', { method: 'POST' });
     btn.disabled = false;
-    $("cat-note").innerHTML = ok
-      ? `<span class="ok">checked — ${(data.refreshed || []).filter((r) => r.ok).map((r) => esc(r.label || r.provider)).join(" · ") || "all quiet"}</span>`
-      : `<span class="err">catalog check failed</span>`;
+    $('cat-note').innerHTML = r.ok
+      ? okLine('checked — ' + ((r.data.refreshed || []).filter(function (x) { return x.ok; }).map(function (x) { return x.label || x.provider; }).join(' · ') || 'all quiet'))
+      : errLine('catalog check failed');
     catalogCache = null;
     loadCatalogView();
   });
 
-  // ── routing: one shell, two products, hash-addressed views ───────
-  const VIEW_META = {
-    "flow/overview":  { t: "Overview",  s: "What this account is doing on Flow — every number measured." },
-    "flow/keys":      { t: "Keys",      s: "The pool's provider keys and the gateway keys you hand to clients." },
-    "flow/models":    { t: "Models",    s: "The real names your account may call — checked daily against the catalog." },
-    "flow/usage":     { t: "Usage",     s: "Charts, limit windows and the full request ledger." },
-    "flow/desk":      { t: "Desk",      s: "Pending accounts first, then the account book. Only you see this." },
-    "flow/limits":    { t: "Limits",    s: "Per-model grants, reconciled against the pool's real capacity." },
-    "flow/models2":   { t: "Model workbench", s: "The names the customer calls — and the rungs behind them." },
-    "flow/catalog":   { t: "Catalog",   s: "What the pool can serve, per provider, checked daily." },
-    "crew/board":     { t: "Board",     s: "Start a crew. Kill it mid-run — the partials stay." },
-    "crew/feed":      { t: "Feed",      s: "The live project stream. Refusals land in seconds." },
-    "crew/portfolio": { t: "Portfolio", s: "Every project names its next human decision." },
-  };
-
-  function parseHash() {
-    const h = location.hash.replace(/^#\/?/, "");
-    const parts = h.split("/");
-    const product = parts[0] === "crew" ? "crew" : "flow";
-    let view = parts[1] || (product === "crew" ? "board" : "overview");
-    const param = parts.slice(2).join("/") || null;
-    if (product === "flow" && view === "models" && param) view = "models2";
-    const key = `${product}/${view}`;
-    const OP_ONLY = new Set(["flow/desk", "flow/limits", "flow/models2", "flow/catalog"]);
-    if (!VIEW_META[key] || (OP_ONLY.has(key) && !IS_OP)) {
-      const fallback = product === "crew" ? "board" : "overview";
-      return { product, view: fallback, param: null, key: `${product}/${fallback}` };
-    }
-    return { product, view, param, key };
-  }
-
-  function setChips(html) { $("view-chips").innerHTML = html; }
-
-  function route() {
-    const r = parseHash();
-    // product switcher + nav
-    $("prod-flow").classList.toggle("on", r.product === "flow");
-    $("prod-crew").classList.toggle("on", r.product === "crew");
-    $("cap-flow").hidden = r.product !== "flow";
-    $("nav-flow").hidden = r.product !== "flow";
-    $("cap-crew").hidden = r.product !== "crew";
-    $("nav-crew").hidden = r.product !== "crew";
-    document.querySelectorAll(`#nav-${r.product} .side-link`).forEach((a) => {
-      const href = a.getAttribute("href").replace("#", "");
-      a.classList.toggle("on", href.startsWith(r.key) || (r.key === "flow/overview" && href === "flow/overview") || (r.key === "crew/board" && href === "crew/board"));
+  /* ================= crew ================= */
+  async function loadProjects() {
+    var r = await api('/api/account/projects');
+    if (!r.ok) return;
+    ['crew-project', 'feed-project'].forEach(function (id) {
+      var sel = $(id), cur = sel.value;
+      sel.innerHTML = (r.data.projects || []).map(function (p) { return '<option value="' + esc(p.slug) + '">' + esc(p.name) + '</option>'; }).join('') || '<option value="">no projects</option>';
+      if (cur) sel.value = cur;
     });
-    // views
-    document.querySelectorAll(".view").forEach((v) => v.classList.remove("on"));
-    const viewId = r.key === "flow/models2" ? "v-flow-workbench" : `v-${r.key.replace("/", "-")}`;
-    const el = $(viewId);
-    if (el) { el.classList.remove("on"); void el.offsetWidth; el.classList.add("on"); }
-    // top bar
-    const meta = VIEW_META[r.key];
-    $("view-title").textContent = r.param && (r.key === "flow/limits" || r.key === "flow/models2")
-      ? `${meta.t} · ${userNameById(r.param)}`
-      : meta.t;
-    $("view-sub").textContent = meta.s;
-    setChips("");
-    // lazy data
-    if (r.key === "flow/limits" && r.param) openLimits(r.param);
-    if (r.key === "flow/models2" && r.param) openWorkbench(r.param);
-    if (r.key === "flow/desk" && IS_OP) { if (!loaded.desk) { loaded.desk = 1; loadDesk(); loadDeskUsers(); } else { loadDesk(); loadDeskUsers(); } }
-    if (r.key === "flow/catalog" && IS_OP) loadCatalogView();
   }
-  window.addEventListener("hashchange", route);
-
-  document.querySelectorAll(".side-entry").forEach((b) =>
-    b.addEventListener("click", () => {
-      location.hash = b.dataset.prod === "crew" ? "crew/board" : "flow/overview";
-    }));
-
-  // ── sign out ──────────────────────────────────────────────────────
-  $("signout").addEventListener("click", async () => {
-    try { await api("/api/auth/logout", { method: "POST" }); } catch { /* redirect either way */ }
-    location.replace("/login.html");
+  var crewPoll = null;
+  function statusChipCrew(s) {
+    return s === 'running' ? chip('running', 'green', true) : s === 'killed' ? chip('killed', 'red', true) : s === 'done' ? chip('done', 'green', true) : chip(s || 'unknown');
+  }
+  async function loadRuns() {
+    var slug = $('crew-project').value;
+    if (!slug) { $('runs').innerHTML = empty('Pick a project', ''); return; }
+    var r = await api('/api/crew?slug=' + encodeURIComponent(slug));
+    if (!r.ok) return;
+    var rows = (r.data.runs || []).map(function (x) {
+      var row = '<tr><td class="name">' + esc(x.title) + '</td><td>' + statusChipCrew(x.crewStatus) + '</td>' +
+        '<td class="r">' + (x.partials.length ? x.partials.map(function (p) { return fN(p.lines) + ' lines'; }).join(' · ') : 'no partials yet') + '</td>' +
+        '<td class="m">' + esc(fDT(x.createdAt)) + '</td>' +
+        '<td class="act">' + (x.runId ? '<button type="button" class="btn btn-danger btn-sm" data-kill="' + esc(x.runId) + '"' + (x.crewStatus !== 'running' ? ' disabled' : '') + '>Kill</button>' : '') + '</td></tr>';
+      var tails = x.partials.filter(function (p) { return p.tail && p.tail.length; });
+      if (tails.length) {
+        row += '<tr class="sub"><td colspan="5">' + tails.slice(0, 2).map(function (p) {
+          return '<div class="m" style="margin-bottom:6px">▸ ' + esc(p.path) + ' · ' + fN(p.lines) + ' lines</div><div class="partial-tail">' + esc((p.tail || []).join('\n')) + '</div>';
+        }).join('') + '</td></tr>';
+      }
+      return row;
+    });
+    $('runs').innerHTML = rows.length ? tbl([['Task'], ['Status'], ['Partials', 'r'], ['Started'], ['']], rows) : empty('No crew runs yet', 'start one on the right');
+    document.querySelectorAll('#runs [data-kill]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        b.disabled = true;
+        api('/api/crew/' + b.dataset.kill + '/kill', { method: 'POST', body: '{}' }).then(function (x) {
+          $('crew-note').innerHTML = x.ok ? okLine('kill in flight — SIGTERM, then the grace, then SIGKILL to the group') : errLine('could not kill');
+          setTimeout(loadRuns, 400);
+        });
+      });
+    });
+    var anyRunning = (r.data.runs || []).some(function (x) { return x.crewStatus === 'running'; });
+    if (anyRunning && !crewPoll) crewPoll = setInterval(loadRuns, 2500);
+    if (!anyRunning && crewPoll) { clearInterval(crewPoll); crewPoll = null; }
+  }
+  $('crew-project').addEventListener('change', loadRuns);
+  $('crew-start').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var r = await api('/api/crew', { method: 'POST', body: JSON.stringify({
+      slug: $('crew-project').value,
+      title: $('cs-title').value.trim() || 'crew task',
+      workers: Number($('cs-workers').value) || 3,
+      durationSec: Number($('cs-secs').value) || 30
+    }) });
+    $('crew-note').innerHTML = r.ok
+      ? okLine('crew ' + esc(r.data.runId) + ' — process group ' + esc(String(r.data.pgid)))
+      : errLine(r.data.error || 'could not start crew');
+    if (r.ok) setTimeout(loadRuns, 500);
   });
 
-  // ── boot ──────────────────────────────────────────────────────────
-  (async function main() {
-    const { ok, status, data } = await api("/api/auth/me");
-    if (!ok || status === 401) { location.replace("/login.html"); return; }
-    IS_OP = !!data.operator;
-    $("who").textContent = data.username;
-    $("hello").textContent = `Hello, ${data.username}.`;
-    $("rank-badge").textContent = IS_OP ? "operator" : "member";
-    const dot = $("acct-dot");
-    dot.classList.add(data.status === "active" ? "" : data.status);
-    if (data.status !== "active") $("pending-note").hidden = false;
-    $("status-marks").innerHTML =
-      `<span class="badge ${data.status === "active" ? "ok" : data.status === "pending" ? "live" : "err"}">&#9679; ${esc(data.status)}</span>` +
-      (IS_OP ? `<span class="badge">operator</span>` : `<span class="badge">member</span>`);
+  /* feed */
+  var feedCursor = '0';
+  function feedTx(e) {
+    var b = e.body;
+    if (!b || typeof b !== 'object') return esc(String(b || '').slice(0, 200));
+    if (b.rejection) return 'refused a ' + esc(String(b.type || e.type)) + ' line — ' + esc((b.violations || []).join('; '));
+    if (typeof b.text === 'string') return esc(b.text.slice(0, 200));
+    if (b.rowId) return esc(b.rowId) + ' → ' + esc(String(b.status || b.verdict || ''));
+    return esc(JSON.stringify(b).slice(0, 200));
+  }
+  function feedVerdict(e) {
+    var b = e.body || {};
+    if (b.rejection) return chip('refused', 'red', true);
+    if (b.verdict === 'falsified') return chip('falsified', 'red', true);
+    if (b.verdict === 'unproven') return chip('unproven', 'slate', true);
+    if (b.verdict === 'accepted' || b.status === 'accepted') return chip('accepted', 'green', true);
+    if (e.type === 'system') return chip('system', 'slate', true);
+    return '';
+  }
+  async function loadFeed() {
+    var slug = $('feed-project').value;
+    if (!slug) return;
+    $('feed-state').textContent = 'project · ' + slug + ' · live';
+    var r = await api('/api/projects/' + encodeURIComponent(slug) + '/stream?afterSeq=' + encodeURIComponent(feedCursor));
+    if (!r.ok || !(r.data.events || []).length) return;
+    feedCursor = r.data.nextCursor;
+    var box = $('feed');
+    (r.data.events || []).forEach(function (e) {
+      var div = document.createElement('div');
+      div.className = 'feed-line' + (e.body && e.body.rejection ? ' refused' : '') + (e.corrupt ? ' refused' : '');
+      div.innerHTML = '<span class="ts">' + esc(fTime(e.ts)) + '</span><span class="who">' + esc(e.actor) + '</span>' +
+        '<span class="tx">' + feedTx(e) + '</span><span class="verdict">' + feedVerdict(e) + '</span>';
+      box.appendChild(div);
+    });
+    while (box.children.length > 200) box.firstChild.remove();
+    box.scrollTop = box.scrollHeight;
+  }
+  $('feed-project').addEventListener('change', function () { feedCursor = '0'; $('feed').innerHTML = ''; loadFeed(); });
+  $('feed-post').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var text = $('fp-text').value.trim();
+    if (!$('feed-project').value || !text) return;
+    var payload = { type: $('fp-type').value, body: $('fp-raw').checked ? text : { text: text } };
+    var r = await api('/api/projects/' + encodeURIComponent($('feed-project').value) + '/stream', { method: 'POST', body: JSON.stringify(payload) });
+    $('feed-note').innerHTML = r.ok
+      ? okLine('posted — seq ' + esc(String(r.data.seq)))
+      : errLine('refused — ' + ((r.data.violations || []).join('; ') || r.data.error || 'malformed'));
+    if (r.ok) { $('fp-text').value = ''; setTimeout(loadFeed, 150); }
+  });
 
-    if (IS_OP) {
-      document.querySelectorAll(".op-only").forEach((a) => a.hidden = false);
-    } else {
-      $("byo-sec").hidden = true;
-      $("api-model-note").innerHTML =
-        "OpenAI-compatible. <code>model</code> = one of the names assigned to your account (Models tab). " +
-        "One key, three services: <code>POST&nbsp;/api/flow/chat/completions</code> (text) &middot; " +
-        "<code>POST&nbsp;/api/flow/search</code> with <code>{&quot;query&quot;:&quot;&hellip;&quot;}</code> &middot; " +
-        "<code>POST&nbsp;/api/flow/image</code> with <code>{&quot;prompt&quot;:&quot;&hellip;&quot;}</code>.";
-      $("gk-curl").textContent =
-        'curl https://<your-gateway>/api/flow/chat/completions \\\n' +
-        '  -H "Authorization: Bearer jkn_…" \\\n' +
-        '  -H "Content-Type: application/json" \\\n' +
-        '  -d \'{"model":"fast","stream":false,"messages":[{"role":"user","content":"hi"}]}\' \n\n' +
-        'model — one of the names assigned to your account (see the Models tab)';
+  /* portfolio */
+  async function loadPortfolio() {
+    var r = await api('/api/portfolio');
+    if (!r.ok) return;
+    var nd = r.data.nextDecision;
+    $('pf-next').innerHTML = nd
+      ? '<span class="eyebrow">next for this account</span>' + chip(esc(nd.project), 'gold') + ' ' + chip(nd.kind, nd.kind === 'ship' ? '' : 'gold', true) + ' ' + esc(nd.prompt) +
+        ' — ' + (nd.options || []).map(function (o) { return chip(o); }).join(' ')
+      : '<span class="eyebrow">next for this account</span><span>nothing is waiting on a human — the crew has the wheel</span>';
+    $('portfolio').innerHTML = (r.data.projects || []).map(function (p) {
+      var openN = (p.nextDecision && p.nextDecision.kind !== 'ship') ? 1 : 0;
+      var rows = (p.rows || []).map(function (x) {
+        return '<li><span>' + esc(x.rowId) + ' — ' + esc(x.resolved) + (x.witnessedBy ? ' <span class="m">✓ witnessed</span>' : '') + '</span></li>';
+      }).join('') || '<li><span class="m">no resolved rows yet</span></li>';
+      return '<article class="panel pcard"><div class="hd"><div><p class="eyebrow">Project</p><h3 style="margin-top:6px">' + esc(p.name) + '</h3></div>' +
+        '<span>' + (p.status === 'done' ? chip('done', 'green', true) : p.status === 'running' ? chip('running', 'green', true) : chip(p.status, 'red', true)) + '</span></div>' +
+        '<ul class="open-list">' + rows + '</ul>' +
+        (p.nextDecision
+          ? '<div class="decide"><span class="eyebrow">next for this account</span><span>' + chip(p.nextDecision.kind, p.nextDecision.kind === 'ship' ? '' : 'gold', true) + ' ' + esc(p.nextDecision.prompt) + '</span></div>'
+          : '') + '</article>';
+    }).join('') || empty('No projects yet', '');
+  }
+
+  /* ================= routing ================= */
+  var VIEWS = {
+    'flow/overview': { t: 'Overview', s: 'What this account is doing on Flow — every number measured.' },
+    'flow/keys': { t: 'Keys', s: 'The pool’s provider keys, and the gateway keys you hand to clients.' },
+    'flow/models': { t: 'Models', s: 'The real names your account may call — checked daily against the catalog.' },
+    'flow/usage': { t: 'Usage', s: 'Charts, limit windows and the full request ledger.' },
+    'flow/desk': { t: 'Desk', s: 'Pending accounts first, then the account book. Only you see this.', op: true },
+    'flow/limits': { t: 'Limits', s: 'Per-model grants, reconciled against the pool’s real capacity.', op: true, acct: true },
+    'flow/workbench': { t: 'Model workbench', s: 'The names the customer calls — and the rungs behind them.', op: true, acct: true },
+    'flow/catalog': { t: 'Catalog', s: 'What the pool can serve, per provider, checked daily.', op: true },
+    'crew/board': { t: 'Board', s: 'Start a crew. Kill it mid-run — the partials stay.' },
+    'crew/feed': { t: 'Feed', s: 'The live project stream. Refusals land in seconds.' },
+    'crew/portfolio': { t: 'Portfolio', s: 'Every project names its next human decision.' }
+  };
+  function acctName(uid) { var u = deskUsers.find(function (x) { return x.id === uid; }); return u ? u.username : 'account'; }
+  function parseHash() {
+    var parts = location.hash.replace(/^#\/?/, '').split('/');
+    var product = parts[0] === 'crew' ? 'crew' : 'flow';
+    var view = parts[1] || (product === 'crew' ? 'board' : 'overview');
+    var param = parts.slice(2).join('/') || null;
+    var key = product + '/' + view;
+    if (!VIEWS[key] || (VIEWS[key].op && !IS_OP)) {
+      var fb = product === 'crew' ? 'board' : 'overview';
+      return { product: product, key: product + '/' + fb, param: null };
     }
-    loadKeys();
-    loadGatewayKeys();
-    loadUsage();
-    loadOrgLimits();
-    if (!location.hash) history.replaceState(null, "", "#flow/overview");
+    return { product: product, key: key, param: param };
+  }
+  var NAV = {
+    flow: [['overview', 'Overview'], ['keys', 'Keys'], ['models', 'Models'], ['usage', 'Usage']],
+    crew: [['board', 'Board'], ['feed', 'Feed'], ['portfolio', 'Portfolio']]
+  };
+  var ICONS = {
+    overview: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
+    keys: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="12" r="4.5"/><path d="M12.5 12H20m-3 0v3.5M20 12v3.5"/></svg>',
+    models: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>',
+    usage: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 19V5m0 14h16"/><path d="M7 15l4-5 3 3 5-7"/></svg>',
+    desk: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="9" cy="9" r="3.5"/><path d="M3.5 19c1-3 3-4.5 5.5-4.5s4.5 1.5 5.5 4.5"/><path d="M17 8h4m-4 4h3"/></svg>',
+    catalog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 4h11l3 3v13H5V4Z"/><path d="M9 4v5h6V4M9 13h6M9 17h6"/></svg>',
+    board: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4m8-4v4M8 11h3m2 0h3"/></svg>',
+    feed: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 5h11m-11 4h14M5 13h9m-9 4h12"/></svg>',
+    portfolio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>'
+  };
+  function buildNav(product) {
+    var entries = NAV[product].slice();
+    if (product === 'flow' && IS_OP) entries = entries.concat([['desk', 'Desk'], ['catalog', 'Catalog']]);
+    var html = '<p class="eyebrow">' + (product === 'flow' ? 'Flow' : 'Crew') + '</p>';
+    entries.forEach(function (e) {
+      html += '<a href="#' + product + '/' + e[0] + '">' + (ICONS[e[0]] || '') + '<span>' + e[1] + '</span></a>';
+    });
+    $('snav').innerHTML = html;
+  }
+  function route() {
+    var r = parseHash();
+    $('sw-flow').setAttribute('aria-pressed', String(r.product === 'flow'));
+    $('sw-crew').setAttribute('aria-pressed', String(r.product === 'crew'));
+    buildNav(r.product);
+    $('mtop-title').textContent = r.product === 'flow' ? 'Flow' : 'Crew';
+    document.querySelectorAll('#snav a').forEach(function (a) {
+      var href = a.getAttribute('href').slice(1);
+      var on = href === r.key || (VIEWS[r.key].acct && r.key === href);
+      a.setAttribute('aria-current', on ? 'page' : 'false');
+    });
+    document.querySelectorAll('.view').forEach(function (v) { v.hidden = true; v.classList.remove('in'); });
+    var el = document.querySelector('.view[data-view="' + r.key + '"]');
+    if (el) { el.hidden = false; void el.offsetWidth; el.classList.add('in'); }
+    var meta = VIEWS[r.key];
+    $('v-title').textContent = meta.acct && r.param ? meta.t + ' · ' + acctName(r.param) : meta.t;
+    $('v-sub').textContent = meta.s;
+    document.querySelectorAll('#snav a').forEach(function (a) {
+      if (a.getAttribute('href') === '#' + r.key) a.setAttribute('aria-current', 'page');
+    });
+    // view data
+    $('v-sub').textContent = (r.key === 'flow/keys' && !IS_OP)
+      ? 'The gateway keys you hand to clients. Shown exactly once at issue.'
+      : meta.s;
+    if (r.key === 'flow/overview' || r.key === 'flow/usage') loadUsage();
+    if (r.key === 'flow/keys') { if (IS_OP) loadKeys(); loadGatewayKeys(); loadAliases(); }
+    if (r.key === 'flow/models') loadAliases();
+    if (r.key === 'flow/desk') { loadDesk(); loadDeskUsers(); }
+    if (r.key === 'flow/limits' && r.param) openLimits(r.param);
+    if (r.key === 'flow/workbench' && r.param) openWorkbench(r.param);
+    if (r.key === 'flow/catalog') loadCatalogView();
+    if (r.key === 'crew/board') loadRuns();
+    if (r.key === 'crew/portfolio') loadPortfolio();
+    document.body.classList.remove('side-open');
+  }
+  window.addEventListener('hashchange', route);
+  $('sw-flow').addEventListener('click', function () { location.hash = 'flow/overview'; });
+  $('sw-crew').addEventListener('click', function () { location.hash = 'crew/board'; });
+  document.querySelectorAll('[data-act="to-desk"]').forEach(function (b) {
+    b.addEventListener('click', function () { location.hash = 'flow/desk'; });
+  });
+  $('navtoggle').addEventListener('click', function () { document.body.classList.toggle('side-open'); });
+  $('side-scrim').addEventListener('click', function () { document.body.classList.remove('side-open'); });
+  $('signout').addEventListener('click', function () {
+    api('/api/auth/logout', { method: 'POST' }).finally(function () { location.replace('login.html'); });
+  });
+
+  /* ================= boot ================= */
+  (async function main() {
+    var r = await api('/api/auth/me');
+    if (!r.ok) { location.replace('login.html'); return; }
+    var data = r.data;
+    IS_OP = !!data.operator;
+    USERNAME = data.username || '';
+    $('hello').textContent = USERNAME;
+    $('status-marks').innerHTML = statusChip(data.status) + (IS_OP ? chip('operator') : chip('member'));
+    if (data.status && data.status !== 'active') $('pending-note').hidden = false;
+    if (!IS_OP) {
+      document.querySelectorAll('[data-op]').forEach(function (el) { el.hidden = true; el.style.display = 'none'; });
+      $('byo-sec').hidden = true;
+    }
+    buildNav('flow');
+    if (!location.hash) history.replaceState(null, '', '#flow/overview');
     route();
+    // ambient live loops
+    loadProjects().then(function () { loadRuns(); });
+    setInterval(loadFeed, 2000);
   })();
+})();
 </script>
 </body>
 </html>

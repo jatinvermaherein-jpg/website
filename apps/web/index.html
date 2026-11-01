@@ -1,181 +1,123 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>JATIN — One base. Two instruments.</title>
-<meta name="description" content="One account, one pool. Two instruments: FLOW — one API key, three faces, real verified model names. CREW — identical agents in different seats over one immutable stream.">
-<meta name="robots" content="noindex">
-<meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0B0E1A">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/preloader.css">
-<link rel="stylesheet" href="/site.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JATIN — One base. Two instruments.</title>
+  <meta name="description" content="JATIN is one private platform with two instruments: FLOW, the AI gateway, and CREW, agents at work. Every drop, one pearl." />
+  <meta name="theme-color" content="#0B0E1A" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B0E1A'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23D4AF6A'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23F5F1E8' stroke-width='1.5' stroke-dasharray='28 28'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="preloader.css" />
+  <link rel="stylesheet" href="site.css" />
+  <script src="preloader.js"></script>
 </head>
 <body>
-<div class="grain" aria-hidden="true"></div>
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="index.html" aria-label="JATIN — home">
+        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 3a13 13 0 0 1 13 13" stroke="#F5F1E8" stroke-width="1.5" stroke-linecap="round"/><path d="M16 29A13 13 0 0 1 3 16" stroke="#F5F1E8" stroke-opacity=".55" stroke-width="1.5" stroke-linecap="round"/><path d="M16 8a8 8 0 0 1 8 8" stroke="#F5F1E8" stroke-opacity=".8" stroke-width="1.5" stroke-linecap="round"/><path d="M16 24a8 8 0 0 1-8-8" stroke="#F5F1E8" stroke-opacity=".4" stroke-width="1.5" stroke-linecap="round"/><circle cx="16" cy="16" r="3" fill="#D4AF6A"/></svg>
+        JATIN
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a href="flow.html">Flow</a>
+        <a href="crew.html">Crew</a>
+        <a href="login.html" class="signin">Sign in</a>
+      </nav>
+    </div>
+  </header>
 
-<header class="jt-bar">
-  <div class="jt-bar-in">
-    <a class="jt-brand" href="/" aria-label="Jatin, home">
-      <svg class="jt-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true" focusable="false">
-        <circle cx="16" cy="16" r="11" opacity="0.25"/>
-        <circle cx="16" cy="16" r="7" opacity="0.5"/>
-        <circle class="jt-mark-core" cx="16" cy="16" r="3.4"/>
-      </svg>
-      <span>Jatin<i></i></span>
-    </a>
-    <nav class="jt-nav" aria-label="Site">
-      <a href="/flow.html">Flow</a>
-      <a href="/crew.html">Crew</a>
-      <a class="jt-cta" href="/login.html">Sign in</a>
-    </nav>
-  </div>
-</header>
-
-<main>
-  <!-- ══ ACT 1 · the house opens on its truth ══════════════════════ -->
-  <section class="hero">
-    <div class="veil" aria-hidden="true"></div>
-    <div class="wrap hero-in">
-      <p class="eyebrow">One account &middot; one pool &mdash; every drop, one pearl</p>
-      <h1 class="display">
-        <span class="thin">One base,</span>
-        <span class="bold">two <em class="lean">instruments.</em></span>
-      </h1>
-      <div class="hero-foot">
-        <p class="sub">
-          Jatin is one private platform. On its shared base &mdash; one login, one
-          ledger, one provider pool &mdash; live two products that never share a
-          sentence: <b>FLOW</b>, the gateway that resells AI capacity under your
-          names, and <b>CREW</b>, the agents that work while you decide.
-        </p>
-        <div class="cta">
-          <span class="hint" id="pulse-flow">&bull; Flow &mdash; the gateway</span>
-          <span class="hint" id="pulse-crew">&bull; Crew &mdash; the seats</span>
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <p class="eyebrow gold fx">Every drop, one pearl.</p>
+        <h1 class="display fx d1">
+          <span class="t">One base,</span>
+          <span class="b">two <span class="lean">instruments.</span></span>
+        </h1>
+        <p class="lede fx d2">One private platform. One account, one login, one ledger, one pool. On it, two instruments that never share a story.</p>
+        <div class="hero-meta fx d3">
+          <div class="pulse-badge" id="pulse" role="status" aria-live="polite">
+            <span class="dot" id="pulse-dot"></span>
+            <span>requests · 24h <b id="p-req">—</b></span>
+            <span class="sep"></span>
+            <span>crews running <b id="p-crew">—</b></span>
+          </div>
+          <a href="login.html" class="btn btn-ghost">Sign in <svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8h11M9 4l4 4-4 4"/></svg></a>
         </div>
       </div>
-      <div class="marks">
-        <span class="badge live" id="pulse-live">&#9679; live</span>
-        <span class="badge" id="pulse-reqs">&mdash; requests in 24h</span>
-        <span class="badge" id="pulse-crews">&mdash; crews working</span>
-      </div>
-    </div>
-    <div class="scroll-cue" aria-hidden="true"><span>the two doors</span><i></i></div>
-    <svg class="arch" viewBox="0 0 1440 90" preserveAspectRatio="none" aria-hidden="true"><path d="M0 90 C 360 8, 1080 8, 1440 90" fill="none" stroke="var(--jt-line)" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>
-  </section>
+    </section>
 
-  <!-- ══ ACT 2 · two doors, one house ══════════════════════════════ -->
-  <section class="doors">
-    <div class="veil" aria-hidden="true"></div>
-    <div class="wrap doors-in">
-      <p class="eyebrow">Choose an instrument</p>
-      <div class="door-grid">
-        <article class="panel panel--flow door door--flow">
-          <svg class="panel-ripple" viewBox="0 0 140 140" aria-hidden="true"><circle cx="140" cy="0" r="118"/><circle cx="140" cy="0" r="78"/><circle cx="140" cy="0" r="40"/></svg>
-          <h2>Flow <span class="mono-faint" style="font-size:11px">&middot; the gateway</span></h2>
-          <p>Every key, one gateway. The providers behind it are not your business.</p>
-          <div class="door-visual" aria-hidden="true">
-            <svg viewBox="0 0 420 96" role="img" aria-label="a ledger line of measured ticks, one glowing gold">
-              <line class="tickline" x1="8" y1="72" x2="412" y2="72" stroke-width="1.5"/>
-              <g>
-                <line class="tickline" x1="30"  y1="72" x2="30"  y2="44"/><circle class="tickdot" cx="30"  cy="44" r="2.6"/>
-                <line class="tickline" x1="58"  y1="72" x2="58"  y2="58"/><circle class="tickdot" cx="58"  cy="58" r="2.6"/>
-                <line class="tickline" x1="86"  y1="72" x2="86"  y2="36"/><circle class="tickdot" cx="86"  cy="36" r="2.6"/>
-                <line class="tickline" x1="114" y1="72" x2="114" y2="52"/><circle class="tickdot" cx="114" cy="52" r="2.6"/>
-                <line class="tickline hot" x1="142" y1="72" x2="142" y2="16"/><circle class="tickdot hot" cx="142" cy="16" r="4"/>
-                <line class="tickline" x1="170" y1="72" x2="170" y2="60"/><circle class="tickdot" cx="170" cy="60" r="2.6"/>
-                <line class="tickline" x1="198" y1="72" x2="198" y2="40"/><circle class="tickdot" cx="198" cy="40" r="2.6"/>
-                <line class="tickline" x1="226" y1="72" x2="226" y2="56"/><circle class="tickdot" cx="226" cy="56" r="2.6"/>
-                <line class="tickline" x1="254" y1="72" x2="254" y2="46"/><circle class="tickdot" cx="254" cy="46" r="2.6"/>
-                <line class="tickline" x1="282" y1="72" x2="282" y2="62"/><circle class="tickdot" cx="282" cy="62" r="2.6"/>
-                <line class="tickline" x1="310" y1="72" x2="310" y2="48"/><circle class="tickdot" cx="310" cy="48" r="2.6"/>
-                <line class="tickline" x1="338" y1="72" x2="338" y2="58"/><circle class="tickdot" cx="338" cy="58" r="2.6"/>
-                <line class="tickline" x1="366" y1="72" x2="366" y2="38"/><circle class="tickdot" cx="366" cy="38" r="2.6"/>
-                <line class="tickline" x1="394" y1="72" x2="394" y2="54"/><circle class="tickdot" cx="394" cy="54" r="2.6"/>
-              </g>
-              <text x="8" y="92" fill="var(--jt-faint)" font-family="var(--jt-mono)" font-size="9" letter-spacing="2">EVERY NUMBER, MEASURED</text>
-            </svg>
-          </div>
-          <div class="door-cta">
-            <a class="btn" href="/flow.html">Enter Flow</a>
-            <span class="hint">one key &middot; text, search, image</span>
-          </div>
-        </article>
-
-        <article class="panel panel--crew door door--crew">
-          <svg class="panel-ripple" viewBox="0 0 140 140" aria-hidden="true"><circle cx="0" cy="0" r="118"/><circle cx="0" cy="0" r="78"/><circle cx="0" cy="0" r="40"/></svg>
-          <h2>Crew <span class="mono-faint" style="font-size:11px">&middot; the seats</span></h2>
-          <p>The crew works while you decide. Killed, never lost.</p>
-          <div class="door-visual" aria-hidden="true">
-            <div class="seatline">
-              <div class="seat lead">
-                <svg viewBox="0 0 24 24" fill="none" stroke="var(--jt-gold)" stroke-width="1.4"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.2-3.6 3.8-5.4 7-5.4s5.8 1.8 7 5.4"/></svg>
-                <span>Lead</span>
+    <section class="arch" aria-label="The two instruments">
+      <div class="wrap" style="padding-bottom:clamp(64px,9vw,120px)">
+        <div class="split">
+          <!-- FLOW -->
+          <article class="door door-flow fx d1">
+            <p class="eyebrow gold">Instrument I · the gateway</p>
+            <h2><span class="t">Flow</span>Every key, one gateway.</h2>
+            <p class="sub">The providers behind it are not your business.</p>
+            <div class="viz ledger-viz" aria-hidden="true">
+              <div class="keyrow">
+                <svg viewBox="0 0 120 36" fill="none" stroke="#D4AF6A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="18" r="10"/><circle cx="16" cy="18" r="3.5" fill="#D4AF6A" stroke="none"/><path d="M26 18h86M96 18v9M105 18v6M112 18v-1"/></svg>
+                <span class="k">jt_live_7Fq2•••••••••••9aXc</span>
               </div>
-              <div class="seat">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="4" y="10" width="7" height="9" rx="1.5"/><rect x="13" y="6" width="7" height="13" rx="1.5"/></svg>
-                <span>Builders</span>
-              </div>
-              <div class="seat">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="11" cy="11" r="5.5"/><path d="m15.5 15.5 4.5 4.5"/></svg>
-                <span>Auditors</span>
-              </div>
-              <div class="seat">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 19 15.5 8.5l3 3L8 22H5v-3Z"/><path d="m14 7 3-3 3 3-3 3"/></svg>
-                <span>Scribe</span>
-              </div>
-              <div class="seat">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3"/></svg>
-                <span>Scout</span>
+              <div class="rows">
+                <div><span>text · gemini-2.5-flash</span><b>verified</b></div>
+                <div><span>search</span><b>live</b></div>
+                <div><span>image</span><b>live</b></div>
               </div>
             </div>
-          </div>
-          <div class="door-cta">
-            <a class="btn" href="/crew.html">Enter Crew</a>
-            <span class="hint">five seats &middot; one immutable stream</span>
-          </div>
-        </article>
+            <div class="go">
+              <a href="flow.html" class="btn btn-gold">Open Flow <svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8h11M9 4l4 4-4 4"/></svg></a>
+              <span class="eyebrow">control · opacity</span>
+            </div>
+          </article>
+
+          <!-- CREW -->
+          <article class="door door-crew fx d2">
+            <p class="eyebrow gold">Instrument II · agents at work</p>
+            <h2><span class="t">Crew</span>The crew works while you decide.</h2>
+            <p class="sub">Killed, never lost.</p>
+            <div class="viz roster-viz" aria-hidden="true">
+              <svg viewBox="0 0 400 96" fill="none">
+                <line x1="30" y1="38" x2="370" y2="38" stroke="rgba(245,241,232,.14)"/>
+                <g stroke="#F5F1E8" stroke-opacity=".7" stroke-width="1.5" fill="#0B0E1A">
+                  <circle cx="30" cy="38" r="12"/><circle cx="115" cy="38" r="12"/><circle cx="200" cy="38" r="12"/><circle cx="285" cy="38" r="12"/><circle cx="370" cy="38" r="12"/>
+                </g>
+                <circle cx="30" cy="38" r="4" fill="#D4AF6A"/>
+                <circle cx="115" cy="38" r="3" fill="#F5F1E8" fill-opacity=".7"/><circle cx="200" cy="38" r="3" fill="#F5F1E8" fill-opacity=".7"/><circle cx="285" cy="38" r="3" fill="#F5F1E8" fill-opacity=".7"/><circle cx="370" cy="38" r="3" fill="#F5F1E8" fill-opacity=".7"/>
+                <g text-anchor="middle"><text x="30" y="76">Lead</text><text x="115" y="76">Builders</text><text x="200" y="76">Auditors</text><text x="285" y="76">Scribe</text><text x="370" y="76">Scout</text></g>
+              </svg>
+            </div>
+            <div class="go">
+              <a href="crew.html" class="btn btn-gold">Open Crew <svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8h11M9 4l4 4-4 4"/></svg></a>
+              <span class="eyebrow">labor · truth</span>
+            </div>
+          </article>
+        </div>
       </div>
-      <p class="fine" style="margin-top:26px">
-        One account opens both doors. One ledger prices both. Nothing underneath
-        is duplicated &mdash; only the story is told twice.
-      </p>
-    </div>
-    <svg class="arch" viewBox="0 0 1440 90" preserveAspectRatio="none" aria-hidden="true"><path d="M0 90 C 360 8, 1080 8, 1440 90" fill="none" stroke="var(--jt-line)" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>
-  </section>
+    </section>
+  </main>
 
   <footer class="foot">
-    <div class="wrap foot-in">
-      <span class="mono-faint">Jatin &mdash; every drop, one pearl</span>
-      <span class="mono-faint">Flow &middot; Crew &mdash; one base, two instruments</span>
-      <a class="mono-faint" href="/login.html" style="color:var(--jt-gold)">Sign in &rarr;</a>
-    </div>
-    <div class="wrap refusals" aria-label="What Jatin will never do">
-      <span>no unencrypted keys</span>
-      <span>no model name that isn&rsquo;t real today</span>
-      <span>no grant above the pool&rsquo;s real capacity</span>
-      <span>no provider name across the wire to a customer</span>
-      <span>no PASS without falsification</span>
-      <span>no read path for env values</span>
+    <div class="wrap">
+      <p class="line"><b style="color:var(--ink);font-weight:800;letter-spacing:.06em">JATIN</b> — Every drop, one pearl. One base. Two instruments.</p>
+      <nav aria-label="Footer"><a href="flow.html">Flow</a><a href="crew.html">Crew</a><a href="login.html">Sign in</a></nav>
     </div>
   </footer>
-</main>
 
-<script src="/preloader.js"></script>
-<script>window.__jatinPreloader && window.__jatinPreloader.init({});</script>
-<script>
-// the landing is not a poster — it reads the live system (aggregate
-// telemetry only; if the fetch fails, the static claims stand).
-(async () => {
-  try {
-    const p = await (await fetch("/api/pulse", { cache: "no-store" })).json();
-    if (!p.up) return;
-    const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
-    set("pulse-reqs", p.requests24h + " requests in 24h");
-    set("pulse-crews", p.crewsRunning + " crew" + (p.crewsRunning === 1 ? "" : "s") + " working");
-  } catch { /* the static claims are good enough */ }
-})();
-</script>
+  <script>
+    (function () {
+      var n = function (v) { return typeof v === 'number' ? v.toLocaleString('en-US') : '—'; };
+      fetch('/api/pulse', { credentials: 'same-origin' })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (d) {
+          document.getElementById('p-req').textContent = n(d.requests24h);
+          document.getElementById('p-crew').textContent = n(d.crewsRunning);
+          var dot = document.getElementById('pulse-dot');
+          if (d.up !== false) dot.className = 'dot green pulse';
+        })
+        .catch(function () { /* offline preview: leave the dashes */ });
+    })();
+  </script>
 </body>
 </html>

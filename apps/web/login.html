@@ -1,142 +1,120 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>JATIN — Sign in</title>
-<meta name="robots" content="noindex">
-<meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0B0E1A">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/preloader.css">
-<link rel="stylesheet" href="/site.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign in — JATIN</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#0B0E1A" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B0E1A'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23D4AF6A'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23F5F1E8' stroke-width='1.5' stroke-dasharray='28 28'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="preloader.css" />
+  <link rel="stylesheet" href="site.css" />
+  <script src="preloader.js"></script>
 </head>
-<body>
-<div class="grain" aria-hidden="true"></div>
-
-<header class="jt-bar">
-  <div class="jt-bar-in">
-    <a class="jt-brand" href="/" aria-label="Jatin, home">
-      <svg class="jt-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true" focusable="false">
-        <circle cx="16" cy="16" r="11" opacity="0.25"/>
-        <circle cx="16" cy="16" r="7" opacity="0.5"/>
-        <circle class="jt-mark-core" cx="16" cy="16" r="3.4"/>
-      </svg>
-      <span>Jatin<i></i></span>
+<body class="auth-page" style="padding:0">
+  <div class="auth-wrap">
+    <a class="brand" href="index.html" aria-label="JATIN — home" style="align-self:center">
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true" style="width:26px;height:26px"><path d="M16 3a13 13 0 0 1 13 13" stroke="#F5F1E8" stroke-width="1.5" stroke-linecap="round"/><path d="M16 29A13 13 0 0 1 3 16" stroke="#F5F1E8" stroke-opacity=".55" stroke-width="1.5" stroke-linecap="round"/><path d="M16 8a8 8 0 0 1 8 8" stroke="#F5F1E8" stroke-opacity=".8" stroke-width="1.5" stroke-linecap="round"/><path d="M16 24a8 8 0 0 1-8-8" stroke="#F5F1E8" stroke-opacity=".4" stroke-width="1.5" stroke-linecap="round"/><circle cx="16" cy="16" r="3" fill="#D4AF6A"/></svg>
+      JATIN
     </a>
-    <nav class="jt-nav" aria-label="Site">
-      <a class="jt-cta" href="/">Home</a>
-    </nav>
-  </div>
-</header>
 
-<main class="login-main">
-  <svg class="login-ripple" viewBox="0 0 140 140" aria-hidden="true"><circle cx="70" cy="0" r="118"/><circle cx="70" cy="0" r="78"/><circle cx="70" cy="0" r="40"/></svg>
-  <div class="login-card">
-    <svg class="login-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-      <circle cx="16" cy="16" r="11" opacity="0.25"/>
-      <circle cx="16" cy="16" r="7" opacity="0.5"/>
-      <circle class="jt-mark-core" cx="16" cy="16" r="3.4"/>
-    </svg>
-    <h1 class="login-title" id="login-title">Sign in</h1>
-    <p class="login-sub" id="login-sub">Username and password. One account opens both instruments.</p>
+    <div class="auth-card">
+      <h1 id="auth-title">Sign in</h1>
+      <p class="note" id="auth-sub" style="margin-top:4px">Username and password. One account opens both instruments.</p>
 
-    <div class="login-tabs" role="tablist" aria-label="Authentication">
-      <button class="login-tab on" id="tab-login" role="tab" aria-selected="true" type="button">Sign in</button>
-      <button class="login-tab" id="tab-register" role="tab" aria-selected="false" type="button">Request access</button>
+      <div class="tabs" role="tablist" aria-label="Authentication">
+        <button type="button" id="tab-in" role="tab" aria-selected="true">Sign in</button>
+        <button type="button" id="tab-up" role="tab" aria-selected="false">Request access</button>
+      </div>
+
+      <form id="form-in" novalidate>
+        <div class="field"><label for="in-user">Username</label>
+          <input class="input" id="in-user" name="username" autocomplete="username" spellcheck="false" /></div>
+        <div class="field"><label for="in-pass">Password</label>
+          <input class="input" id="in-pass" name="password" type="password" autocomplete="current-password" /></div>
+        <p class="err-line" id="in-err" role="alert"></p>
+        <button class="btn btn-gold" id="in-go" type="submit">Sign in</button>
+      </form>
+
+      <form id="form-up" novalidate hidden>
+        <div class="field"><label for="up-user">Username</label>
+          <input class="input" id="up-user" name="username" autocomplete="username" spellcheck="false" minlength="3" maxlength="32" pattern="[a-z0-9][a-z0-9_.\-]*" placeholder="lowercase, 3–32" /></div>
+        <div class="field"><label for="up-pass">Password</label>
+          <input class="input" id="up-pass" name="password" type="password" autocomplete="new-password" minlength="8" /></div>
+        <p class="err-line" id="up-err" role="alert"></p>
+        <button class="btn btn-gold" id="up-go" type="submit">Request access</button>
+      </form>
+
+      <div class="pending-box" id="pending" hidden>
+        <span class="dot gold" aria-hidden="true"></span>Created. Your account is pending verification by the operator — you can sign in once it is verified.
+      </div>
     </div>
 
-    <form id="login-form">
-      <label>Username
-        <input name="username" autocomplete="username" spellcheck="false" required>
-      </label>
-      <label>Password
-        <input name="password" type="password" autocomplete="current-password" required>
-      </label>
-      <button class="btn" type="submit">Sign in</button>
-    </form>
-
-    <form id="register-form" hidden>
-      <label>Username
-        <input name="username" autocomplete="username" spellcheck="false" minlength="3" maxlength="32" pattern="[a-z0-9][a-z0-9_.\-]*" required>
-      </label>
-      <label>Password
-        <input name="password" type="password" autocomplete="new-password" minlength="8" required>
-      </label>
-      <button class="btn" type="submit">Request access</button>
-      <p class="hint" id="register-note" hidden>&#10003; Created. Your account is pending verification by the operator &mdash; you can sign in once it is verified.</p>
-    </form>
-
-    <p id="auth-msg" class="auth-msg" role="status"></p>
-    <p class="login-foot mono-faint">One account. Both instruments.</p>
+    <p class="auth-foot">One account. Both instruments.</p>
   </div>
-</main>
 
-<script>
-  const msg = document.getElementById("auth-msg");
-  const say = (text, ok) => {
-    msg.textContent = text;
-    msg.className = "auth-msg " + (ok ? "ok" : "err");
-  };
-  const loginForm = document.getElementById("login-form");
-  const registerForm = document.getElementById("register-form");
-  const note = document.getElementById("register-note");
-  const tabLogin = document.getElementById("tab-login");
-  const tabRegister = document.getElementById("tab-register");
-  const title = document.getElementById("login-title");
-  const sub = document.getElementById("login-sub");
+  <script>
+  (function () {
+    'use strict';
+    function $(id) { return document.getElementById(id); }
+    var dest = '/dashboard.html';
 
-  function pick(tab) {
-    const login = tab === "login";
-    tabLogin.classList.toggle("on", login);
-    tabRegister.classList.toggle("on", !login);
-    tabLogin.setAttribute("aria-selected", login ? "true" : "false");
-    tabRegister.setAttribute("aria-selected", login ? "false" : "true");
-    loginForm.hidden = !login;
-    registerForm.hidden = login;
-    title.textContent = login ? "Sign in" : "Request access";
-    sub.textContent = login
-      ? "Username and password. One account opens both instruments."
-      : "New accounts are verified by the operator before you can sign in.";
-    msg.textContent = "";
-  }
-  tabLogin.addEventListener("click", () => pick("login"));
-  tabRegister.addEventListener("click", () => pick("register"));
-
-  loginForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const fd = new FormData(loginForm);
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ username: fd.get("username"), password: fd.get("password") }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok) {
-      say("Signed in — taking you in.", true);
-      setTimeout(() => (location.href = "/dashboard.html"), 500);
-    } else {
-      say(data.error || "sign-in failed", false);
+    function post(path, body) {
+      return fetch(path, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, status: r.status, body: j }; }); });
     }
-  });
-
-  registerForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const fd = new FormData(registerForm);
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ username: fd.get("username"), password: fd.get("password") }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok) {
-      note.hidden = false;
-      say("Account created — pending verification.", true);
-      registerForm.reset();
-    } else {
-      say(data.error || "could not create the account", false);
+    function msg(r, fallback) {
+      var b = r.body || {};
+      return (typeof b.error === 'string' && b.error) || (typeof b.message === 'string' && b.message) || fallback;
     }
-  });
-</script>
+    function busy(btn, on, label) { btn.setAttribute('aria-busy', on ? 'true' : 'false'); btn.textContent = on ? '…' : label; }
+
+    // already signed in? go straight through
+    fetch('/api/auth/me', { credentials: 'same-origin' }).then(function (r) { if (r.ok) location.replace(dest); }).catch(function () {});
+
+    function tab(which) {
+      var up = which === 'up';
+      $('tab-in').setAttribute('aria-selected', String(!up));
+      $('tab-up').setAttribute('aria-selected', String(up));
+      $('form-in').hidden = up; $('form-up').hidden = !up; $('pending').hidden = true;
+      $('auth-title').textContent = up ? 'Request access' : 'Sign in';
+      $('auth-sub').textContent = up
+        ? 'New accounts are verified by the operator before you can sign in.'
+        : 'Username and password. One account opens both instruments.';
+      (up ? $('up-user') : $('in-user')).focus();
+    }
+    $('tab-in').onclick = function () { tab('in'); };
+    $('tab-up').onclick = function () { tab('up'); };
+    if (location.hash === '#request') tab('up');
+
+    $('form-in').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var username = $('in-user').value.trim(), password = $('in-pass').value;
+      $('in-err').textContent = ''; $('in-user').classList.remove('bad'); $('in-pass').classList.remove('bad');
+      if (!username || !password) { $('in-err').textContent = 'Enter your username and password.'; return; }
+      busy($('in-go'), true, 'Sign in');
+      post('/api/auth/login', { username: username, password: password }).then(function (r) {
+        if (r.ok) { location.href = dest; return; }
+        busy($('in-go'), false, 'Sign in');
+        $('in-pass').classList.add('bad');
+        $('in-err').textContent = r.status === 403 ? msg(r, 'This account is still pending verification by the operator.') : msg(r, 'Those details don’t match an account.');
+      }).catch(function () { busy($('in-go'), false, 'Sign in'); $('in-err').textContent = 'Can’t reach the server. Try again in a moment.'; });
+    });
+
+    $('form-up').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var username = $('up-user').value.trim(), password = $('up-pass').value;
+      $('up-err').textContent = ''; $('up-user').classList.remove('bad'); $('up-pass').classList.remove('bad');
+      if (!username || password.length < 8) { $('up-err').textContent = 'A username and a password of at least 8 characters, please.'; return; }
+      busy($('up-go'), true, 'Request access');
+      post('/api/auth/register', { username: username, password: password }).then(function (r) {
+        busy($('up-go'), false, 'Request access');
+        if (r.ok) { $('form-up').hidden = true; $('pending').hidden = false; return; }
+        if (r.status === 409) $('up-user').classList.add('bad');
+        $('up-err').textContent = msg(r, 'Couldn’t send the request. Check the details and try again.');
+      }).catch(function () { busy($('up-go'), false, 'Request access'); $('up-err').textContent = 'Can’t reach the server. Try again in a moment.'; });
+    });
+  })();
+  </script>
 </body>
 </html>
