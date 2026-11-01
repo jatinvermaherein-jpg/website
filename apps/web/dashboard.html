@@ -119,7 +119,7 @@
 
     <!-- ===== FLOW · Models ===== -->
     <section class="view" data-view="flow/models" hidden>
-      <div class="group"><header><h2>Model names</h2><p>What your account may call. Checked daily against the upstream catalog.</p></header>
+      <div class="group"><header><h2>Model names</h2><p>What your account may call. Checked daily against the source catalog.</p></header>
         <div id="alias-list"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i><i class="skel"></i></div></div></div>
         <p class="note" id="api-model-note" style="margin-top:12px">These are the real model names, checked daily against the catalog.</p>
       </div>
@@ -130,7 +130,7 @@
       <div id="usage-charts-full"><div class="skel-block"><i class="skel"></i><i class="skel"></i><i class="skel"></i></div></div>
       <div class="group"><header><h2 id="windows-cap">Limit windows</h2><p id="windows-sub">What you may use, and when it renews.</p></header>
         <div id="windows"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i><i class="skel"></i></div></div></div></div>
-      <div class="group"><header><h2>Per gateway key</h2><p>Every key your clients use, pooled and measured.</p></header>
+      <div class="group"><header><h2>Per gateway key</h2><p>Every key your clients use — measured to the token.</p></header>
         <div id="gk-usage-tbl"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i></div></div></div></div>
       <div class="group"><header><h2>Request ledger</h2><p>The latest requests, newest first.</p></header>
         <div id="reqs"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i><i class="skel"></i></div></div></div></div>
@@ -339,7 +339,7 @@
     $('gk-usage').innerHTML =
       '<div class="panel scard"><span class="label">requests · 30d</span><span class="v">' + fK(sum('requests')) + '</span><span class="s">' + fN(sum('requests')) + ' total</span></div>' +
       '<div class="panel scard"><span class="label">tokens · 30d</span><span class="v">' + fK(sum('tokens')) + '</span><span class="s">' + fN(sum('tokens')) + ' total</span></div>' +
-      '<div class="panel scard"><span class="label">cost · 30d</span><span class="v">' + fUsd(sum('costCents')) + '</span><span class="s">provider-reported</span></div>' +
+      '<div class="panel scard"><span class="label">cost · 30d</span><span class="v">' + fUsd(sum('costCents')) + '</span><span class="s">as metered</span></div>' +
       '<div class="panel scard"><span class="label">gateway keys</span><span class="v">' + active.length + '</span><span class="s">' + (gk.length - active.length) + ' revoked</span></div>';
     renderUsageChart(d.series, 'usage-chart', 'ov');
     renderUsageChart(d.series, 'usage-charts-full', 'fu');
