@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>JATIN — Your dashboard</title>
+<title>JATIN — Dashboard</title>
 <meta name="robots" content="noindex">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#0B0E1A">
@@ -14,213 +14,394 @@
 <body>
 <div class="grain" aria-hidden="true"></div>
 
-<header class="jt-bar">
-  <div class="jt-bar-in">
-    <a class="jt-brand" href="/" aria-label="Jatin, home">
-      <svg class="jt-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true" focusable="false">
+<div class="shell">
+  <!-- ══ the sidebar — the one honest place the two products coexist ══ -->
+  <aside class="side" aria-label="Navigation">
+    <a class="side-brand" href="/" aria-label="Jatin, home">
+      <svg class="jt-mark" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true" focusable="false">
         <circle cx="16" cy="16" r="11" opacity="0.25"/>
         <circle cx="16" cy="16" r="7" opacity="0.5"/>
         <circle class="jt-mark-core" cx="16" cy="16" r="3.4"/>
       </svg>
       <span>Jatin<i></i></span>
     </a>
-    <nav class="jt-nav" aria-label="Account">
-      <a class="jt-cta" href="/dashboard.html" id="who">&nbsp;</a>
+
+    <p class="side-cap">Instruments</p>
+    <nav class="side-prod" aria-label="Product">
+      <button class="side-entry on" type="button" data-prod="flow" id="prod-flow">
+        <span class="pe-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="16.5" cy="7.5" r="3.5"/><path d="m14 10-9 9v4h4l2-2h4v-3l2-2"/><circle cx="8" cy="18" r="1" fill="currentColor" stroke="none"/></svg></span>
+        Flow
+        <span class="pe-tag">gateway</span>
+      </button>
+      <button class="side-entry" type="button" data-prod="crew" id="prod-crew">
+        <span class="pe-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="7" cy="8" r="2.6"/><circle cx="17" cy="8" r="2.6"/><path d="M2.5 19c.9-2.7 2.6-4 4.5-4s3.6 1.3 4.5 4M12.5 19c.9-2.7 2.6-4 4.5-4s3.6 1.3 4.5 4"/></svg></span>
+        Crew
+        <span class="pe-tag">seats</span>
+      </button>
     </nav>
-  </div>
-</header>
 
-<main class="dash-main">
-  <div class="wrap dash-in">
-    <section class="dash-id">
-      <p class="eyebrow">Your account</p>
-      <h1 class="dash-hello" id="hello">Loading&hellip;</h1>
-      <div class="marks" id="status-marks"></div>
-      <p class="fine" id="pending-note" hidden>
-        Your account is pending verification by the operator &mdash; you can use
-        the dashboard once it is verified.
-      </p>
-    </section>
+    <p class="side-cap" id="cap-flow">Flow</p>
+    <nav class="side-nav" id="nav-flow" aria-label="Flow sections">
+      <a class="side-link on" href="#flow/overview"><span class="sl-dot"></span>Overview</a>
+      <a class="side-link" href="#flow/keys"><span class="sl-dot"></span>Keys</a>
+      <a class="side-link" href="#flow/models"><span class="sl-dot"></span>Models</a>
+      <a class="side-link" href="#flow/usage"><span class="sl-dot"></span>Usage</a>
+      <a class="side-link op-only" href="#flow/desk" hidden><span class="sl-dot"></span>Desk</a>
+      <a class="side-link op-only" href="#flow/catalog" hidden><span class="sl-dot"></span>Catalog</a>
+    </nav>
 
-    <section class="dash-sec" id="prov-sec">
-      <p class="eyebrow">Your keys</p>
-      <p class="fine">Provider keys for this account. Stored encrypted, write-only
-        &mdash; no screen, endpoint, or log ever shows the secret again.</p>
-      <div class="keys" id="keys"><p class="empty">loading&hellip;</p></div>
+    <p class="side-cap" id="cap-crew" hidden>Crew</p>
+    <nav class="side-nav" id="nav-crew" hidden aria-label="Crew sections">
+      <a class="side-link" href="#crew/board"><span class="sl-dot"></span>Board</a>
+      <a class="side-link" href="#crew/feed"><span class="sl-dot"></span>Feed</a>
+      <a class="side-link" href="#crew/portfolio"><span class="sl-dot"></span>Portfolio</a>
+    </nav>
 
-      <form id="add-key" class="panel panel--flow add-key">
-        <svg class="panel-ripple" viewBox="0 0 140 140" aria-hidden="true"><circle cx="140" cy="0" r="118"/><circle cx="140" cy="0" r="78"/><circle cx="140" cy="0" r="40"/></svg>
-        <h2 class="panel-h" style="font-size:clamp(18px,2vw,22px)">Add a key</h2>
-        <div class="row2">
-          <label>Provider
-            <select name="provider" required>
-              <optgroup label="AI · text · reasoning">
-                <option value="google">Google Gemini</option>
-                <option value="groq">Groq</option>
-                <option value="openrouter">OpenRouter · free models (DeepSeek R1)</option>
-                <option value="mistral">Mistral</option>
-              </optgroup>
-              <optgroup label="Web search">
-                <option value="tavily">Tavily</option>
-                <option value="serper">Serper.dev</option>
-              </optgroup>
-              <optgroup label="Image">
-                <option value="pollinations">Pollinations · no key needed</option>
-              </optgroup>
-            </select>
-          </label>
-          <label>Label
-            <input name="label" placeholder="workhorse" maxlength="64" required>
-          </label>
+    <div class="side-foot">
+      <div class="side-acct">
+        <span class="acct-dot" id="acct-dot" aria-hidden="true"></span>
+        <span class="acct-name" id="who">&hellip;</span>
+        <span class="badge" id="rank-badge">&mdash;</span>
+      </div>
+      <button class="side-signout" type="button" id="signout">Sign out</button>
+    </div>
+  </aside>
+
+  <!-- ══ the stage ══════════════════════════════════════════════════ -->
+  <div class="stage">
+    <header class="topbar">
+      <div>
+        <h1 id="view-title">Loading&hellip;</h1>
+        <p class="tb-sub" id="view-sub">&nbsp;</p>
+      </div>
+      <div class="tb-chips" id="view-chips"></div>
+    </header>
+
+    <div class="content">
+
+      <!-- ═ FLOW · OVERVIEW ═══════════════════════════════════════ -->
+      <section class="view on" id="v-flow-overview">
+        <p class="eyebrow">Flow &middot; overview</p>
+        <h2 class="greet" id="hello" style="font-size:clamp(24px,3.4vw,36px);font-weight:800;text-transform:uppercase;letter-spacing:-.035em;margin:0 0 4px">Loading&hellip;</h2>
+        <div class="marks" id="status-marks"></div>
+        <p class="pending-note" id="pending-note" hidden>Your account is pending verification by the operator &mdash; you can use the dashboard once it is verified.</p>
+
+        <div class="stats" id="ov-stats">
+          <div class="stat"><span class="st-num" id="ov-req">&mdash;</span><span class="st-label">requests &middot; 30d</span></div>
+          <div class="stat"><span class="st-num" id="ov-tok">&mdash;</span><span class="st-label">tokens &middot; 30d</span></div>
+          <div class="stat"><span class="st-num" id="ov-cost">&mdash;</span><span class="st-label">cost &middot; 30d</span></div>
+          <div class="stat"><span class="st-num" id="ov-keys">&mdash;</span><span class="st-label">gateway keys</span></div>
         </div>
-        <label>Secret
-          <input name="secret" type="password" placeholder="sk-…" autocomplete="off" minlength="8" required>
-        </label>
-        <p class="fine" style="margin-top:4px">Limits are applied automatically per provider type
-          (requests/min, tokens/min, per day, monthly tokens + cost) &mdash; you never type them.
-          They are listed on the key once saved.</p>
-        <div class="cta">
-          <button class="btn" type="submit">Add key</button>
-          <span class="hint" id="add-note">&nbsp;</span>
-        </div>
-      </form>
-    </section>
 
-    <section class="dash-sec">
-      <p class="eyebrow">Gateway keys</p>
-      <p class="fine">Keys you hand to your clients so they can call <code>POST&nbsp;/api/flow/chat/completions</code>
-        with <code>Authorization: Bearer jkn_&hellip;</code> &mdash; the same OpenAI-shaped gateway,
-        no browser session. The key is shown <strong>exactly once</strong>; this account is billed per request,
-        and each key&rsquo;s usage is measured below.</p>
-      <div class="keys" id="gk-keys"><p class="empty">loading&hellip;</p></div>
+        <div id="ov-charts"></div>
 
-      <form id="add-gk" class="panel panel--flow add-key" autocomplete="off">
-        <svg class="panel-ripple" viewBox="0 0 140 140" aria-hidden="true"><circle cx="140" cy="0" r="118"/><circle cx="140" cy="0" r="78"/><circle cx="140" cy="0" r="40"/></svg>
-        <h2 class="panel-h" style="font-size:clamp(18px,2vw,22px)">Issue a gateway key</h2>
-        <label>Name
-          <input name="name" placeholder="mobile-app · ci · a partner" maxlength="80" required>
-        </label>
-        <label>Default model for the sample
-          <select id="gk-model"><option value="">(pick one&hellip;)</option></select>
-        </label>
-        <p class="fine">One key covers every face &mdash; text (a model name from the list),
-          <code>model:"search"</code> and <code>model:"image"</code>. The list is the real
-          catalog, checked daily; &ldquo;verified&rdquo; means the gateway confirmed the model
-          in its upstream today.</p>
-        <div class="cta">
-          <button class="btn" type="submit">Issue key</button>
-          <span class="hint" id="gk-note">&nbsp;</span>
+        <div>
+          <p class="eyebrow">Recent activity</p>
+          <div class="tbl-wrap"><div class="tbl-scroll">
+            <table class="tbl">
+              <thead><tr><th>Time</th><th>Model</th><th class="num">Tokens</th><th class="num">Latency</th><th>Status</th><th>Via</th></tr></thead>
+              <tbody id="reqs"><tr><td colspan="6" class="empty">loading&hellip;</td></tr></tbody>
+            </table>
+          </div></div>
         </div>
-      </form>
+      </section>
 
-      <div class="gk-reveal" id="gk-reveal" hidden>
-        <p class="fine">Your new key — <strong>copy it now</strong>. It is shown exactly once; there is no read path that returns it again.</p>
-        <div class="gk-plain">
-          <code id="gk-plain"></code>
-          <button type="button" class="btn-ghost" id="gk-copy">Copy</button>
+      <!-- ═ FLOW · KEYS ═══════════════════════════════════════════ -->
+      <section class="view" id="v-flow-keys">
+        <!-- BYO provider keys — the operator's pool (members never see it) -->
+        <div id="byo-sec">
+          <p class="eyebrow">Provider keys &mdash; the pool</p>
+          <p class="fine">Keys for this account. Stored encrypted, write-only &mdash; no screen, endpoint, or log ever shows the secret again. Limits are applied automatically per provider; they are listed on each key, never typed.</p>
+          <div class="tbl-wrap"><div class="tbl-scroll">
+            <table class="tbl">
+              <thead><tr><th>Provider</th><th>Label</th><th>Mask</th><th>Auto-limits</th><th>Status</th><th></th></tr></thead>
+              <tbody id="keys"><tr><td colspan="6" class="empty">loading&hellip;</td></tr></tbody>
+            </table>
+          </div></div>
+
+          <form id="add-key" class="form-panel" autocomplete="off">
+            <h3>Add a pool key</h3>
+            <div class="row2">
+              <label class="field">Provider
+                <select name="provider" required>
+                  <optgroup label="AI &middot; text &middot; reasoning">
+                    <option value="google">Google Gemini</option>
+                    <option value="groq">Groq</option>
+                    <option value="openrouter">OpenRouter &middot; free models</option>
+                    <option value="mistral">Mistral</option>
+                  </optgroup>
+                  <optgroup label="Web search">
+                    <option value="tavily">Tavily</option>
+                    <option value="serper">Serper.dev</option>
+                  </optgroup>
+                  <optgroup label="Image">
+                    <option value="pollinations">Pollinations &middot; no key needed</option>
+                  </optgroup>
+                </select>
+              </label>
+              <label class="field">Label
+                <input name="label" placeholder="workhorse" maxlength="64" required>
+              </label>
+            </div>
+            <label class="field">Secret
+              <input name="secret" type="password" placeholder="sk-…" autocomplete="off" minlength="8" required>
+            </label>
+            <p class="fine" style="margin-top:0">Limits are applied automatically per provider type (requests/min, tokens/min, per day, monthly tokens + cost) &mdash; you never type them. They are listed on the key once saved.</p>
+            <div class="form-cta">
+              <button class="btn" type="submit">Add key</button>
+              <span class="hint" id="add-note">&nbsp;</span>
+            </div>
+          </form>
         </div>
-        <pre class="gk-curl" id="gk-curl">curl https://&lt;your-gateway&gt;/api/flow/chat/completions \
+
+        <!-- gateway keys — the keys clients use -->
+        <p class="eyebrow" style="margin-top:10px">Gateway keys &mdash; what your clients call with</p>
+        <p class="fine">Keys you hand to your clients so they can call <code>POST&nbsp;/api/flow/chat/completions</code> with <code>Authorization:&nbsp;Bearer&nbsp;jkn_&hellip;</code> &mdash; the same OpenAI-shaped gateway, no browser session. The key is shown <strong>exactly once</strong>; each key&rsquo;s usage is measured in <a href="#flow/usage" style="color:var(--jt-gold)">Usage</a>.</p>
+        <div class="tbl-wrap"><div class="tbl-scroll">
+          <table class="tbl">
+            <thead><tr><th>Name</th><th>Prefix</th><th>Issued</th><th>Status</th><th></th></tr></thead>
+            <tbody id="gk-keys"><tr><td colspan="5" class="empty">loading&hellip;</td></tr></tbody>
+          </table>
+        </div></div>
+
+        <form id="add-gk" class="form-panel" autocomplete="off">
+          <h3>Issue a gateway key</h3>
+          <div class="row2">
+            <label class="field">Name
+              <input name="name" placeholder="mobile-app &middot; ci &middot; a partner" maxlength="80" required>
+            </label>
+            <label class="field">Default model for the ready-to-paste sample
+              <select id="gk-model"><option value="">(pick one&hellip;)</option></select>
+            </label>
+          </div>
+          <p class="fine" style="margin-top:0">One key covers every face &mdash; text (a model name from your Models tab), <code>model:"search"</code> and <code>model:"image"</code>. The list is the real catalog, checked daily; &ldquo;verified&rdquo; means the gateway confirmed the model in its upstream today.</p>
+          <div class="form-cta">
+            <button class="btn" type="submit">Issue key</button>
+            <span class="hint" id="gk-note">&nbsp;</span>
+          </div>
+        </form>
+
+        <div class="gk-reveal" id="gk-reveal" hidden>
+          <p class="fine" style="margin:0">Your new key &mdash; <strong>copy it now</strong>. It is shown exactly once; there is no read path that returns it again.</p>
+          <div class="gk-plain">
+            <code id="gk-plain"></code>
+            <button type="button" class="btn-ghost" id="gk-copy">Copy</button>
+          </div>
+          <pre class="gk-curl" id="gk-curl">curl https://&lt;your-gateway&gt;/api/flow/chat/completions \
   -H "Authorization: Bearer jkn_&hellip;" \
   -H "Content-Type: application/json" \
-  -d '{"model":"groq/llama-3.3-70b-versatile","stream":false,"messages":[{"role":"user","content":"hi"}]}'</pre>
-      </div>
-    </section>
+  -d '{"model":"gemini-2.5-flash","stream":false,"messages":[{"role":"user","content":"hi"}]}'</pre>
+        </div>
+      </section>
 
-    <section class="dash-sec">
-      <p class="eyebrow">Usage</p>
-      <p class="fine">What this account spent — the provider&rsquo;s own numbers, per key.
-        Windows show live headroom; a revoked key stops serving immediately.</p>
-      <div id="usage-chart"></div>
-      <div class="keys" id="windows"><p class="empty">loading&hellip;</p></div>
-      <p class="eyebrow" style="margin-top:26px">Per gateway key</p>
-      <p class="fine">Requests, tokens and cost attributed to each key you issued — the client&rsquo;s own view is the same endpoint, called with the key.</p>
-      <div class="reqs" id="gk-usage"></div>
-      <div class="reqs" id="reqs"></div>
-    </section>
+      <!-- ═ FLOW · MODELS ═════════════════════════════════════════ -->
+      <section class="view" id="v-flow-models">
+        <p class="eyebrow">Flow &middot; models</p>
+        <div class="tbl-wrap"><div class="tbl-scroll">
+          <table class="tbl">
+            <thead><tr id="models-head"><th>Name</th><th>Status</th><th>Faces</th></tr></thead>
+            <tbody id="alias-list"><tr><td colspan="3" class="empty">loading&hellip;</td></tr></tbody>
+          </table>
+        </div></div>
+        <p class="fine" id="api-model-note">OpenAI-compatible, streaming. <code>model</code> is one of the names above, plus <code>search</code> and <code>image</code>. These are the real model names, checked daily against the catalog.</p>
+      </section>
 
-    <section class="dash-sec panel panel--flow">
-      <svg class="panel-ripple" viewBox="0 0 140 140" aria-hidden="true"><circle cx="140" cy="0" r="118"/><circle cx="140" cy="0" r="78"/><circle cx="140" cy="0" r="40"/></svg>
-      <p class="eyebrow" style="margin-bottom:10px">The API</p>
-      <code class="api-endpoint">POST&nbsp; /api/flow/chat/completions</code>
-      <p class="fine" id="api-model-note">OpenAI-compatible, streaming. <code>model</code> is
-        <code>provider/model-id</code> — e.g. <code>groq/llama-3.3-70b-versatile</code>,
-        <code>openrouter/deepseek/deepseek-r1:free</code>,
-        <code>google/gemini-2.5-flash</code>, <code>mistral/mistral-large-latest</code>
-        &mdash; or one of your aliases. Your cookie is the credential; nothing
-        else authenticates here.</p>
-      <div class="marks" id="alias-list"></div>
-    </section>
+      <!-- ═ FLOW · USAGE ══════════════════════════════════════════ -->
+      <section class="view" id="v-flow-usage">
+        <p class="eyebrow">Flow &middot; usage</p>
+        <div id="usage-chart"></div>
 
-    <section class="dash-sec panel panel--crew">
-      <svg class="panel-ripple" viewBox="0 0 140 140" aria-hidden="true"><circle cx="0" cy="140" r="118"/><circle cx="0" cy="140" r="78"/><circle cx="0" cy="140" r="40"/></svg>
-      <p class="eyebrow" style="margin-bottom:10px">Crew</p>
-      <p class="fine">One crew is one process group. Kill it and its partial work stays on the board
-        &mdash; the attempt is recorded as <em>killed</em>, never lost. Pick a project, set the
-        crew size and a run window, then start.</p>
-      <form id="crew-start" class="crew-start" autocomplete="off">
-        <select name="project" id="crew-project" required><option value="">project&hellip;</option></select>
-        <input name="title" placeholder="task title" maxlength="120" style="flex:1">
-        <label class="inline">workers <input name="workers" type="number" min="1" max="8" value="2" style="width:56px"></label>
-        <label class="inline">run&nbsp;s <input name="duration" type="number" min="1" max="600" value="30" style="width:64px"></label>
-        <button class="btn" type="submit">Start crew</button>
-      </form>
-      <p class="fine" id="crew-note"></p>
-      <div class="runs" id="runs"></div>
-    </section>
+        <div>
+          <p class="eyebrow" id="windows-cap">Limit windows</p>
+          <div class="tbl-wrap"><div class="tbl-scroll">
+            <table class="tbl">
+              <thead><tr><th>Scope / key</th><th class="num">Used / limit</th><th>Resets in</th></tr></thead>
+              <tbody id="windows"><tr><td colspan="3" class="empty">loading&hellip;</td></tr></tbody>
+            </table>
+          </div></div>
+        </div>
 
-    <section class="dash-sec panel panel--feed">
-      <svg class="panel-ripple" viewBox="0 0 140 140" aria-hidden="true"><circle cx="70" cy="140" r="118"/><circle cx="70" cy="140" r="78"/><circle cx="70" cy="140" r="40"/></svg>
-      <p class="eyebrow" style="margin-bottom:10px">Feed</p>
-      <p class="fine">The live project stream. Post a line &mdash; a malformed one is refused at post and
-        the refusal appears here within seconds. The stream never blocks on a bad line.</p>
-      <form id="feed-post" class="crew-start" autocomplete="off">
-        <select id="feed-project" required><option value="">project&hellip;</option></select>
-        <select name="type">
-          <option value="message">message</option>
-          <option value="answer">answer</option>
-          <option value="correction">correction</option>
-          <option value="system">system</option>
-        </select>
-        <input name="text" placeholder="say it" style="flex:1" maxlength="500">
-        <label class="inline"><input type="checkbox" name="raw" style="width:auto"> raw</label>
-        <button class="btn" type="submit">Post</button>
-      </form>
-      <p class="fine" id="feed-note"></p>
-      <div class="feed" id="feed"><p class="empty">pick a project</p></div>
-    </section>
+        <!-- member's own account limits, as set by the operator -->
+        <div id="org-limits-wrap" hidden>
+          <p class="eyebrow">Your limits &mdash; set by the operator</p>
+          <div class="tbl-wrap"><div class="tbl-scroll">
+            <table class="tbl">
+              <thead><tr><th>Scope</th><th>Kind</th><th class="num">Used / limit</th><th>Resets in</th></tr></thead>
+              <tbody id="org-limits"><tr><td colspan="4" class="empty">loading&hellip;</td></tr></tbody>
+            </table>
+          </div></div>
+        </div>
 
-    <section class="dash-sec panel panel--flow">
-      <svg class="panel-ripple" viewBox="0 0 140 140" aria-hidden="true"><circle cx="0" cy="0" r="118"/><circle cx="0" cy="0" r="78"/><circle cx="0" cy="0" r="40"/></svg>
-      <p class="eyebrow" style="margin-bottom:10px">Portfolio</p>
-      <p class="fine">Every project in this account &mdash; and the next human decision each one is waiting on.
-        Open work outranks green.</p>
-      <p id="pf-next" class="pf-next"></p>
-      <div class="runs" id="portfolio"><p class="empty">loading&hellip;</p></div>
-    </section>
+        <div>
+          <p class="eyebrow">Per gateway key</p>
+          <div class="tbl-wrap"><div class="tbl-scroll">
+            <table class="tbl">
+              <thead><tr><th>Key</th><th class="num">Requests</th><th class="num">Tokens in&rarr;out</th><th class="num">Cost</th><th>Last used</th><th>Status</th></tr></thead>
+              <tbody id="gk-usage"><tr><td colspan="6" class="empty">loading&hellip;</td></tr></tbody>
+            </table>
+          </div></div>
+        </div>
 
-    <section class="dash-sec" id="desk-sec" hidden>
-      <p class="eyebrow">Operator desk</p>
-      <p class="fine">Accounts waiting for a decision. You are the only person who sees this.</p>
-      <div id="desk"></div>
+        <div>
+          <p class="eyebrow">Request ledger</p>
+          <div class="tbl-wrap"><div class="tbl-scroll">
+            <table class="tbl">
+              <thead><tr><th>Time</th><th>Model</th><th class="num">Tokens</th><th class="num">Latency</th><th>Status</th><th>Via</th></tr></thead>
+              <tbody id="ledger"><tr><td colspan="6" class="empty">loading&hellip;</td></tr></tbody>
+            </table>
+          </div></div>
+        </div>
+      </section>
 
-      <p class="eyebrow" style="margin-top:30px">Accounts</p>
-      <p class="fine">Every account: verify or suspend it, set the usage limits all of its keys
-        pool into, and assign the model names it may call. Blank limit = unlimited.</p>
-      <div id="desk-users"><p class="empty">loading&hellip;</p></div>
-    </section>
+      <!-- ═ FLOW · DESK (operator) ════════════════════════════════ -->
+      <section class="view" id="v-flow-desk">
+        <div id="desk-sec">
+          <p class="eyebrow">Pending &mdash; accounts waiting for a decision</p>
+          <div class="tbl-wrap"><div class="tbl-scroll">
+            <table class="tbl">
+              <thead><tr><th>Account</th><th class="num">Waiting</th><th></th></tr></thead>
+              <tbody id="desk"><tr><td colspan="3" class="empty">loading&hellip;</td></tr></tbody>
+            </table>
+          </div></div>
 
-    <section class="dash-sec" id="limits-sec">
-      <p class="eyebrow">Your limits</p>
-      <p class="fine" id="limits-note">What your account may use &mdash; set by the operator.
-        Every key you issue draws on the same numbers.</p>
-      <div class="keys" id="org-limits"><p class="empty">loading&hellip;</p></div>
-    </section>
+          <p class="eyebrow" style="margin-top:8px">Accounts</p>
+          <p class="fine">Every account: verify or suspend it, set the usage limits all of its keys pool into, and assign the model names it may call. Blank limit = unlimited.</p>
+          <div class="tbl-wrap"><div class="tbl-scroll">
+            <table class="tbl">
+              <thead><tr><th>Account</th><th>Status</th><th>Org</th><th class="num">Gateway keys</th><th class="num">30d usage</th><th></th></tr></thead>
+              <tbody id="desk-users"><tr><td colspan="6" class="empty">loading&hellip;</td></tr></tbody>
+            </table>
+          </div></div>
+        </div>
+      </section>
+
+      <!-- ═ FLOW · LIMITS (operator, per account — a full view) ═══ -->
+      <section class="view" id="v-flow-limits">
+        <div id="limits-sec">
+          <a href="#flow/desk" class="btn-ghost" style="margin-bottom:6px">&larr; back to desk</a>
+          <div id="limits-box"><p class="empty">pick an account from the desk</p></div>
+        </div>
+      </section>
+
+      <!-- ═ FLOW · MODEL WORKBENCH (operator, per account) ════════ -->
+      <section class="view" id="v-flow-workbench">
+        <a href="#flow/desk" class="btn-ghost" style="margin-bottom:6px">&larr; back to desk</a>
+        <div id="workbench-box"><p class="empty">pick an account from the desk</p></div>
+      </section>
+
+      <!-- ═ FLOW · CATALOG (operator) ═════════════════════════════ -->
+      <section class="view" id="v-flow-catalog">
+        <p class="eyebrow">Flow &middot; catalog</p>
+        <p class="fine">What the pool can serve, per provider. The catalog is checked daily for every pool key; a model is &ldquo;verified&rdquo; when a fresh check saw it in that provider&rsquo;s upstream.</p>
+        <div class="cat-actions">
+          <button class="btn" type="button" id="cat-refresh">Check all now</button>
+          <span class="hint" id="cat-note">&nbsp;</span>
+        </div>
+        <div class="tbl-wrap"><div class="tbl-scroll">
+          <table class="tbl">
+            <thead><tr><th>Provider</th><th>Pool key</th><th class="num">Models</th><th>Last checked</th><th>Fresh</th></tr></thead>
+            <tbody id="catalog-box"><tr><td colspan="5" class="empty">loading&hellip;</td></tr></tbody>
+          </table>
+        </div></div>
+      </section>
+
+      <!-- ═ CREW · BOARD ══════════════════════════════════════════ -->
+      <section class="view" id="v-crew-board">
+        <div class="crew-grid">
+          <div>
+            <p class="eyebrow">Crew &middot; board &mdash; <span id="board-project" class="mono-faint" style="text-transform:none">project</span></p>
+            <div class="tbl-wrap"><div class="tbl-scroll">
+              <table class="tbl">
+                <thead><tr><th>Task</th><th>Status</th><th class="num">Partials</th><th>Started</th><th></th></tr></thead>
+                <tbody id="runs"><tr><td colspan="5" class="empty">pick a project</td></tr></tbody>
+              </table>
+            </div></div>
+          </div>
+          <div class="crew-side">
+            <form id="crew-start" class="form-panel" autocomplete="off">
+              <h3>Start a crew</h3>
+              <label class="field">Project
+                <select name="project" id="crew-project" required><option value="">project&hellip;</option></select>
+              </label>
+              <label class="field">Task title
+                <input name="title" placeholder="task title" maxlength="120" style="width:100%">
+              </label>
+              <div class="row2">
+                <label class="field inline">Workers (1&ndash;8)
+                  <input name="workers" type="number" min="1" max="8" value="2" style="width:100%">
+                </label>
+                <label class="field inline">Run window (s)
+                  <input name="duration" type="number" min="1" max="600" value="30" style="width:100%">
+                </label>
+              </div>
+              <div class="form-cta">
+                <button class="btn" type="submit">Start crew</button>
+              </div>
+              <p class="hint" id="crew-note">&nbsp;</p>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═ CREW · FEED ═══════════════════════════════════════════ -->
+      <section class="view" id="v-crew-feed">
+        <div class="crew-grid">
+          <div>
+            <p class="eyebrow">Crew &middot; feed &mdash; the live project stream</p>
+            <div class="feed-pane">
+              <div class="feed" id="feed"><p class="empty">pick a project</p></div>
+            </div>
+          </div>
+          <div class="crew-side">
+            <form id="feed-post" class="form-panel" autocomplete="off">
+              <h3>Post a line</h3>
+              <label class="field">Project
+                <select id="feed-project" required><option value="">project&hellip;</option></select>
+              </label>
+              <label class="field">Type
+                <select name="type">
+                  <option value="message">message</option>
+                  <option value="answer">answer</option>
+                  <option value="correction">correction</option>
+                  <option value="system">system</option>
+                </select>
+              </label>
+              <label class="field">Line
+                <input name="text" placeholder="say it" maxlength="500" style="width:100%">
+              </label>
+              <label class="field inline"><input type="checkbox" name="raw" style="width:auto"> raw (post the text as the body)</label>
+              <div class="form-cta">
+                <button class="btn" type="submit">Post</button>
+              </div>
+              <p class="hint" id="feed-note">&nbsp;</p>
+              <p class="fine" style="margin-top:4px">A malformed line is refused at post &mdash; the refusal appears in the stream within seconds. The stream never blocks on a bad line.</p>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═ CREW · PORTFOLIO ══════════════════════════════════════ -->
+      <section class="view" id="v-crew-portfolio">
+        <p class="eyebrow">Crew &middot; portfolio</p>
+        <p class="fine">Every project in this account &mdash; and the next human decision each one is waiting on. Open work outranks green.</p>
+        <p id="pf-next" class="pf-next"></p>
+        <div class="tbl-wrap"><div class="tbl-scroll">
+          <table class="tbl">
+            <thead><tr><th>Project</th><th>Status</th><th>Resolved rows</th><th>Next for this account</th></tr></thead>
+            <tbody id="portfolio"><tr><td colspan="4" class="empty">loading&hellip;</td></tr></tbody>
+          </table>
+        </div></div>
+      </section>
+
+    </div>
   </div>
-</main>
+</div>
 
 <script>
+  // ── helpers ───────────────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fmt = (n) => Number(n || 0).toLocaleString();
 
   async function api(url, opts) {
     const res = await fetch(url, { headers: { "content-type": "application/json" }, ...opts });
@@ -228,276 +409,10 @@
     return { ok: res.ok, status: res.status, data };
   }
 
-  const provSel = document.querySelector("#add-key select[name=provider]");
-  const secretIn = document.querySelector("#add-key input[name=secret]");
-  function syncSecret() {
-    const noKey = provSel.value === "pollinations";
-    secretIn.required = !noKey;
-    secretIn.placeholder = noKey ? "not needed" : "sk-…";
-  }
-  provSel.addEventListener("change", syncSecret);
-  syncSecret();
+  let IS_OP = false;
+  const loaded = {};
 
-  function limitChips(limits) {
-    if (!limits?.length) return "";
-    return limits.map((l) => `<span class="badge">${esc(l.kind)} ${l.limit ?? "∞"}${l.reservePct ? ` · keep ${l.reservePct}%` : ""}</span>`).join("");
-  }
-
-  async function loadKeys() {
-    const { ok, data } = await api("/api/account/keys");
-    if (!ok) { $("keys").innerHTML = `<p class="empty">could not load keys</p>`; return; }
-    if (!data.keys.length) {
-      $("keys").innerHTML = `<p class="empty">no keys yet — add your first one below. It is encrypted the moment it arrives.</p>`;
-      return;
-    }
-    $("keys").innerHTML = data.keys.map((k) => `
-      <div class="key-row">
-        <span class="key-id">${esc(k.provider)} &middot; ${esc(k.label)}</span>
-        <span class="badge">${esc(k.category)}</span>
-        <span class="key-mask">${esc(k.keyMask)}</span>
-        <span class="key-limits">${limitChips(k.limits)}</span>
-        ${k.status === "revoked" ? '<span class="badge live">revoked</span>' : `<button class="btn-ghost danger" data-revoke="${esc(k.id)}">Revoke</button>`}
-      </div>`).join("");
-    $("keys").querySelectorAll("button[data-revoke]").forEach((b) =>
-      b.addEventListener("click", async () => {
-        b.disabled = true;
-        const { ok } = await api(`/api/account/keys/${b.dataset.revoke}/revoke`, { method: "POST" });
-        if (ok) loadKeys(); else b.disabled = false;
-      }));
-  }
-
-  // ── gateway keys (the keys clients use to call the gateway) ──────────
-  async function loadGatewayKeys() {
-    const { ok, data } = await api("/api/flow/keys");
-    if (!ok) { $("gk-keys").innerHTML = `<p class="empty">could not load gateway keys</p>`; return; }
-    if (!data.keys.length) {
-      $("gk-keys").innerHTML = `<p class="empty">no gateway keys yet — issue the first one below. Your clients use it against /api/flow exactly like an OpenAI key.</p>`;
-      return;
-    }
-    $("gk-keys").innerHTML = data.keys
-      .map(
-        (k) => `
-      <div class="key-row">
-        <span class="key-id">${esc(k.name)}</span>
-        <span class="key-mask">${esc(k.prefix)}&hellip;</span>
-        <span class="badge">${esc(new Date(k.createdAt).toLocaleDateString())}</span>
-        ${k.revokedAt ? '<span class="badge live">revoked</span>' : `<button class="btn-ghost danger" data-gk-revoke="${esc(k.id)}">Revoke</button>`}
-      </div>`,
-      )
-      .join("");
-    $("gk-keys").querySelectorAll("button[data-gk-revoke]").forEach((b) =>
-      b.addEventListener("click", async () => {
-        b.disabled = true;
-        const { ok } = await api(`/api/flow/keys/${b.dataset.gkRevoke}/revoke`, { method: "POST" });
-        if (ok) { loadGatewayKeys(); loadUsage(); } else b.disabled = false;
-      }));
-  }
-
-  $("add-gk").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const f = e.target;
-    const note = $("gk-note");
-    note.innerHTML = "&nbsp;";
-    const { ok, status, data } = await api("/api/flow/keys", { method: "POST", body: JSON.stringify({ name: f.name.value }) });
-    if (!ok) {
-      note.innerHTML = `<span class="err">${esc(status)} — ${esc(data.error ?? "could not issue key")}</span>`;
-      return;
-    }
-    $("gk-plain").textContent = data.key;
-    // point the sample at the model the operator picked, if any
-    const pick = $("gk-model");
-    const model = (pick && pick.value) || "fast";
-    $("gk-curl").textContent =
-      'curl https://<your-gateway>/api/flow/chat/completions \\\n' +
-      '  -H "Authorization: Bearer ' + data.key + '" \\\n' +
-      '  -H "Content-Type: application/json" \\\n' +
-      "  -d '{\"model\":\"" + model + "\",\"stream\":false,\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}'";
-    $("gk-reveal").hidden = false;
-    $("gk-copy").onclick = async () => {
-      try { await navigator.clipboard.writeText(data.key); $("gk-copy").textContent = "Copied"; }
-      catch { $("gk-copy").textContent = "select it and copy manually"; }
-    };
-    f.reset();
-    note.innerHTML = '<span class="ok">issued — copy the key now; it will not be shown again</span>';
-    loadGatewayKeys();
-  });
-
-  // ── crew board ──────────────────────────────────────────────────────────
-  let crewPoll = null;
-  async function loadCrewProjects() {
-    const { ok, data } = await api("/api/account/projects");
-    if (!ok) return;
-    const sel = $("crew-project");
-    const cur = sel.value;
-    sel.innerHTML = (data.projects || [])
-      .map((p) => `<option value="${esc(p.slug)}">${esc(p.name)}</option>`)
-      .join("") || '<option value="">no projects</option>';
-    if (cur) sel.value = cur;
-  }
-  async function loadCrewRuns() {
-    const slug = $("crew-project").value;
-    if (!slug) { $("runs").innerHTML = `<p class="empty">pick a project</p>`; return; }
-    const { ok, data } = await api(`/api/crew?slug=${encodeURIComponent(slug)}`);
-    if (!ok) return;
-    $("runs").innerHTML = (data.runs || [])
-      .map(
-        (r) => `
-      <div class="run-row">
-        <span class="key-id">${esc(r.title)}</span>
-        <span class="badge ${r.crewStatus === "running" ? "live" : r.crewStatus === "killed" ? "err" : ""}">${esc(r.crewStatus)}</span>
-        <span class="key-limits">${r.partials.length ? r.partials.map((p) => `${p.lines} lines`).join(" · ") : "no partials yet"}</span>
-        ${r.runId ? `<button class="btn-ghost danger" data-kill="${esc(r.runId)}" ${r.crewStatus !== "running" ? "disabled" : ""}>Kill</button>` : ""}
-      </div>
-      ${r.partials.map((p) => `<pre class="partial">${esc((p.tail || []).join("\n"))}</pre>`).join("")}`
-      )
-      .join("") || `<p class="empty">no crew runs yet</p>`;
-    $("runs").querySelectorAll("button[data-kill]").forEach((b) =>
-      b.addEventListener("click", async () => {
-        b.disabled = true;
-        const { ok } = await api(`/api/crew/${b.dataset.kill}/kill`, { method: "POST", body: "{}" });
-        $("crew-note").textContent = ok ? "kill in flight — SIGTERM, then the grace, then SIGKILL to the group" : "could not kill";
-        setTimeout(loadCrewRuns, 400);
-      }));
-    const anyRunning = (data.runs || []).some((r) => r.crewStatus === "running");
-    if (anyRunning && !crewPoll) crewPoll = setInterval(loadCrewRuns, 2500);
-    if (!anyRunning && crewPoll) { clearInterval(crewPoll); crewPoll = null; }
-  }
-  $("crew-project").addEventListener("change", loadCrewRuns);
-  $("crew-start").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const f = e.target;
-    const { ok, data } = await api("/api/crew", {
-      method: "POST",
-      body: JSON.stringify({
-        slug: f.project.value,
-        title: f.title.value.trim() || "crew task",
-        workers: Number(f.workers.value) || 2,
-        durationSec: Number(f.duration.value) || 30,
-      }),
-    });
-    $("crew-note").textContent = ok ? `✓ crew ${data.runId} — process group ${data.pgid}` : (data.error || "could not start crew");
-    if (ok) setTimeout(loadCrewRuns, 500);
-  });
-  loadCrewProjects().then(loadCrewRuns);
-
-  // ── live feed ───────────────────────────────────────────────────────────
-  let feedCursor = "0";
-  async function loadFeedProjects() {
-    const { ok, data } = await api("/api/account/projects");
-    if (!ok) return;
-    const sel = $("feed-project");
-    const cur = sel.value;
-    sel.innerHTML = (data.projects || [])
-      .map((p) => `<option value="${esc(p.slug)}">${esc(p.name)}</option>`)
-      .join("") || '<option value="">no projects</option>';
-    if (cur) sel.value = cur;
-  }
-  function feedSummary(type, body) {
-    if (!body || typeof body !== "object") return String(body).slice(0, 140);
-    if (body.rejection) return `refused a ${esc(body.type)} line — ${esc((body.violations || []).join("; "))}`;
-    if (typeof body.text === "string") return esc(body.text.slice(0, 140));
-    if (body.rowId) return `${esc(body.rowId)} → ${esc(body.status ?? body.verdict ?? "")}`;
-    return esc(JSON.stringify(body).slice(0, 140));
-  }
-  async function loadFeed() {
-    const slug = $("feed-project").value;
-    if (!slug) return;
-    const { ok, data } = await api(`/api/projects/${encodeURIComponent(slug)}/stream?afterSeq=${encodeURIComponent(feedCursor)}`);
-    if (!ok) return;
-    if (!data.events.length) return;
-    feedCursor = data.nextCursor;
-    const box = $("feed");
-    box.classList.remove("empty");
-    for (const e of data.events.reverse()) {
-      const rejected = e.type === "system" && e.body?.rejection;
-      const div = document.createElement("div");
-      div.className = "feed-line" + (rejected ? " rejected" : "") + (e.corrupt ? " corrupt" : "");
-      div.innerHTML =
-        `<span class="badge ${rejected ? "err" : ""}">${rejected ? "rejected" : esc(e.type)}</span>` +
-        `<span class="key-mask">${esc(e.actor)}</span>` +
-        `<span class="fine feed-text">${feedSummary(e.type, e.body)}</span>` +
-        `<span class="fine feed-ts">${new Date(e.ts).toLocaleTimeString()}</span>`;
-      box.prepend(div);
-    }
-    while (box.children.length > 40) box.lastElementChild.remove();
-  }
-  $("feed-project").addEventListener("change", () => { feedCursor = "0"; loadFeed(); });
-  $("feed-post").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const f = e.target;
-    const text = f.text.value.trim();
-    if (!f.project.value || !text) return;
-    const payload = { type: f.type.value, body: f.raw.checked ? text : { text } };
-    const { ok, data } = await api(`/api/projects/${encodeURIComponent(f.project.value)}/stream`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-    $("feed-note").textContent = ok
-      ? `✓ posted — seq ${data.seq}`
-      : `✗ ${data.error ?? "rejected"}${data.violations ? " — " + data.violations.join("; ") : ""}`;
-    f.text.value = "";
-    setTimeout(loadFeed, 120);
-  });
-  loadFeedProjects();
-  setInterval(loadFeed, 2000);
-
-  // ── portfolio ───────────────────────────────────────────────────────────
-  async function loadPortfolio() {
-    const { ok, data } = await api("/api/portfolio");
-    if (!ok) return;
-    const box = $("portfolio");
-    box.innerHTML = (data.projects || [])
-      .map(
-        (p) => `
-      <div class="run-row">
-        <span class="key-id">${esc(p.name)}</span>
-        <span class="badge">${esc(p.status)}</span>
-        <span class="key-limits">${
-          (p.rows || [])
-            .map((r) => `${esc(r.rowId)} <b>${esc(r.resolved)}</b>${r.witnessedBy ? " ✓" : ""}`)
-            .join(" · ") || "no rows"
-        }</span>
-        ${p.nextDecision
-          ? `<span class="badge ${p.nextDecision.kind === "ship" ? "" : "live"}">${esc(p.nextDecision.kind)}</span><span class="fine">${esc(p.nextDecision.prompt)}</span>`
-          : '<span class="fine">nothing to decide</span>'}
-      </div>`
-      )
-      .join("") || `<p class="empty">no projects yet</p>`;
-    const nd = data.nextDecision;
-    $("pf-next").innerHTML = nd
-      ? `Next for this account: <span class="badge live">${esc(nd.project)}</span> <span class="badge">${esc(nd.kind)}</span> ${esc(nd.prompt)} &mdash; ${nd.options.map((o) => `<span class="badge">${esc(o)}</span>`).join(" ")}`
-      : "Nothing is waiting on a human — the crew has the wheel.";
-  }
-  loadPortfolio();
-
-  // sections rise into place as they enter the viewport (reduced-motion: off)
-  const showAll = () => document.querySelectorAll(".dash-sec").forEach((s) => s.classList.add("in"));
-  if (!matchMedia("(prefers-reduced-motion: reduce)").matches && "IntersectionObserver" in window) {
-    const io = new IntersectionObserver(
-      (entries) => entries.forEach((en) => en.isIntersecting && en.target.classList.add("in")),
-      { threshold: 0.12 },
-    );
-    document.querySelectorAll(".dash-sec").forEach((s) => io.observe(s));
-    setTimeout(showAll, 2500); // failsafe — content is never held hostage
-  } else {
-    showAll();
-  }
-
-  function windowChips(windows) {
-    if (!windows?.length) return `<span class="badge">no limits</span>`;
-    return windows
-      .map((w) => {
-        const secs = Math.max(0, Math.round((w.windowEnd - Date.now()) / 1000));
-        const mm = Math.floor(secs / 60);
-        const when = secs < 90 ? `${secs}s` : mm < 90 ? `${mm}m` : `${Math.floor(mm / 60)}h${mm % 60 ? (mm % 60) + "m" : ""}`;
-        const tight = w.headroom <= 0;
-        const scope = w.model && w.model !== "all" ? `${esc(w.model)} · ` : "";
-        return `<span class="badge${tight ? " live" : ""}">${scope}${esc(w.kind)} ${w.used}/${w.effectiveLimit} · reset ${when}</span>`;
-      })
-      .join("");
-  }
-
-  // ── the 30-day usage chart (member + operator) — inline SVG, no libs ──
+  // ── the 30-day usage chart (inline SVG, no libs) ─────────────────
   // data.series = { days: [{date, requests, tokens, costCents}…30],
   //                 models: [{model, requests, tokens, costCents}…] }
   function areaPath(vals, w, h, pad) {
@@ -509,8 +424,8 @@
     const area = `${line} L${pts[pts.length - 1][0].toFixed(1)},${(h - pad).toFixed(1)} L${pad},${(h - pad).toFixed(1)} Z`;
     return { line, area, max };
   }
-  function renderUsageChart(series) {
-    const el = $("usage-chart");
+  function renderUsageChart(series, target) {
+    const el = $(target);
     if (!el) return;
     if (!series || !series.days?.length) { el.innerHTML = ""; return; }
     const W = 720, H = 180, PAD = 26;
@@ -534,23 +449,23 @@
         return `<div class="mrow">
           <span class="mname">${esc(m.model)}</span>
           <span class="mbar"><span class="mfill" style="width:${pct}%"></span></span>
-          <span class="mstat">${m.requests} req · ${m.tokens.toLocaleString()} tok · ${(m.costCents / 100).toFixed(2)}&cent;</span>
+          <span class="mstat">${fmt(m.requests)} req &middot; ${fmt(m.tokens)} tok &middot; ${(m.costCents / 100).toFixed(2)}&cent;</span>
         </div>`;
       })
       .join("") || `<p class="empty">no traffic in the last 30 days</p>`;
     el.innerHTML = `
       <div class="chart-grid">
         <div class="chart-card">
-          <p class="eyebrow">Requests · last 30 days <span class="chart-total">${totalReq.toLocaleString()} total</span></p>
+          <p class="eyebrow">Requests &middot; last 30 days <span class="chart-total">${fmt(totalReq)} total</span></p>
           <svg viewBox="0 0 ${W} ${H}" class="chart-svg" role="img" aria-label="daily requests">
             <path d="${r.area}" class="area-req"/>
             <path d="${r.line}" class="line-req"/>
             ${xticks}
-            <text x="${PAD}" y="${PAD - 8}" class="tick tickmax">${r.max.toLocaleString()} max/day</text>
+            <text x="${PAD}" y="${PAD - 8}" class="tick tickmax">${fmt(r.max)} max/day</text>
           </svg>
         </div>
         <div class="chart-card">
-          <p class="eyebrow">Cost · last 30 days <span class="chart-total">${(totalCost / 100).toFixed(2)}&cent; total</span></p>
+          <p class="eyebrow">Cost &middot; last 30 days <span class="chart-total">${(totalCost / 100).toFixed(2)}&cent; total</span></p>
           <svg viewBox="0 0 ${W} ${H}" class="chart-svg" role="img" aria-label="daily cost">
             <path d="${c.area}" class="area-cost"/>
             <path d="${c.line}" class="line-cost"/>
@@ -559,145 +474,398 @@
           </svg>
         </div>
       </div>
-      <div class="chart-card" style="margin-top:14px">
-        <p class="eyebrow">By model · 30 days</p>
+      <div class="chart-card" style="margin-top:16px">
+        <p class="eyebrow">By model &middot; 30 days</p>
         ${modelBars}
       </div>`;
   }
 
-  // member view: the account's limit windows + the (API-scoped) ledger +
-  // per-key aggregates — rows served from the shared pool arrive redacted
-  async function loadMemberUsage(data) {
-    $("windows").innerHTML = (data.orgWindows || []).length
-      ? (data.orgWindows || []).map((w) => `<div class="key-row"><span class="key-id">${esc(w.kind)}</span><span class="key-limits">${windowChips([w])}</span></div>`).join("")
-      : `<p class="empty">no limits set yet — your account draws on the operator&rsquo;s shared capacity</p>`;
-    $("reqs").innerHTML = (data.requests || [])
-      .slice(0, 15)
-      .map(
-        (r) => `
-      <div class="req-row">
-        <span class="key-mask">${esc(r.modelServed)}</span>
-        <span class="badge">${r.tokensIn}→${r.tokensOut} tok</span>
-        <span class="badge">${r.latencyMs}ms</span>
-        <span class="badge ${r.status === "ok" ? "" : r.status === "fallback" ? "live" : " err"}">${esc(r.status)}</span>
-        ${r.degraded ? '<span class="badge live">degraded</span>' : ""}
-        ${r.credential ? `<span class="key-mask">${esc(r.credential.label)}</span>` : ""}
-        ${r.apiKey ? `<span class="badge via">via ${esc(r.apiKey.name)}</span>` : ""}
-      </div>`,
-      )
-      .join("") || `<p class="empty">no requests yet — the ledger is empty</p>`;
-    $("gk-usage").innerHTML = (data.gatewayKeys || [])
-      .map(
-        (k) => `
-      <div class="req-row">
-        <span class="key-mask">${esc(k.name)} &middot; ${esc(k.prefix)}&hellip;</span>
-        <span class="badge">${k.requests} req</span>
-        <span class="badge">${k.tokensIn}→${k.tokensOut} tok</span>
-        <span class="badge">${k.costCents.toFixed(2)}&cent;</span>
-        <span class="badge">${k.lastUsedAt ? esc(new Date(k.lastUsedAt).toLocaleString()) : "never used"}</span>
-        ${k.revokedAt ? '<span class="badge live">revoked</span>' : ""}
-      </div>`,
-      )
-      .join("") || `<p class="empty">no gateway keys yet — issue one above</p>`;
+  // ── limit-window rows (scope · kind · used/limit · resets in) ────
+  function resetWhen(w) {
+    const secs = Math.max(0, Math.round((w.windowEnd - Date.now()) / 1000));
+    const mm = Math.floor(secs / 60);
+    return secs < 90 ? `${secs}s` : mm < 90 ? `${mm}m` : `${Math.floor(mm / 60)}h${mm % 60 ? (mm % 60) + "m" : ""}`;
+  }
+  function windowRows(windows, scopeLabel) {
+    if (!windows?.length) return `<tr><td colspan="3" class="empty">no limits set</td></tr>`;
+    return windows.map((w) => {
+      const tight = w.headroom <= 0;
+      const scope = w.model && w.model !== "all" ? `${scopeLabel ? esc(w.model) + " · " : ""}${esc(w.kind)}` : esc(w.kind);
+      return `<tr>
+        <td class="name">${scope}</td>
+        <td class="num"><span class="badge ${tight ? "err" : ""}" style="margin:0">${fmt(w.used)} / ${w.effectiveLimit === null || w.effectiveLimit === undefined ? "∞" : fmt(w.effectiveLimit)}</span></td>
+        <td class="mono">reset ${resetWhen(w)}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  function reqRows(rows) {
+    return rows.map((r) => {
+      const st = r.status === "ok" ? "" : r.status === "fallback" ? "live" : "err";
+      return `<tr>
+        <td class="mono">${esc(new Date(r.createdAt).toLocaleString())}</td>
+        <td class="name">${esc(r.modelServed)}</td>
+        <td class="num">${fmt(r.tokensIn)} &rarr; ${fmt(r.tokensOut)}</td>
+        <td class="num">${fmt(r.latencyMs)} ms</td>
+        <td><span class="badge ${st}">${esc(r.status)}</span>${r.degraded ? ' <span class="badge live">degraded</span>' : ""}</td>
+        <td class="mono">${r.credential ? esc(r.credential.label) : "—"}${r.apiKey ? ` &middot; via ${esc(r.apiKey.name)}` : ""}</td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="6" class="empty">no requests yet — the ledger is empty</td></tr>`;
+  }
+
+  // ── provider keys (the operator's pool) ───────────────────────────
+  function limitChips(limits) {
+    if (!limits?.length) return `<span class="mono">—</span>`;
+    return `<div class="cell-chips">${limits.map((l) => `<span class="badge">${esc(l.kind)} ${l.limit ?? "∞"}${l.reservePct ? ` &middot; keep ${l.reservePct}%` : ""}</span>`).join("")}</div>`;
+  }
+  async function loadKeys() {
+    const { ok, data } = await api("/api/account/keys");
+    if (!ok) { $("keys").innerHTML = `<tr><td colspan="6" class="empty">could not load keys</td></tr>`; return; }
+    if (!data.keys.length) {
+      $("keys").innerHTML = `<tr><td colspan="6" class="empty">no pool keys yet — add the first one below. It is encrypted the moment it arrives.</td></tr>`;
+      return;
+    }
+    $("keys").innerHTML = data.keys.map((k) => `
+      <tr>
+        <td class="name">${esc(k.provider)}</td>
+        <td class="name">${esc(k.label)}</td>
+        <td class="mono">${esc(k.keyMask)}</td>
+        <td>${limitChips(k.limits)}</td>
+        <td>${k.status === "revoked" ? '<span class="badge err">revoked</span>' : k.status === "dead" ? '<span class="badge err">dead</span>' : '<span class="badge ok">active</span>'}</td>
+        <td>${k.status === "revoked" ? "" : `<div class="rowact"><button class="btn-ghost danger" data-revoke="${esc(k.id)}">Revoke</button></div>`}</td>
+      </tr>`).join("");
+    $("keys").querySelectorAll("button[data-revoke]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        b.disabled = true;
+        const { ok } = await api(`/api/account/keys/${b.dataset.revoke}/revoke`, { method: "POST" });
+        if (ok) loadKeys(); else b.disabled = false;
+      }));
+  }
+
+  const provSel = document.querySelector("#add-key select[name=provider]");
+  const secretIn = document.querySelector("#add-key input[name=secret]");
+  function syncSecret() {
+    const noKey = provSel.value === "pollinations";
+    secretIn.required = !noKey;
+    secretIn.placeholder = noKey ? "not needed" : "sk-…";
+  }
+  provSel.addEventListener("change", syncSecret);
+  syncSecret();
+
+  $("add-key").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const { ok, status, data } = await api("/api/account/keys", {
+      method: "POST",
+      body: JSON.stringify({
+        provider: fd.get("provider"),
+        label: fd.get("label"),
+        secret: fd.get("secret") || undefined,
+      }),
+    });
+    $("add-note").innerHTML = ok
+      ? `<span class="ok">✓ added — ${esc(data.keyMask)}</span>`
+      : status === 409 ? `<span class="err">label exists</span>` : `<span class="err">${esc(data.error || "could not add key")}</span>`;
+    if (ok) { e.target.reset(); loadKeys(); loadUsage(); }
+  });
+
+  // ── gateway keys ──────────────────────────────────────────────────
+  async function loadGatewayKeys() {
+    const { ok, data } = await api("/api/flow/keys");
+    if (!ok) { $("gk-keys").innerHTML = `<tr><td colspan="5" class="empty">could not load gateway keys</td></tr>`; return; }
+    if (!data.keys.length) {
+      $("gk-keys").innerHTML = `<tr><td colspan="5" class="empty">no gateway keys yet — issue the first one below. Your clients use it against /api/flow exactly like an OpenAI key.</td></tr>`;
+      return;
+    }
+    $("gk-keys").innerHTML = data.keys.map((k) => `
+      <tr>
+        <td class="name">${esc(k.name)}</td>
+        <td class="mono">${esc(k.prefix)}&hellip;</td>
+        <td class="mono">${esc(new Date(k.createdAt).toLocaleDateString())}</td>
+        <td>${k.revokedAt ? '<span class="badge err">revoked</span>' : '<span class="badge ok">active</span>'}</td>
+        <td>${k.revokedAt ? "" : `<div class="rowact"><button class="btn-ghost danger" data-gk-revoke="${esc(k.id)}">Revoke</button></div>`}</td>
+      </tr>`).join("");
+    $("gk-keys").querySelectorAll("button[data-gk-revoke]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        b.disabled = true;
+        const { ok } = await api(`/api/flow/keys/${b.dataset.gkRevoke}/revoke`, { method: "POST" });
+        if (ok) { loadGatewayKeys(); loadUsage(); } else b.disabled = false;
+      }));
+  }
+
+  $("add-gk").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    const note = $("gk-note");
+    note.innerHTML = "&nbsp;";
+    const { ok, status, data } = await api("/api/flow/keys", { method: "POST", body: JSON.stringify({ name: f.name.value }) });
+    if (!ok) {
+      note.innerHTML = `<span class="err">${status} — ${esc(data.error ?? "could not issue key")}</span>`;
+      return;
+    }
+    $("gk-plain").textContent = data.key;
+    const pick = $("gk-model");
+    const model = (pick && pick.value) || "";
+    $("gk-curl").textContent =
+      'curl https://<your-gateway>/api/flow/chat/completions \\\n' +
+      '  -H "Authorization: Bearer ' + data.key + '" \\\n' +
+      '  -H "Content-Type: application/json" \\\n' +
+      '  -d \'{\"model\":\"' + (model || "gemini-2.5-flash") + "\",\"stream\":false,\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}\'";
+    $("gk-reveal").hidden = false;
+    $("gk-copy").onclick = async () => {
+      try { await navigator.clipboard.writeText(data.key); $("gk-copy").textContent = "Copied"; }
+      catch { $("gk-copy").textContent = "select it and copy manually"; }
+    };
+    f.reset();
+    note.innerHTML = '<span class="ok">issued — copy the key now; it will not be shown again</span>';
+    loadGatewayKeys();
+  });
+
+  // ── usage (charts + windows + ledger + aliases) ──────────────────
+  function renderAliasesView(names, services) {
+    const head = $("models-head");
+    if (IS_OP && head) head.innerHTML = `<th>Name</th><th>Status</th><th>Faces</th><th>Behind it (you only)</th>`;
+    const rows = (names || []).map((a) => {
+      const verified = a.verified
+        ? `<span class="badge ok" title="confirmed in the upstream catalog">✓ ${a.verifiedAt ? esc(new Date(a.verifiedAt).toLocaleDateString()) : "verified"}</span>`
+        : `<span class="badge" title="not yet confirmed against the catalog">checking&hellip;</span>`;
+      const faces = services.filter((s) => s.available).map((s) => `<span class="badge">${esc(s.name)}</span><span class="badge live">live</span>`).join(" ");
+      const rungs = a.targets && IS_OP ? `<span class="mono">${a.targets.map((t) => esc(t.provider)).join(" &rarr; ")}</span>` : "";
+      return `<tr>
+        <td class="name">${esc(a.alias)}</td>
+        <td>${verified}</td>
+        <td>${faces || '<span class="mono">—</span>'}</td>
+        ${IS_OP ? `<td>${rungs}</td>` : ""}
+      </tr>`;
+    }).join("");
+    const svcRows = (services || []).filter((s) => s.available && !(names || []).some((n) => n.alias === s.name)).map((s) =>
+      `<tr><td class="name">${esc(s.name)}</td><td><span class="badge live">live</span></td><td><span class="mono">service face</span></td>${IS_OP ? "<td></td>" : ""}</tr>`
+    ).join("");
+    $("alias-list").innerHTML = (rows + svcRows) || `<tr><td colspan="${IS_OP ? 4 : 3}" class="empty">${IS_OP ? "no aliases — the operator can call provider/model directly" : "no model names assigned to your account yet"}</td></tr>`;
+    const sel = $("gk-model");
+    if (sel) {
+      sel.innerHTML = '<option value="">(pick one…)</option>' +
+        (names || []).map((a) => `<option value="${esc(a.alias)}">${esc(a.alias)}${a.verified ? "" : " (unverified)"}</option>`).join("") +
+        (services || []).filter((s) => s.available).map((s) => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join("");
+    }
   }
 
   async function loadUsage() {
     const { ok, data } = await api("/api/flow/usage");
     if (!ok) {
-      $("windows").innerHTML = `<p class="empty">could not load usage</p>`;
+      $("windows").innerHTML = `<tr><td colspan="3" class="empty">could not load usage</td></tr>`;
       return;
     }
-    renderUsageChart(data.series);
-    if (data.orgWindows !== undefined) { loadMemberUsage(data); return; }
-    $("windows").innerHTML = (data.keys || [])
-      .map(
-        (k) => `
-      <div class="key-row">
-        <span class="key-id">${esc(k.provider)} &middot; ${esc(k.label)}</span>
-        <span class="key-mask">${esc(k.keyMask)}</span>
-        <span class="key-limits">${windowChips(k.windows)}</span>
-      </div>`,
-      )
-      .join("") || `<p class="empty">no keys yet</p>`;
-    $("reqs").innerHTML = (data.requests || [])
-      .slice(0, 15)
-      .map(
-        (r) => `
-      <div class="req-row">
-        <span class="key-mask">${esc(r.modelServed)}</span>
-        <span class="badge">${r.tokensIn}→${r.tokensOut} tok</span>
-        <span class="badge">${r.latencyMs}ms</span>
-        <span class="badge ${r.status === "ok" ? "" : r.status === "fallback" ? "live" : " err"}">${esc(r.status)}</span>
-        ${r.degraded ? '<span class="badge live">degraded</span>' : ""}
-        ${r.credential ? `<span class="key-mask">${esc(r.credential.label)}</span>` : ""}
-        ${r.apiKey ? `<span class="badge via">via ${esc(r.apiKey.name)}</span>` : ""}
-      </div>`,
-      )
-      .join("") || `<p class="empty">no requests yet — the ledger is empty</p>`;
-    $("gk-usage").innerHTML = (data.gatewayKeys || [])
-      .map(
-        (k) => `
-      <div class="req-row">
-        <span class="key-mask">${esc(k.name)} &middot; ${esc(k.prefix)}&hellip;</span>
-        <span class="badge">${k.requests} req</span>
-        <span class="badge">${k.tokensIn}→${k.tokensOut} tok</span>
-        <span class="badge">${k.costCents.toFixed(2)}&cent;</span>
-        <span class="badge">${k.lastUsedAt ? esc(new Date(k.lastUsedAt).toLocaleString()) : "never used"}</span>
-        ${k.revokedAt ? '<span class="badge live">revoked</span>' : ""}
-      </div>`,
-      )
-      .join("") || `<p class="empty">no gateway keys yet — issue one above</p>`;
+    // charts — overview + usage view
+    renderUsageChart(data.series, "ov-charts");
+    renderUsageChart(data.series, "usage-chart");
+    // overview stats
+    const days = data.series?.days || [];
+    $("ov-req").textContent = fmt(days.reduce((a, d) => a + (d.requests || 0), 0));
+    $("ov-tok").textContent = fmt(days.reduce((a, d) => a + (d.tokens || 0), 0));
+    $("ov-cost").innerHTML = "$" + (days.reduce((a, d) => a + (d.costCents || 0), 0) / 100).toFixed(2);
+    $("ov-keys").textContent = (data.gatewayKeys || []).filter((k) => !k.revokedAt).length;
+    // recent activity (overview) + full ledger (usage)
+    $("reqs").innerHTML = reqRows((data.requests || []).slice(0, 15));
+    $("ledger").innerHTML = reqRows(data.requests || []);
+    // per-gateway-key aggregates
+    $("gk-usage").innerHTML = (data.gatewayKeys || []).map((k) => `
+      <tr>
+        <td class="name">${esc(k.name)} <span class="mono">&middot; ${esc(k.prefix)}&hellip;</span></td>
+        <td class="num">${fmt(k.requests)}</td>
+        <td class="num">${fmt(k.tokensIn)} &rarr; ${fmt(k.tokensOut)}</td>
+        <td class="num">${k.costCents.toFixed(2)}&cent;</td>
+        <td class="mono">${k.lastUsedAt ? esc(new Date(k.lastUsedAt).toLocaleString()) : "never used"}</td>
+        <td>${k.revokedAt ? '<span class="badge err">revoked</span>' : '<span class="badge ok">active</span>'}</td>
+      </tr>`).join("") || `<tr><td colspan="6" class="empty">no gateway keys yet — issue one in Keys</td></tr>`;
+    if (data.orgWindows !== undefined) {
+      // member: the account's own windows
+      $("windows").innerHTML = (data.orgWindows || []).length
+        ? windowRows(data.orgWindows)
+        : `<tr><td colspan="3" class="empty">no limits set yet — your account draws on the operator's shared capacity</td></tr>`;
+    } else {
+      // operator: the pool keys' windows
+      $("windows-cap").textContent = "Pool key windows";
+      $("windows").innerHTML = (data.keys || []).map((k) => `
+        <tr>
+          <td class="name">${esc(k.provider)} &middot; ${esc(k.label)} <span class="mono">${esc(k.keyMask)}</span></td>
+          <td class="num" colspan="2"><div class="cell-chips">${(k.windows || []).length
+            ? k.windows.map((w) => `<span class="badge ${w.headroom <= 0 ? "err" : ""}">${w.model && w.model !== "all" ? esc(w.model) + " · " : ""}${esc(w.kind)} ${fmt(w.used)}/${w.effectiveLimit === null || w.effectiveLimit === undefined ? "∞" : fmt(w.effectiveLimit)} · reset ${resetWhen(w)}</span>`).join("")
+            : '<span class="badge">no limits</span>'}</div></td>
+        </tr>`).join("") || `<tr><td colspan="3" class="empty">no pool keys yet</td></tr>`;
+    }
     const aliases = await api("/api/account/aliases");
     if (aliases.ok) {
-      const names = (aliases.data.aliases || []);
+      const names = aliases.data.aliases || [];
       const services = aliases.data.services || [];
-      // the customer view: the names they may call + the verified badge —
-      // the operator (BYO) also sees the rung chain
-      $("alias-list").innerHTML =
-        names
-          .map((a) => {
-            const verified = a.verified
-              ? `<span class="badge live" title="confirmed in the upstream catalog">✓ ${a.verifiedAt ? esc(new Date(a.verifiedAt).toLocaleDateString()) : "verified"}</span>`
-              : `<span class="badge" title="not yet confirmed against the catalog">checking…</span>`;
-            const rungs = a.targets && !IS_OP ? "" : a.targets ? ` <span class="key-mask">&larr; ${a.targets.map((t) => esc(t.provider)).join(" → ")}</span>` : "";
-            return `<span class="badge">${esc(a.alias)}</span>${verified}${rungs}`;
-          })
-          .join("") || (IS_OP ? '<span class="badge">no aliases — request provider/model directly</span>' : '<span class="badge">no model names assigned to your account yet</span>');
-      // service faces are model names too
-      services.forEach((s) => {
-        if (s.available) $("alias-list").insertAdjacentHTML("beforeend", `<span class="badge">${esc(s.name)}</span><span class="badge live" title="this face is live on the pool">live</span>`);
-      });
-      // the sample-code model picker on the key form
-      const sel = $("gk-model");
-      if (sel) {
-        sel.innerHTML = '<option value="">(pick one…)</option>' +
-          names.map((a) => `<option value="${esc(a.alias)}">${esc(a.alias)}${a.verified ? "" : " (unverified)"}</option>`).join("") +
-          services.filter((s) => s.available).map((s) => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join("");
-      }
+      renderAliasesView(names, services);
       if (!IS_OP) {
         $("api-model-note").innerHTML =
-          `OpenAI-compatible, streaming. <code>model</code> is one of the <strong>names below</strong> — ` +
-          `text models, plus <code>search</code> and <code>image</code>. Your cookie is the credential; nothing else authenticates here.`;
+          `OpenAI-compatible, streaming. <code>model</code> is one of the <strong>names above</strong> — ` +
+          `text models, plus <code>search</code> and <code>image</code>. One key, three faces; every number is measured.`;
       }
     }
   }
 
+  // the member's own account limits (as set by the operator)
+  async function loadOrgLimits() {
+    const { ok, data } = await api("/api/account/limits");
+    if (!ok) { $("org-limits").innerHTML = `<tr><td colspan="4" class="empty">could not load limits</td></tr>`; return; }
+    $("org-limits-wrap").hidden = IS_OP;
+    $("org-limits").innerHTML = (data.orgWindows || []).length
+      ? data.orgWindows.map((w) => `<tr>
+          <td class="name">${w.model && w.model !== "all" ? esc(w.model) : "all models"}</td>
+          <td class="mono">${esc(w.kind)}</td>
+          <td class="num">${fmt(w.used)} / ${w.effectiveLimit === null || w.effectiveLimit === undefined ? "∞" : fmt(w.effectiveLimit)}</td>
+          <td class="mono">reset ${resetWhen(w)}</td>
+        </tr>`).join("")
+      : `<tr><td colspan="4" class="empty">no limits set on your account yet — the operator has not assigned usage limits</td></tr>`;
+  }
+
+  // ── crew board ────────────────────────────────────────────────────
+  let crewPoll = null;
+  async function loadCrewProjects() {
+    const { ok, data } = await api("/api/account/projects");
+    if (!ok) return;
+    for (const id of ["crew-project", "feed-project"]) {
+      const sel = $(id);
+      const cur = sel.value;
+      sel.innerHTML = (data.projects || []).map((p) => `<option value="${esc(p.slug)}">${esc(p.name)}</option>`).join("") || '<option value="">no projects</option>';
+      if (cur) sel.value = cur;
+    }
+  }
+  async function loadCrewRuns() {
+    const slug = $("crew-project").value;
+    if (!slug) { $("runs").innerHTML = `<tr><td colspan="5" class="empty">pick a project</td></tr>`; return; }
+    const { ok, data } = await api(`/api/crew?slug=${encodeURIComponent(slug)}`);
+    if (!ok) return;
+    $("board-project").textContent = data.project || slug;
+    $("runs").innerHTML = (data.runs || []).map((r) => `
+      <tr>
+        <td class="name">${esc(r.title)}</td>
+        <td><span class="badge ${r.crewStatus === "running" ? "live" : r.crewStatus === "killed" ? "err" : r.crewStatus === "done" ? "ok" : ""}">${esc(r.crewStatus)}</span></td>
+        <td class="num">${r.partials.length ? r.partials.map((p) => `${fmt(p.lines)} lines`).join(" &middot; ") : "no partials yet"}</td>
+        <td class="mono">${esc(new Date(r.createdAt).toLocaleString())}</td>
+        <td>${r.runId ? `<div class="rowact"><button class="btn-ghost danger" data-kill="${esc(r.runId)}" ${r.crewStatus !== "running" ? "disabled" : ""}>Kill</button></div>` : ""}</td>
+      </tr>` + (r.partials.some((p) => p.tail?.length)
+        ? `<tr><td colspan="5" style="padding-top:2px"><div style="display:grid;gap:8px">${r.partials.filter((p) => p.tail?.length).map((p) => `<pre class="partial">${esc((p.tail || []).join("\n"))}</pre>`).join("")}</div></td></tr>`
+        : ""))
+      .join("") || `<tr><td colspan="5" class="empty">no crew runs yet</td></tr>`;
+    $("runs").querySelectorAll("button[data-kill]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        b.disabled = true;
+        const { ok } = await api(`/api/crew/${b.dataset.kill}/kill`, { method: "POST", body: "{}" });
+        $("crew-note").innerHTML = ok ? '<span class="ok">kill in flight — SIGTERM, then the grace, then SIGKILL to the group</span>' : '<span class="err">could not kill</span>';
+        setTimeout(loadCrewRuns, 400);
+      }));
+    const anyRunning = (data.runs || []).some((r) => r.crewStatus === "running");
+    if (anyRunning && !crewPoll) crewPoll = setInterval(loadCrewRuns, 2500);
+    if (!anyRunning && crewPoll) { clearInterval(crewPoll); crewPoll = null; }
+  }
+  $("crew-project").addEventListener("change", loadCrewRuns);
+  $("crew-start").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    const { ok, data } = await api("/api/crew", {
+      method: "POST",
+      body: JSON.stringify({
+        slug: f.project.value,
+        title: f.title.value.trim() || "crew task",
+        workers: Number(f.workers.value) || 2,
+        durationSec: Number(f.duration.value) || 30,
+      }),
+    });
+    $("crew-note").innerHTML = ok
+      ? `<span class="ok">✓ crew ${esc(data.runId)} — process group ${esc(String(data.pgid))}</span>`
+      : `<span class="err">${esc(data.error || "could not start crew")}</span>`;
+    if (ok) setTimeout(loadCrewRuns, 500);
+  });
+  loadCrewProjects().then(loadCrewRuns);
+
+  // ── live feed ─────────────────────────────────────────────────────
+  let feedCursor = "0";
+  function feedSummary(type, body) {
+    if (!body || typeof body !== "object") return String(body).slice(0, 140);
+    if (body.rejection) return `refused a ${esc(body.type)} line — ${esc((body.violations || []).join("; "))}`;
+    if (typeof body.text === "string") return esc(body.text.slice(0, 140));
+    if (body.rowId) return `${esc(body.rowId)} → ${esc(body.status ?? body.verdict ?? "")}`;
+    return esc(JSON.stringify(body).slice(0, 140));
+  }
+  async function loadFeed() {
+    const slug = $("feed-project").value;
+    if (!slug) return;
+    const { ok, data } = await api(`/api/projects/${encodeURIComponent(slug)}/stream?afterSeq=${encodeURIComponent(feedCursor)}`);
+    if (!ok) return;
+    if (!data.events.length) return;
+    feedCursor = data.nextCursor;
+    const box = $("feed");
+    for (const e of data.events.reverse()) {
+      const rejected = e.type === "system" && e.body?.rejection;
+      const div = document.createElement("div");
+      div.className = "feed-line" + (rejected ? " rejected" : "") + (e.corrupt ? " corrupt" : "");
+      div.innerHTML =
+        `<span class="badge ${rejected ? "err" : e.body?.status === "accepted" || e.body?.verdict === "accepted" ? "ok" : e.body?.verdict === "falsified" ? "err" : "info"}">${rejected ? "refused" : esc(e.type)}</span>` +
+        `<span class="key-mask">${esc(e.actor)}</span>` +
+        `<span class="fine feed-text">${feedSummary(e.type, e.body)}</span>` +
+        `<span class="feed-ts">${new Date(e.ts).toLocaleTimeString()}</span>`;
+      box.prepend(div);
+    }
+    while (box.children.length > 60) box.lastElementChild.remove();
+  }
+  $("feed-project").addEventListener("change", () => { feedCursor = "0"; loadFeed(); });
+  $("feed-post").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    const text = f.text.value.trim();
+    if (!f.project.value || !text) return;
+    const payload = { type: f.type.value, body: f.raw.checked ? text : { text } };
+    const { ok, data } = await api(`/api/projects/${encodeURIComponent(f.project.value)}/stream`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    $("feed-note").innerHTML = ok
+      ? `<span class="ok">✓ posted — seq ${esc(String(data.seq))}</span>`
+      : `<span class="err">✗ ${esc(data.error ?? "rejected")}${data.violations ? " — " + esc(data.violations.join("; ")) : ""}</span>`;
+    f.text.value = "";
+    setTimeout(loadFeed, 120);
+  });
+  setInterval(loadFeed, 2000);
+
+  // ── portfolio ─────────────────────────────────────────────────────
+  async function loadPortfolio() {
+    const { ok, data } = await api("/api/portfolio");
+    if (!ok) return;
+    $("portfolio").innerHTML = (data.projects || []).map((p) => `
+      <tr>
+        <td class="name">${esc(p.name)}</td>
+        <td><span class="badge ${p.status === "done" ? "ok" : p.status === "running" ? "live" : "err"}">${esc(p.status)}</span></td>
+        <td class="mono">${(p.rows || []).map((r) => `${esc(r.rowId)} <b>${esc(r.resolved)}</b>${r.witnessedBy ? " ✓" : ""}`).join(" &middot; ") || "no rows"}</td>
+        <td>${p.nextDecision
+          ? `<span class="badge ${p.nextDecision.kind === "ship" ? "" : "live"}">${esc(p.nextDecision.kind)}</span> <span class="fine" style="display:inline">${esc(p.nextDecision.prompt)}</span>`
+          : '<span class="fine" style="display:inline">nothing to decide</span>'}</td>
+      </tr>`).join("") || `<tr><td colspan="4" class="empty">no projects yet</td></tr>`;
+    const nd = data.nextDecision;
+    $("pf-next").innerHTML = nd
+      ? `Next for this account: <span class="badge live">${esc(nd.project)}</span> <span class="badge">${esc(nd.kind)}</span> ${esc(nd.prompt)} &mdash; ${nd.options.map((o) => `<span class="badge">${esc(o)}</span>`).join(" ")}`
+      : "Nothing is waiting on a human — the crew has the wheel.";
+  }
+  loadPortfolio();
+
+  // ── operator desk ─────────────────────────────────────────────────
   async function loadDesk() {
     const { ok, data } = await api("/api/admin/pending");
-    if (!ok) { $("desk").innerHTML = `<p class="empty">desk unavailable</p>`; return; }
-    if (!data.pending.length) {
-      $("desk").innerHTML = `<p class="empty">no one is waiting</p>`;
-      return;
-    }
-    $("desk").innerHTML = data.pending.map((u) => `
-      <div class="desk-row">
-        <span class="key-id">${esc(u.username)}</span>
-        <span class="key-mask">waiting ${Math.max(0, Math.round((Date.now() - new Date(u.createdAt).getTime()) / 60000))} min</span>
-        <span class="key-limits">
-          <button class="btn-ghost" data-act="verify" data-id="${esc(u.id)}">Verify</button>
-          <button class="btn-ghost danger" data-act="suspend" data-id="${esc(u.id)}">Suspend</button>
-        </span>
-      </div>`).join("");
+    if (!ok) { $("desk").innerHTML = `<tr><td colspan="3" class="empty">desk unavailable</td></tr>`; return; }
+    $("desk").innerHTML = data.pending.length
+      ? data.pending.map((u) => `
+        <tr>
+          <td class="name">${esc(u.username)}</td>
+          <td class="num">waiting ${Math.max(0, Math.round((Date.now() - new Date(u.createdAt).getTime()) / 60000))} min</td>
+          <td><div class="rowact">
+            <button class="btn-ghost" data-act="verify" data-id="${esc(u.id)}">Verify</button>
+            <button class="btn-ghost danger" data-act="suspend" data-id="${esc(u.id)}">Suspend</button>
+          </div></td>
+        </tr>`).join("")
+      : `<tr><td colspan="3" class="empty">no one is waiting</td></tr>`;
     $("desk").querySelectorAll("button[data-act]").forEach((b) =>
       b.addEventListener("click", async () => {
         b.disabled = true;
@@ -706,122 +874,167 @@
       }));
   }
 
-  // ── the account book: limits + model assignments, per account ─────────
   const LIMIT_FIELDS = [
-    ["rpm", "Requests / min"],
-    ["tpm", "Tokens / min"],
-    ["rpd", "Requests / day"],
-    ["monthly_tokens", "Tokens / month"],
-    ["monthly_cost_cents", "Cost ¢ / month"],
-    ["monthly_images", "Images / month"],
-    ["monthly_searches", "Searches / month"],
+    ["rpm", "rpm"],
+    ["tpm", "tpm"],
+    ["rpd", "rpd"],
+    ["monthly_tokens", "tok/mo"],
+    ["monthly_cost_cents", "cost ¢/mo"],
+    ["monthly_images", "img/mo"],
+    ["monthly_searches", "search/mo"],
   ];
   const PROVIDERS = ["google", "groq", "openrouter", "mistral"];
 
-  // the limit matrix: one row per scope — 'all models' (the account),
-  // the 'search' and 'image' faces, and each model name assigned to the
-  // account. Blank = unlimited. Every key of the account pools into these.
+  // the limit matrix as a real table — one scope row group at a time,
+  // pool chips under each model scope, over-pool flagged as typed
   function limitsEditor(u, ld) {
     const scopes = ld.scopes?.length ? ld.scopes : [null, "search", "image"];
     const byKey = Object.fromEntries((ld.limits || []).map((l) => [`${l.model ?? "all"}|${l.kind}`, l]));
-    const kinds = LIMIT_FIELDS.map((f) => f[0]);
     const pool = ld.pool || {};
-    // the pool standing behind each model — a grant above it is meaningless,
-    // so the chips are right here next to the inputs
     const poolChips = (s) => {
       if (s === null || !pool[s]) return "";
-      return `<div class="pool-chips">${kinds
-        .map((kind) => {
+      return `<div class="pool-chips">${LIMIT_FIELDS
+        .map(([kind]) => {
           const p = pool[s][kind];
           if (!p) return "";
-          const capTxt = p.cap === null || p.cap === undefined ? "∞" : p.cap;
-          const others = p.elsewhere ? ` · ${p.elsewhere} granted elsewhere` : "";
+          const capTxt = p.cap === null || p.cap === undefined ? "∞" : fmt(p.cap);
+          const others = p.elsewhere ? ` &middot; ${fmt(p.elsewhere)} granted elsewhere` : "";
           return `<span class="badge" data-poolcap="${s === null ? "all" : s}|${kind}" title="total pool capacity for this model · headroom left after other accounts">${kind} pool ${capTxt}${others}</span>`;
         })
         .join("")}</div>`;
     };
-    return `<div class="limits-edit">
-      <p class="fine">Per-model grants are reconciled against the pool: a value above what the
-        pool can back is clamped to ${Math.round((ld.fraction ?? 0.8) * 100)}% of the pool for this
-        account (its 30-day usage: ${ld.usage30d ? `${ld.usage30d.requests.toLocaleString()} req · ${(ld.usage30d.costCents / 100).toFixed(2)}¢` : "n/a"}). Blank = unlimited.</p>
-      ${scopes
-        .map(
-          (s) => `<div class="scope-row">
-          <span class="scope-name">${s === null ? "all models" : esc(s)}</span>
-          ${poolChips(s)}
-          <div class="row2">
-            ${kinds.map((kind) =>
-              `<label>${kind}
-                <input data-kind="${kind}" data-scope="${s === null ? "all" : s}" type="number" min="1" step="any" placeholder="∞"
-                  value="${byKey[`${s === null ? "all" : s}|${kind}`]?.limit ?? ""}">
-              </label>`).join("")}
-          </div>
-        </div>`
-        )
-        .join("")}
-      <div class="cta">
+    return `
+      <div class="matrix-note">
+        Per-model grants are reconciled against the pool: a value above what the pool can back is clamped to
+        <b>${Math.round((ld.fraction ?? 0.8) * 100)}%</b> of the pool for this account
+        (its 30-day usage: ${ld.usage30d ? `<b>${fmt(ld.usage30d.requests)} req &middot; ${(ld.usage30d.costCents / 100).toFixed(2)}&cent;</b>` : "n/a"}).
+        Blank = unlimited.
+      </div>
+      <div class="matrix" style="margin-top:14px">
+        <div class="matrix-scroll">
+          <table class="tbl limits-table">
+            <thead>
+              <tr><th>Scope</th>${LIMIT_FIELDS.map(([k, label]) => `<th class="num">${label}</th>`).join("")}</tr>
+            </thead>
+            <tbody>
+              ${scopes.map((s) => `
+                <tr class="scope-head">
+                  <td colspan="${LIMIT_FIELDS.length + 1}">
+                    <span class="scope-name">${s === null ? "all models" : esc(s)}</span>
+                    ${poolChips(s)}
+                  </td>
+                </tr>
+                <tr>
+                  <td class="name">${s === null ? "all models" : esc(s)}</td>
+                  ${LIMIT_FIELDS.map(([kind]) => `
+                    <td class="num"><input data-kind="${kind}" data-scope="${s === null ? "all" : s}" type="number" min="1" step="any" placeholder="∞"
+                      value="${byKey[`${s === null ? "all" : s}|${kind}`]?.limit ?? ""}"></td>`).join("")}
+                </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="save-bar">
         <button class="btn" data-save-limits="${esc(u.id)}">Save limits</button>
         <span class="hint" data-limits-note="${esc(u.id)}">&nbsp;</span>
-      </div>
-    </div>`;
+      </div>`;
   }
 
-  // the model workbench: one model NAME the customer calls, backed by up to
-  // 5 provider rungs (the pool). The customer never sees the rungs.
-  // `catalog` = { provider: { checkedAt, models: [ids] } } from /api/admin/catalog
+  function wireLimits(el, id) {
+    el.querySelectorAll("input[data-kind]").forEach((i) => {
+      i.addEventListener("input", () => {
+        const v = i.value ? Number(i.value) : null;
+        el.querySelectorAll(".pool-chips .badge[data-poolcap]").forEach((c) => {
+          const [scope, kind] = c.dataset.poolcap.split("|");
+          const input = el.querySelector(`input[data-scope="${CSS.escape(scope)}"][data-kind="${CSS.escape(kind)}"]`);
+          const capTxt = (c.textContent.match(/pool ([∞0-9.,]+)/) || [])[1];
+          const cap = capTxt === "∞" ? null : Number(String(capTxt).replace(/[.,]/g, ""));
+          const isMine = input && input === i;
+          c.classList.toggle("over", !!isMine && v !== null && cap !== null && v > cap);
+        });
+      });
+    });
+    el.querySelector(`[data-save-limits="${id}"]`).addEventListener("click", async (e) => {
+      const btn = e.currentTarget;
+      const note = el.querySelector(`[data-limits-note="${id}"]`);
+      const limits = [...el.querySelectorAll("input[data-kind]")].map((i) => ({
+        model: i.dataset.scope === "all" ? null : i.dataset.scope,
+        kind: i.dataset.kind,
+        limit: i.value ? Number(i.value) : null,
+        reservePct: 5,
+      }));
+      btn.disabled = true;
+      const { ok, data } = await api(`/api/admin/users/${id}/limits`, { method: "PUT", body: JSON.stringify({ limits }) });
+      btn.disabled = false;
+      if (!ok) { note.innerHTML = `<span class="err">${esc(data.error ?? "could not save")}</span>`; return; }
+      const caps = data.caps || [];
+      const capHtml = caps.length
+        ? caps.map((c) => `<span class="err">${esc(c.model)} ${esc(c.kind)}: ${c.requested} → ${c.effective} — ${esc(c.note ?? "capped to pool")}</span>`).join(" &middot; ")
+        : "";
+      note.innerHTML = `<span class="ok">saved — ${data.limits.length} active limit(s), applied per model</span> ${capHtml}`;
+      (data.limits || []).forEach((l) => {
+        const input = el.querySelector(`input[data-scope="${CSS.escape(l.model ?? "all")}"][data-kind="${CSS.escape(l.kind)}"]`);
+        if (input) input.value = l.limit ?? "";
+      });
+    });
+  }
+
+  // ── the model workbench — the customer's names, the pool's rungs ──
   function modelsEditor(u, aliases, catalog) {
     const cat = catalog || {};
     const checkedNote = Object.keys(cat)
       .filter((p) => cat[p] && cat[p].checkedAt)
       .map((p) => `${p} · ${new Date(cat[p].checkedAt).toLocaleDateString()}`)
       .join(" · ") || "catalog not checked yet";
-    return `<div class="models-edit">
-      ${(aliases || [])
-        .map(
-          (a) => {
-            const st = a.catalog?.status || "unknown";
-            const missing = (a.catalog?.missing || []).length
-              ? `<span class="catalog-note">missing from today&rsquo;s catalog: ${a.catalog.missing.map((m) => `<span class="key-mask">${esc(m)}</span>`).join(", ")}</span>`
-              : "";
-            return `<div class="alias-edit">
-          <div class="key-row">
-            <span class="key-id"><span class="cat-dot ${st}" title="catalog status: ${st}"></span>${esc(a.alias)}</span>
-            ${a.targets.map((t) => `<span class="key-mask">${esc(t.provider)}/${esc(t.providerModelId)}</span>`).join("")}
-            <button class="btn-ghost" data-load-alias="${esc(u.id)}" data-alias="${esc(a.alias)}">edit ▾</button>
-          </div>
-          ${missing}
-        </div>`;
-          }
-        )
-        .join("") || `<p class="empty">no model names assigned to this account yet</p>`}
-      <div class="workbench">
-        <div class="row2">
-          <label>Model name (what the customer calls)
-            <input data-alias-name placeholder="use the real model name — e.g. gemini-2.5-flash" pattern="[a-z0-9][a-z0-9_-]{2,31}">
-          </label>
-          <label>Rung provider (hidden from the customer)
-            <select data-rung-provider>${PROVIDERS.map((p) => `<option>${p}</option>`).join("")}</select>
-          </label>
-        </div>
-        <label>Rung model id — pick from the catalog (checked daily)
+    return `<div class="bench">
+      <div>
+        <p class="eyebrow">Assigned names</p>
+        <div class="tbl-wrap"><div class="tbl-scroll">
+          <table class="tbl">
+            <thead><tr><th>Name</th><th>Catalog</th><th>Rungs (hidden from the customer)</th><th></th></tr></thead>
+            <tbody>
+              ${(aliases || []).map((a) => {
+                const st = a.catalog?.status || "unknown";
+                const missing = (a.catalog?.missing || []).length
+                  ? `<span class="catalog-note" style="display:block">missing from today&rsquo;s catalog: ${a.catalog.missing.map((m) => `<span class="mono">${esc(m)}</span>`).join(", ")}</span>`
+                  : "";
+                return `<tr>
+                  <td class="name"><span class="cat-dot ${st}" title="catalog status: ${st}"></span>${esc(a.alias)}</td>
+                  <td>${missing || '<span class="mono">—</span>'}</td>
+                  <td class="mono">${a.targets.map((t) => esc(t.provider) + "/" + esc(t.providerModelId)).join("<br>")}</td>
+                  <td><div class="rowact"><button class="btn-ghost" data-load-alias="${esc(u.id)}" data-alias="${esc(a.alias)}">edit</button></div></td>
+                </tr>`;
+              }).join("") || `<tr><td colspan="4" class="empty">no model names assigned to this account yet</td></tr>`}
+            </tbody>
+          </table>
+        </div></div>
+      </div>
+      <div class="form-panel">
+        <h3>Assign / replace a ladder</h3>
+        <label class="field">Model name (what the customer calls)
+          <input data-alias-name placeholder="use the real model name — e.g. gemini-2.5-flash" pattern="[a-z0-9][a-z0-9_-]{2,31}" style="width:100%">
+        </label>
+        <label class="field">Rung provider (hidden from the customer)
+          <select data-rung-provider>${PROVIDERS.map((p) => `<option>${p}</option>`).join("")}</select>
+        </label>
+        <label class="field">Rung model id — pick from the catalog (checked daily)
           <input data-rung-model list="cat-dl" placeholder="gemini-2.5-flash · llama-3.3-70b-versatile · deepseek/deepseek-r1:free" style="width:100%">
           <datalist id="cat-dl"></datalist>
         </label>
-        <div class="cta">
-          <button class="btn-ghost" data-use-name>use model name</button>
-          <button class="btn-ghost" data-add-rung>+ add rung</button>
-          <button class="btn" data-save-alias="${esc(u.id)}">Assign / replace ladder</button>
+        <div class="rungs" data-rungs></div>
+        <div class="form-cta">
+          <button class="btn-ghost" type="button" data-use-name>use model name</button>
+          <button class="btn-ghost" type="button" data-add-rung>+ add rung</button>
           <span class="hint" data-alias-note="${esc(u.id)}">&nbsp;</span>
         </div>
-        <div class="rungs" data-rungs></div>
-        <div class="cta" style="margin-top:10px">
-          <button class="btn-ghost" data-check-catalog>check catalog now</button>
+        <div class="form-cta">
+          <button class="btn" data-save-alias="${esc(u.id)}">Assign / replace ladder</button>
+        </div>
+        <div class="form-cta" style="margin-top:2px">
+          <button class="btn-ghost" type="button" data-check-catalog>check catalog now</button>
           <span class="catalog-note">last checked: ${esc(checkedNote)}</span>
         </div>
-        <p class="fine">A model name pools up to 5 provider rungs — the gateway walks them when
-          one is exhausted. Re-saving a name replaces its whole ladder. The green dot means every
-          rung&rsquo;s model is in its provider&rsquo;s catalog as of today; gold means one is missing
-          or the catalog is stale.</p>
+        <p class="fine workbench-note" style="margin-top:6px">A model name pools up to 5 provider rungs — the gateway walks them when one is exhausted. Re-saving a name replaces its whole ladder. The green dot means every rung&rsquo;s model is in its provider&rsquo;s catalog as of today; gold means one is missing or the catalog is stale.</p>
       </div>
     </div>`;
   }
@@ -829,8 +1042,6 @@
   function wireWorkbench(el, u, catalog) {
     let rungs = [];
     const rungBox = el.querySelector("[data-rungs]");
-
-    // the rung model id picker is fed from the daily-checked catalog
     const catDl = el.querySelector("#cat-dl");
     const fillCatalog = () => {
       if (!catDl) return;
@@ -841,8 +1052,6 @@
     el.querySelector("[data-rung-provider]")?.addEventListener("change", fillCatalog);
     fillCatalog();
 
-    // "use model name": the rung's real model id becomes the alias name —
-    // the customer then calls the model by the name it actually has
     el.querySelector("[data-use-name]")?.addEventListener("click", () => {
       const raw = el.querySelector("[data-rung-model]").value.trim();
       if (!raw) return;
@@ -850,7 +1059,6 @@
       if (slug.length >= 3) el.querySelector("[data-alias-name]").value = slug;
     });
 
-    // "check catalog now": force an immediate fetch of every pool key's catalog
     el.querySelector("[data-check-catalog]")?.addEventListener("click", async (e) => {
       const btn = e.currentTarget;
       btn.disabled = true;
@@ -862,10 +1070,7 @@
       if (ok) {
         const good = (data.refreshed || []).filter((r) => r.ok).length;
         const bad = (data.refreshed || []).length - good;
-        note.innerHTML = ok
-          ? `<span class="ok">catalog checked — ${good} provider(s) answered${bad ? `, ${bad} unreachable (stays stale, retried hourly)` : ""}</span>`
-          : "";
-        // refresh the cached catalog for the pickers
+        note.innerHTML = `<span class="ok">catalog checked — ${good} key(s) answered${bad ? `, ${bad} unreachable (stays stale, retried hourly)` : ""}</span>`;
         const c = await api("/api/admin/catalog");
         if (c.ok) {
           for (const row of c.data.catalog || []) {
@@ -879,7 +1084,7 @@
     });
     const renderRungs = () => {
       rungBox.innerHTML = rungs.length
-        ? rungs.map((t, i) => `<span class="badge">${i + 1} · ${esc(t.provider)}/${esc(t.providerModelId)} <button type="button" class="btn-ghost" data-drop-rung="${i}">×</button></span>`).join(" ")
+        ? rungs.map((t, i) => `<span class="badge">${i + 1} &middot; ${esc(t.provider)}/${esc(t.providerModelId)} <button type="button" class="btn-ghost" data-drop-rung="${i}">&times;</button></span>`).join(" ")
         : `<span class="fine">no rungs yet — pick a provider + model id, then “+ add rung”</span>`;
       rungBox.querySelectorAll("button[data-drop-rung]").forEach((b) =>
         b.addEventListener("click", () => {
@@ -915,19 +1120,14 @@
       if (!alias) { note.innerHTML = `<span class="err">model name required</span>`; return; }
       if (!rungs.length) { note.innerHTML = `<span class="err">add at least one rung first</span>`; return; }
       btn.disabled = true;
-      const r = await api(`/api/admin/users/${u.id}/aliases`, {
-        method: "PUT",
-        body: JSON.stringify({ alias, targets: rungs }),
-      });
+      const r = await api(`/api/admin/users/${u.id}/aliases`, { method: "PUT", body: JSON.stringify({ alias, targets: rungs }) });
       btn.disabled = false;
       if (r.ok) {
         note.innerHTML = `<span class="ok">assigned — “${esc(alias)}” pools ${r.data.targets.length} rung(s); the account can call it now</span>`;
         rungs = [];
         el.querySelector("[data-alias-name]").value = "";
         renderRungs();
-        el.dataset.loaded = "";
-        el.hidden = true;
-        el.hidden = false; // force a fresh render next open
+        openWorkbench(u.id); // re-render the names table fresh
       } else {
         note.innerHTML = `<span class="err">${esc(r.data.error ?? "could not assign")}</span>`;
       }
@@ -935,7 +1135,6 @@
     renderRungs();
   }
 
-  // the catalog the workbench pickers use — fetched once per desk load
   let catalogCache = null;
   async function fetchCatalog() {
     if (catalogCache) return catalogCache;
@@ -949,167 +1148,202 @@
     return catalogCache;
   }
 
+  function userNameById(id) {
+    return deskUsersCache.find((u) => u.id === id)?.username || "account";
+  }
+  let deskUsersCache = [];
+
   async function loadDeskUsers() {
     catalogCache = null; // a fresh desk load gets a fresh catalog
-    const box = $("desk-users");
     const { ok, data } = await api("/api/admin/users");
-    if (!ok) { box.innerHTML = `<p class="empty">desk unavailable</p>`; return; }
-    box.innerHTML = (data.users || [])
-      .filter((u) => !u.isOperator)
-      .map((u) => `
-      <div class="user-row">
-        <div class="key-row">
-          <span class="key-id">${esc(u.username)}</span>
-          <span class="badge ${u.status === "active" ? "" : u.status === "pending" ? "live" : "err"}">${esc(u.status)}</span>
-          <span class="key-mask">org ${esc(u.org?.name ?? "—")} · ${u.gatewayKeys} key(s) · ${u.usage.requests} req · ${u.usage.costCents.toFixed(0)}¢</span>
-          <span class="key-limits">
-            ${u.status === "pending" ? `<button class="btn-ghost" data-act="verify" data-id="${esc(u.id)}">Verify</button>` : ""}
-            <button class="btn-ghost danger" data-act="suspend" data-id="${esc(u.id)}">Suspend</button>
-            <button class="btn-ghost" data-toggle-limits="${esc(u.id)}">Limits ▾</button>
-            <button class="btn-ghost" data-toggle-models="${esc(u.id)}">Models ▾</button>
-          </span>
-        </div>
-        <div class="limits-edit" id="limits-edit-${esc(u.id)}" hidden></div>
-        <div class="models-edit" id="models-edit-${esc(u.id)}" hidden></div>
-      </div>`).join("") || `<p class="empty">no accounts yet — sign-ups appear here first, pending</p>`;
-
-    box.querySelectorAll("button[data-act]").forEach((b) =>
+    if (!ok) { $("desk-users").innerHTML = `<tr><td colspan="6" class="empty">desk unavailable</td></tr>`; return; }
+    const users = (data.users || []).filter((u) => !u.isOperator);
+    deskUsersCache = users;
+    $("desk-users").innerHTML = users.map((u) => `
+      <tr>
+        <td class="name">${esc(u.username)}</td>
+        <td><span class="badge ${u.status === "active" ? "ok" : u.status === "pending" ? "live" : "err"}">${esc(u.status)}</span></td>
+        <td class="mono">${esc(u.org?.name ?? "—")}</td>
+        <td class="num">${u.gatewayKeys}</td>
+        <td class="num">${fmt(u.usage.requests)} req &middot; ${u.usage.costCents.toFixed(0)}&cent;</td>
+        <td><div class="rowact">
+          ${u.status === "pending" ? `<button class="btn-ghost" data-act="verify" data-id="${esc(u.id)}">Verify</button>` : ""}
+          <button class="btn-ghost" data-open-limits="${esc(u.id)}">Limits</button>
+          <button class="btn-ghost" data-open-models="${esc(u.id)}">Models</button>
+          <button class="btn-ghost danger" data-act="suspend" data-id="${esc(u.id)}">Suspend</button>
+        </div></td>
+      </tr>`).join("") || `<tr><td colspan="6" class="empty">no accounts yet — sign-ups appear here first, pending</td></tr>`;
+    $("desk-users").querySelectorAll("button[data-act]").forEach((b) =>
       b.addEventListener("click", async () => {
         b.disabled = true;
         const { ok: done } = await api(`/api/admin/users/${b.dataset.id}/${b.dataset.act}`, { method: "POST" });
         if (done) { loadDesk(); loadDeskUsers(); } else b.disabled = false;
       }));
-
-    box.querySelectorAll("button[data-toggle-limits]").forEach((b) =>
-      b.addEventListener("click", async () => {
-        const id = b.dataset.toggleLimits;
-        const el = $(`limits-edit-${id}`);
-        el.hidden = !el.hidden;
-        if (!el.hidden && !el.dataset.loaded) {
-          const u = (data.users || []).find((x) => x.id === id);
-          const { ok, data: ld } = await api(`/api/admin/users/${id}/limits`);
-          el.innerHTML = ok ? limitsEditor(u, ld) : `<p class="empty">could not load limits</p>`;
-          el.dataset.loaded = "1";
-          wireLimits(el, id);
-        }
-      }));
-
-    box.querySelectorAll("button[data-toggle-models]").forEach((b) =>
-      b.addEventListener("click", async () => {
-        const id = b.dataset.toggleModels;
-        const el = $(`models-edit-${id}`);
-        el.hidden = !el.hidden;
-        if (!el.hidden && !el.dataset.loaded) {
-          const u = (data.users || []).find((x) => x.id === id);
-          const [ad, cat] = await Promise.all([api(`/api/admin/users/${id}/aliases`), fetchCatalog()]);
-          el.innerHTML = modelsEditor(u, ad.ok ? ad.aliases : [], cat);
-          el.dataset.loaded = "1";
-          wireWorkbench(el, u, cat);
-        }
-      }));
+    $("desk-users").querySelectorAll("button[data-open-limits]").forEach((b) =>
+      b.addEventListener("click", () => { location.hash = `flow/limits/${b.dataset.openLimits}`; }));
+    $("desk-users").querySelectorAll("button[data-open-models]").forEach((b) =>
+      b.addEventListener("click", () => { location.hash = `flow/models/${b.dataset.openModels}`; }));
   }
 
-  function wireLimits(el, id) {
-    // live headroom warning: flag a grant above the pool as the operator types
-    el.querySelectorAll("input[data-kind]").forEach((i) => {
-      i.addEventListener("input", () => {
-        const v = i.value ? Number(i.value) : null;
-        const chips = el.querySelectorAll(`.pool-chips .badge[data-poolcap]`);
-        let over = false;
-        chips.forEach((c) => {
-          const [scope, kind] = c.dataset.poolcap.split("|");
-          const input = el.querySelector(`input[data-scope="${CSS.escape(scope)}"][data-kind="${CSS.escape(kind)}"]`);
-          const capTxt = (c.textContent.match(/pool ([∞0-9.]+)/) || [])[1];
-          const cap = capTxt === "∞" ? null : Number(capTxt);
-          const isMine = input && input === i;
-          c.classList.toggle("over", !!isMine && v !== null && cap !== null && v > cap);
-          if (isMine && v !== null && cap !== null && v > cap) over = true;
-        });
-      });
-    });
-    el.querySelector(`[data-save-limits="${id}"]`).addEventListener("click", async (e) => {
-      const btn = e.currentTarget;
-      const note = el.querySelector(`[data-limits-note="${id}"]`);
-      const limits = [...el.querySelectorAll("input[data-kind]")].map((i) => ({
-        model: i.dataset.scope === "all" ? null : i.dataset.scope,
-        kind: i.dataset.kind,
-        limit: i.value ? Number(i.value) : null,
-        reservePct: 5,
-      }));
-      btn.disabled = true;
-      const { ok, data } = await api(`/api/admin/users/${id}/limits`, { method: "PUT", body: JSON.stringify({ limits }) });
-      btn.disabled = false;
-      if (!ok) { note.innerHTML = `<span class="err">${esc(data.error ?? "could not save")}</span>`; return; }
-      const caps = data.caps || [];
-      const capHtml = caps.length
-        ? caps.map((c) => `<span class="err">${esc(c.model)} ${esc(c.kind)}: ${c.requested} → ${c.effective} — ${esc(c.note ?? "capped to pool")}</span>`).join(" · ")
-        : "";
-      note.innerHTML = `<span class="ok">saved — ${data.limits.length} active limit(s), applied per model</span> ${capHtml}`;
-      // reflect the effective (possibly clamped) values back into the inputs
-      (data.limits || []).forEach((l) => {
-        const input = el.querySelector(`input[data-scope="${CSS.escape(l.model ?? "all")}"][data-kind="${CSS.escape(l.kind)}"]`);
-        if (input) input.value = l.limit ?? "";
-      });
-    });
+  // the per-account full views (operator)
+  async function openLimits(id) {
+    const box = $("limits-box");
+    box.innerHTML = `<p class="empty">loading ${esc(userNameById(id))}&rsquo;s limits&hellip;</p>`;
+    const { ok, data } = await api(`/api/admin/users/${id}/limits`);
+    if (!ok) { box.innerHTML = `<p class="empty">could not load limits</p>`; return; }
+    const u = deskUsersCache.find((x) => x.id === id) || { id, username: "account" };
+    box.innerHTML = limitsEditor(u, data);
+    wireLimits(box, id);
+  }
+  async function openWorkbench(id) {
+    const box = $("workbench-box");
+    box.innerHTML = `<p class="empty">loading ${esc(userNameById(id))}&rsquo;s model names&hellip;</p>`;
+    const [ad, cat] = await Promise.all([api(`/api/admin/users/${id}/aliases`), fetchCatalog()]);
+    const u = deskUsersCache.find((x) => x.id === id) || { id, username: "account" };
+    box.innerHTML = modelsEditor(u, ad.ok ? ad.aliases : [], cat);
+    wireWorkbench(box, u, cat);
   }
 
-  $("add-key").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const { ok, status, data } = await api("/api/account/keys", {
-      method: "POST",
-      body: JSON.stringify({
-        provider: fd.get("provider"),
-        label: fd.get("label"),
-        secret: fd.get("secret") || undefined,
-      }),
-    });
-    $("add-note").textContent = ok
-      ? `✓ added — ${data.keyMask}`
-      : status === 409 ? "label exists" : (data.error || "could not add key");
-    if (ok) { e.target.reset(); loadKeys(); loadUsage(); }
+  // ── catalog view (operator) ───────────────────────────────────────
+  async function loadCatalogView() {
+    const { ok, data } = await api("/api/admin/catalog");
+    if (!ok) { $("catalog-box").innerHTML = `<tr><td colspan="5" class="empty">could not load the catalog</td></tr>`; return; }
+    const rows = (data.catalog || []).filter((c) => c.hasPoolKey);
+    $("catalog-box").innerHTML = rows.map((c) => `
+      <tr>
+        <td class="name">${esc(c.provider)}</td>
+        <td><span class="badge ok">present</span></td>
+        <td class="num">${c.count}</td>
+        <td class="mono">${c.checkedAt ? esc(new Date(c.checkedAt).toLocaleString()) : "never"}</td>
+        <td>${c.fresh ? '<span class="badge ok">fresh</span>' : '<span class="badge live">stale — retried hourly</span>'}</td>
+      </tr>`).join("") || `<tr><td colspan="5" class="empty">no pool keys with a catalog yet</td></tr>`;
+  }
+  $("cat-refresh").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    const { ok, data } = await api("/api/admin/catalog/refresh", { method: "POST" });
+    btn.disabled = false;
+    $("cat-note").innerHTML = ok
+      ? `<span class="ok">checked — ${(data.refreshed || []).filter((r) => r.ok).map((r) => esc(r.label || r.provider)).join(" · ") || "all quiet"}</span>`
+      : `<span class="err">catalog check failed</span>`;
+    catalogCache = null;
+    loadCatalogView();
   });
 
-  let IS_OP = false;
+  // ── routing: one shell, two products, hash-addressed views ───────
+  const VIEW_META = {
+    "flow/overview":  { t: "Overview",  s: "What this account is doing on Flow — every number measured." },
+    "flow/keys":      { t: "Keys",      s: "The pool's provider keys and the gateway keys you hand to clients." },
+    "flow/models":    { t: "Models",    s: "The real names your account may call — checked daily against the catalog." },
+    "flow/usage":     { t: "Usage",     s: "Charts, limit windows and the full request ledger." },
+    "flow/desk":      { t: "Desk",      s: "Pending accounts first, then the account book. Only you see this." },
+    "flow/limits":    { t: "Limits",    s: "Per-model grants, reconciled against the pool's real capacity." },
+    "flow/models2":   { t: "Model workbench", s: "The names the customer calls — and the rungs behind them." },
+    "flow/catalog":   { t: "Catalog",   s: "What the pool can serve, per provider, checked daily." },
+    "crew/board":     { t: "Board",     s: "Start a crew. Kill it mid-run — the partials stay." },
+    "crew/feed":      { t: "Feed",      s: "The live project stream. Refusals land in seconds." },
+    "crew/portfolio": { t: "Portfolio", s: "Every project names its next human decision." },
+  };
 
-  async function loadOrgLimits() {
-    const { ok, data } = await api("/api/account/limits");
-    if (!ok) { $("org-limits").innerHTML = `<p class="empty">could not load limits</p>`; return; }
-    $("org-limits").innerHTML = (data.orgWindows || []).length
-      ? data.orgWindows.map((w) => `<div class="key-row"><span class="key-id">${esc(w.kind)}</span><span class="key-limits">${windowChips([w])}</span></div>`).join("")
-      : `<p class="empty">no limits set on your account yet — the operator has not assigned usage limits</p>`;
+  function parseHash() {
+    const h = location.hash.replace(/^#\/?/, "");
+    const parts = h.split("/");
+    const product = parts[0] === "crew" ? "crew" : "flow";
+    let view = parts[1] || (product === "crew" ? "board" : "overview");
+    const param = parts.slice(2).join("/") || null;
+    if (product === "flow" && view === "models" && param) view = "models2";
+    const key = `${product}/${view}`;
+    const OP_ONLY = new Set(["flow/desk", "flow/limits", "flow/models2", "flow/catalog"]);
+    if (!VIEW_META[key] || (OP_ONLY.has(key) && !IS_OP)) {
+      const fallback = product === "crew" ? "board" : "overview";
+      return { product, view: fallback, param: null, key: `${product}/${fallback}` };
+    }
+    return { product, view, param, key };
   }
 
+  function setChips(html) { $("view-chips").innerHTML = html; }
+
+  function route() {
+    const r = parseHash();
+    // product switcher + nav
+    $("prod-flow").classList.toggle("on", r.product === "flow");
+    $("prod-crew").classList.toggle("on", r.product === "crew");
+    $("cap-flow").hidden = r.product !== "flow";
+    $("nav-flow").hidden = r.product !== "flow";
+    $("cap-crew").hidden = r.product !== "crew";
+    $("nav-crew").hidden = r.product !== "crew";
+    document.querySelectorAll(`#nav-${r.product} .side-link`).forEach((a) => {
+      const href = a.getAttribute("href").replace("#", "");
+      a.classList.toggle("on", href.startsWith(r.key) || (r.key === "flow/overview" && href === "flow/overview") || (r.key === "crew/board" && href === "crew/board"));
+    });
+    // views
+    document.querySelectorAll(".view").forEach((v) => v.classList.remove("on"));
+    const viewId = r.key === "flow/models2" ? "v-flow-workbench" : `v-${r.key.replace("/", "-")}`;
+    const el = $(viewId);
+    if (el) { el.classList.remove("on"); void el.offsetWidth; el.classList.add("on"); }
+    // top bar
+    const meta = VIEW_META[r.key];
+    $("view-title").textContent = r.param && (r.key === "flow/limits" || r.key === "flow/models2")
+      ? `${meta.t} · ${userNameById(r.param)}`
+      : meta.t;
+    $("view-sub").textContent = meta.s;
+    setChips("");
+    // lazy data
+    if (r.key === "flow/limits" && r.param) openLimits(r.param);
+    if (r.key === "flow/models2" && r.param) openWorkbench(r.param);
+    if (r.key === "flow/desk" && IS_OP) { if (!loaded.desk) { loaded.desk = 1; loadDesk(); loadDeskUsers(); } else { loadDesk(); loadDeskUsers(); } }
+    if (r.key === "flow/catalog" && IS_OP) loadCatalogView();
+  }
+  window.addEventListener("hashchange", route);
+
+  document.querySelectorAll(".side-entry").forEach((b) =>
+    b.addEventListener("click", () => {
+      location.hash = b.dataset.prod === "crew" ? "crew/board" : "flow/overview";
+    }));
+
+  // ── sign out ──────────────────────────────────────────────────────
+  $("signout").addEventListener("click", async () => {
+    try { await api("/api/auth/logout", { method: "POST" }); } catch { /* redirect either way */ }
+    location.replace("/login.html");
+  });
+
+  // ── boot ──────────────────────────────────────────────────────────
   (async function main() {
     const { ok, status, data } = await api("/api/auth/me");
     if (!ok || status === 401) { location.replace("/login.html"); return; }
     IS_OP = !!data.operator;
     $("who").textContent = data.username;
     $("hello").textContent = `Hello, ${data.username}.`;
+    $("rank-badge").textContent = IS_OP ? "operator" : "member";
+    const dot = $("acct-dot");
+    dot.classList.add(data.status === "active" ? "" : data.status);
+    if (data.status !== "active") $("pending-note").hidden = false;
     $("status-marks").innerHTML =
-      `<span class="badge live">● ${esc(data.status)}</span>` +
+      `<span class="badge ${data.status === "active" ? "ok" : data.status === "pending" ? "live" : "err"}">&#9679; ${esc(data.status)}</span>` +
       (IS_OP ? `<span class="badge">operator</span>` : `<span class="badge">member</span>`);
 
-    if (!IS_OP) {
-      // opacity for members: no provider list anywhere on this screen
-      $("prov-sec").hidden = true;
+    if (IS_OP) {
+      document.querySelectorAll(".op-only").forEach((a) => a.hidden = false);
+    } else {
+      $("byo-sec").hidden = true;
       $("api-model-note").innerHTML =
-        "OpenAI-compatible. <code>model</code> = one of the names assigned to your account (badges below). " +
-        "One key, three services: <code>POST&nbsp;/api/flow/chat/completions</code> (text) · " +
-        "<code>POST&nbsp;/api/flow/search</code> with <code>{&quot;query&quot;:&quot;…&quot;}</code> · " +
-        "<code>POST&nbsp;/api/flow/image</code> with <code>{&quot;prompt&quot;:&quot;…&quot;}</code>.";
+        "OpenAI-compatible. <code>model</code> = one of the names assigned to your account (Models tab). " +
+        "One key, three services: <code>POST&nbsp;/api/flow/chat/completions</code> (text) &middot; " +
+        "<code>POST&nbsp;/api/flow/search</code> with <code>{&quot;query&quot;:&quot;&hellip;&quot;}</code> &middot; " +
+        "<code>POST&nbsp;/api/flow/image</code> with <code>{&quot;prompt&quot;:&quot;&hellip;&quot;}</code>.";
       $("gk-curl").textContent =
         'curl https://<your-gateway>/api/flow/chat/completions \\\n' +
         '  -H "Authorization: Bearer jkn_…" \\\n' +
         '  -H "Content-Type: application/json" \\\n' +
         '  -d \'{"model":"fast","stream":false,"messages":[{"role":"user","content":"hi"}]}\' \n\n' +
-        'model — one of the names assigned to your account (see "The API" below)';
+        'model — one of the names assigned to your account (see the Models tab)';
     }
-    await loadKeys();
+    loadKeys();
     loadGatewayKeys();
     loadUsage();
     loadOrgLimits();
-    if (IS_OP) { $("desk-sec").hidden = false; loadDesk(); loadDeskUsers(); }
+    if (!location.hash) history.replaceState(null, "", "#flow/overview");
+    route();
   })();
 </script>
 </body>

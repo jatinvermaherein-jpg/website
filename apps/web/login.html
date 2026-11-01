@@ -38,8 +38,13 @@
       <circle cx="16" cy="16" r="7" opacity="0.5"/>
       <circle class="jt-mark-core" cx="16" cy="16" r="3.4"/>
     </svg>
-    <h1 class="login-title">Sign in</h1>
-    <p class="login-sub">Username and password. New accounts are verified by the operator before you can sign in.</p>
+    <h1 class="login-title" id="login-title">Sign in</h1>
+    <p class="login-sub" id="login-sub">Username and password. One account opens both instruments.</p>
+
+    <div class="login-tabs" role="tablist" aria-label="Authentication">
+      <button class="login-tab on" id="tab-login" role="tab" aria-selected="true" type="button">Sign in</button>
+      <button class="login-tab" id="tab-register" role="tab" aria-selected="false" type="button">Request access</button>
+    </div>
 
     <form id="login-form">
       <label>Username
@@ -51,8 +56,6 @@
       <button class="btn" type="submit">Sign in</button>
     </form>
 
-    <p class="login-toggle">No account? <a href="#register">Create one</a></p>
-
     <form id="register-form" hidden>
       <label>Username
         <input name="username" autocomplete="username" spellcheck="false" minlength="3" maxlength="32" pattern="[a-z0-9][a-z0-9_.\-]*" required>
@@ -60,11 +63,12 @@
       <label>Password
         <input name="password" type="password" autocomplete="new-password" minlength="8" required>
       </label>
-      <button class="btn" type="submit">Create account</button>
+      <button class="btn" type="submit">Request access</button>
       <p class="hint" id="register-note" hidden>&#10003; Created. Your account is pending verification by the operator &mdash; you can sign in once it is verified.</p>
     </form>
 
     <p id="auth-msg" class="auth-msg" role="status"></p>
+    <p class="login-foot mono-faint">One account. Both instruments.</p>
   </div>
 </main>
 
@@ -77,6 +81,27 @@
   const loginForm = document.getElementById("login-form");
   const registerForm = document.getElementById("register-form");
   const note = document.getElementById("register-note");
+  const tabLogin = document.getElementById("tab-login");
+  const tabRegister = document.getElementById("tab-register");
+  const title = document.getElementById("login-title");
+  const sub = document.getElementById("login-sub");
+
+  function pick(tab) {
+    const login = tab === "login";
+    tabLogin.classList.toggle("on", login);
+    tabRegister.classList.toggle("on", !login);
+    tabLogin.setAttribute("aria-selected", login ? "true" : "false");
+    tabRegister.setAttribute("aria-selected", login ? "false" : "true");
+    loginForm.hidden = !login;
+    registerForm.hidden = login;
+    title.textContent = login ? "Sign in" : "Request access";
+    sub.textContent = login
+      ? "Username and password. One account opens both instruments."
+      : "New accounts are verified by the operator before you can sign in.";
+    msg.textContent = "";
+  }
+  tabLogin.addEventListener("click", () => pick("login"));
+  tabRegister.addEventListener("click", () => pick("register"));
 
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -95,13 +120,6 @@
     }
   });
 
-  document.querySelector(".login-toggle a").addEventListener("click", (e) => {
-    e.preventDefault();
-    loginForm.hidden = true;
-    registerForm.hidden = false;
-    msg.textContent = "";
-  });
-
   registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const fd = new FormData(registerForm);
@@ -113,7 +131,7 @@
     const data = await res.json().catch(() => ({}));
     if (res.ok) {
       note.hidden = false;
-      say("Account created.", true);
+      say("Account created — pending verification.", true);
       registerForm.reset();
     } else {
       say(data.error || "could not create the account", false);

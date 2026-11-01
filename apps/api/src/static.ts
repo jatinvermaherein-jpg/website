@@ -58,6 +58,8 @@ export async function staticRoutes(app: FastifyInstance) {
   });
   app.get('/index.html', (req, reply) => sendFile(reply, 'index.html'));
   app.get('/login.html', (req, reply) => sendFile(reply, 'login.html'));
+  app.get('/flow.html', (req, reply) => sendFile(reply, 'flow.html'));
+  app.get('/crew.html', (req, reply) => sendFile(reply, 'crew.html'));
   app.get('/dashboard', (req, reply) => sendFile(reply, 'dashboard.html'));
   app.get('/dashboard.html', (req, reply) => sendFile(reply, 'dashboard.html'));
   app.get('/preloader.css', (req, reply) => sendFile(reply, 'preloader.css'));
