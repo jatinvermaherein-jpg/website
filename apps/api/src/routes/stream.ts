@@ -18,6 +18,7 @@ import { Prisma } from '@prisma/client';
 import type { InputJsonValue } from '@prisma/client/runtime/library';
 import { prisma } from '../lib/prisma.js';
 import { requireUser } from '../lib/auth.js';
+import { seatFromBearer, touchSeat } from '../lib/seatauth.js';
 import { validateEvent, coerceVerdict, ENV_RANK, type EventType } from '../lib/envelope.js';
 
 const MAX_TAKE = 200;
@@ -107,12 +108,29 @@ async function appendEvent(projectId: string, type: EventType, actor: string, bo
 export async function streamRoutes(app: FastifyInstance) {
   // read — fail open, cursor-resuming
   app.get('/:slug/stream', async (req, reply) => {
-    const user = await requireUser(req, reply);
-    if (!user) return;
-    const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
-    if (!membership) return reply.code(404).send({ error: 'no org' });
-    const project = await projectOf(membership.orgId, (req.params as { slug: string }).slug);
-    if (!project) return reply.code(404).send({ error: 'no such project' });
+    // one stream, two readers: a real agent (seat credential, from anywhere)
+    // or a human (web session). The seat's admission IS its SeatProject row.
+    const slug = (req.params as { slug: string }).slug;
+    const seat = await seatFromBearer(req);
+    let project: { id: string; slug: string } | null = null;
+    let cursorId = '';
+    if (seat) {
+      const p = await prisma.project.findUnique({ where: { slug } });
+      const joined = p && (await prisma.seatProject.findUnique({ where: { seatId_projectId: { seatId: seat.id, projectId: p.id } } }));
+      if (!p || !joined) return reply.code(404).send({ error: 'no such project for this seat' });
+      project = p;
+      cursorId = seat.id;
+      touchSeat(seat.id); // read = heartbeat
+    } else {
+      const user = await requireUser(req, reply);
+      if (!user) return;
+      const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
+      if (!membership) return reply.code(404).send({ error: 'no org' });
+      const p = await projectOf(membership.orgId, slug);
+      if (!p) return reply.code(404).send({ error: 'no such project' });
+      project = p;
+      cursorId = user.id;
+    }
 
     const q = req.query as { afterSeq?: string; limit?: string };
     let cursor = 0n;
@@ -120,7 +138,7 @@ export async function streamRoutes(app: FastifyInstance) {
       if (!/^\d+$/.test(q.afterSeq)) return reply.code(422).send({ error: 'afterSeq must be a non-negative integer' });
       cursor = BigInt(q.afterSeq);
     } else {
-      const saved = await prisma.cursor.findUnique({ where: { seatId_scopeId: { seatId: user.id, scopeId: project.id } } });
+      const saved = await prisma.cursor.findUnique({ where: { seatId_scopeId: { seatId: cursorId, scopeId: project.id } } });
       cursor = saved?.lastSeq ?? 0n;
     }
     const limit = Math.min(MAX_TAKE, Math.max(1, Number(q.limit) || 50));
@@ -134,9 +152,9 @@ export async function streamRoutes(app: FastifyInstance) {
 
     await prisma.cursor
       .upsert({
-        where: { seatId_scopeId: { seatId: user.id, scopeId: project.id } },
+        where: { seatId_scopeId: { seatId: cursorId, scopeId: project.id } },
         update: { lastSeq: nextCursor },
-        create: { seatId: user.id, scopeId: project.id, lastSeq: nextCursor },
+        create: { seatId: cursorId, scopeId: project.id, lastSeq: nextCursor },
       })
       .catch(() => {});
 
@@ -150,16 +168,33 @@ export async function streamRoutes(app: FastifyInstance) {
 
   // post — validate at post; the bad line is refused, never written
   app.post('/:slug/stream', async (req, reply) => {
-    const user = await requireUser(req, reply);
-    if (!user) return;
-    const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
-    if (!membership) return reply.code(404).send({ error: 'no org' });
-    const project = await projectOf(membership.orgId, (req.params as { slug: string }).slug);
-    if (!project) return reply.code(404).send({ error: 'no such project' });
+    const slug = (req.params as { slug: string }).slug;
+    const seat = await seatFromBearer(req);
+    let project: { id: string; slug: string } | null = null;
+    let humanActor: string | null = null;
+    if (seat) {
+      const p = await prisma.project.findUnique({ where: { slug } });
+      const joined = p && (await prisma.seatProject.findUnique({ where: { seatId_projectId: { seatId: seat.id, projectId: p.id } } }));
+      if (!p || !joined) return reply.code(404).send({ error: 'no such project for this seat' });
+      project = p;
+      touchSeat(seat.id); // post = heartbeat
+    } else {
+      const user = await requireUser(req, reply);
+      if (!user) return;
+      const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
+      if (!membership) return reply.code(404).send({ error: 'no org' });
+      const p = await projectOf(membership.orgId, slug);
+      if (!p) return reply.code(404).send({ error: 'no such project' });
+      project = p;
+      humanActor = user.username;
+    }
 
     const b = (req.body ?? {}) as { type?: string; actor?: string; body?: unknown; refs?: Record<string, unknown> };
     const type = b.type as EventType;
-    const actor = typeof b.actor === 'string' && b.actor.trim() ? b.actor : user.username;
+    // a seat posts under its own name — impersonation via b.actor is only
+    // allowed for humans (they post on their own behalf, seats don't)
+    const actor =
+      typeof b.actor === 'string' && b.actor.trim() ? b.actor : seat ? seat.name : humanActor!;
     const violations = validateEvent(String(type), actor, b.body);
 
     // Phase 10 — the fidelity ladder: verdicts only run UP. A row that

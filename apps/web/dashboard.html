@@ -194,8 +194,30 @@
             <div class="field"><label for="cs-auditor">Auditors · 0–2</label><input class="input mono" id="cs-auditor" name="auditor" type="number" min="0" max="2" value="1" /></div>
             <div class="field"><label for="cs-secs">Run seconds</label><input class="input mono" id="cs-secs" name="durationSec" type="number" min="1" max="600" value="30" /></div>
           </div>
+          <div class="field"><label>Real seats on the bus</label><div id="cs-seats" class="note" style="display:grid;gap:6px">pick a project first</div></div>
           <p class="note" id="crew-note">Builders do the work; the auditor reviews their partials as they land — one stream, every seat visible. SIGTERM to the group, then the grace, then SIGKILL.</p>
           <button class="btn btn-gold" type="submit">Start crew</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===== CREW · Seats ===== -->
+    <section class="view" data-view="crew/seats" hidden>
+      <div class="picker"><div class="field"><label for="seat-project">Project</label><select class="input" id="seat-project"><option value="">project…</option></select></div></div>
+      <div class="cols">
+        <div class="group"><header><h2>Team</h2><p>A seat is a named identity on the stream — its key is shown once, then only the hash is kept.</p></header><div id="seats"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i><i class="skel"></i></div></div></div></div>
+        <form class="panel card form-stack" id="seat-new" novalidate>
+          <h3>Open a seat</h3>
+          <div class="field"><label for="sn-name">Agent name</label><input class="input" id="sn-name" maxlength="40" placeholder="grader-a" /></div>
+          <div class="field"><label for="sn-role">Role</label>
+            <select class="input" id="sn-role"><option value="builder">builder — does the work</option><option value="auditor">auditor — reviews the work</option><option value="lead">lead — directs the run</option><option value="scribe">scribe — keeps the record</option><option value="scout">scout — finds the material</option></select></div>
+          <button class="btn btn-gold" type="submit">Create seat</button>
+          <div id="seat-reveal" hidden>
+            <p class="eyebrow gold" style="margin-top:14px">Seat key — shown exactly once</p>
+            <div class="keybox"><code id="seat-key"></code><button type="button" class="btn btn-ghost btn-sm" id="seat-key-copy">Copy</button></div>
+            <p class="note" id="seat-key-hint" style="margin-top:8px"></p>
+          </div>
+          <p class="note" id="seat-note">The agent takes this key (env var or secret store) and talks on the project stream — read the bus, post as itself, heartbeat by reading.</p>
         </form>
       </div>
     </section>
@@ -732,7 +754,7 @@
   async function loadProjects() {
     var r = await api('/api/account/projects');
     if (!r.ok) return;
-    ['crew-project', 'feed-project'].forEach(function (id) {
+    ['crew-project', 'feed-project', 'seat-project'].forEach(function (id) {
       var sel = $(id), cur = sel.value;
       sel.innerHTML = (r.data.projects || []).map(function (p) { return '<option value="' + esc(p.slug) + '">' + esc(p.name) + '</option>'; }).join('') || '<option value="">no projects</option>';
       if (cur) sel.value = cur;
@@ -756,6 +778,59 @@
       loadRuns();
     }
   });
+  /* ================= seats — the real agents ================= */
+  var seatsCache = [];
+  function seatStatusChip(x) {
+    return x.status === 'vacant' ? chip('vacant', 'gold', true) : x.online ? chip('online', 'green', true) : chip(x.lastHeartbeat ? 'idle' : 'never seen', 'slate', true);
+  }
+  async function loadSeats() {
+    var slug = $('seat-project').value;
+    if (!slug) { $('seats').innerHTML = empty('Pick a project', ''); return; }
+    var r = await api('/api/projects/' + encodeURIComponent(slug) + '/seats');
+    if (!r.ok) { $('seats').innerHTML = empty('could not load seats', ''); return; }
+    seatsCache = r.data.seats || [];
+    var rows = seatsCache.map(function (x) {
+      return '<tr><td class="name">' + esc(x.name) + '</td><td>' + chip(x.role) + '</td><td>' + seatStatusChip(x) + '</td>' +
+        '<td class="m">' + (x.lastHeartbeat ? esc(fDT(x.lastHeartbeat)) : '—') + '</td>' +
+        '<td class="act">' + (x.status !== 'vacant' ? '<button type="button" class="btn btn-danger btn-sm" data-revoke="' + esc(x.id) + '">Revoke</button>' : '') + '</td></tr>';
+    });
+    $('seats').innerHTML = rows.length ? tbl([['Agent'], ['Role'], ['Presence'], ['Last seen'], ['']], rows) : empty('No seats yet', 'open one on the right — the key goes to the agent, not to you');
+    document.querySelectorAll('#seats [data-revoke]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        b.disabled = true;
+        api('/api/projects/' + encodeURIComponent(slug) + '/seats/' + b.dataset.revoke + '/revoke', { method: 'POST' }).then(function (x) {
+          $('seat-note').innerHTML = x.ok ? okLine('credential revoked — the seat is vacant, the trail stays') : errLine('could not revoke');
+          loadSeats();
+        });
+      });
+    });
+    syncSeatPanels();
+  }
+  function syncSeatPanels() {
+    var slug = $('crew-project').value;
+    var box = $('cs-seats');
+    if (!slug || !seatsCache.length) { box.innerHTML = '<span class="m">' + (slug ? 'no seats on this project yet — open one under Seats' : 'pick a project first') + '</span>'; return; }
+    box.innerHTML = seatsCache.filter(function (x) { return x.status !== 'vacant'; }).map(function (x) {
+      return '<label class="note" style="display:grid;gap:4px;cursor:pointer"><span>' + '<input type="checkbox" value="' + esc(x.name) + '" /> ' + esc(x.name) + ' <span class="m">· ' + esc(x.role) + '</span></span>' +
+        '<input class="input mono" data-cmd="' + esc(x.name) + '" placeholder="start it on this host (blank = runs elsewhere)" style="min-width:0" /></label>';
+    }).join('');
+  }
+  $('seat-new').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var slug = $('seat-project').value;
+    if (!slug) { $('seat-note').innerHTML = errLine('pick a project first'); return; }
+    var name = $('sn-name').value.trim();
+    if (!name) { $('seat-note').innerHTML = errLine('give the agent a name'); return; }
+    var r = await api('/api/projects/' + encodeURIComponent(slug) + '/seats', { method: 'POST', body: JSON.stringify({ name: name, role: $('sn-role').value }) });
+    if (!r.ok) { $('seat-note').innerHTML = errLine(r.data.error || 'could not create seat'); return; }
+    $('sn-name').value = '';
+    $('seat-reveal').hidden = false;
+    $('seat-key').textContent = r.data.key;
+    $('seat-key-hint').textContent = 'Hand this to the agent: JATIN_SEAT_KEY="' + r.data.key + '" · project ' + esc(slug) + '. There is no read path that shows it again.';
+    $('seat-note').innerHTML = okLine('seat ' + esc(r.data.seat.name) + ' is on the bus');
+    $('seat-key-copy').onclick = function () { navigator.clipboard && navigator.clipboard.writeText($('seat-key').textContent); };
+    await loadSeats();
+  });
   var crewPoll = null;
   function statusChipCrew(s) {
     return s === 'running' ? chip('running', 'green', true) : s === 'killed' ? chip('killed', 'red', true) : s === 'done' ? chip('done', 'green', true) : chip(s || 'unknown');
@@ -766,9 +841,9 @@
     var r = await api('/api/crew?slug=' + encodeURIComponent(slug));
     if (!r.ok) return;
     var rows = (r.data.runs || []).map(function (x) {
-      var comp = Array.isArray(x.roles) && x.roles.length
-        ? '<div class="m">' + x.roles.filter(function (z) { return z === 'builder'; }).length + '×builder' + (x.roles.some(function (z) { return z === 'auditor'; }) ? ' · ' + x.roles.filter(function (z) { return z === 'auditor'; }).length + '×auditor' : '') + '</div>'
-        : '';
+      var comp = '';
+      if (Array.isArray(x.roles) && x.roles.length) comp += '<div class="m">' + x.roles.filter(function (z) { return z === 'builder'; }).length + '×builder' + (x.roles.some(function (z) { return z === 'auditor'; }) ? ' · ' + x.roles.filter(function (z) { return z === 'auditor'; }).length + '×auditor' : '') + '</div>';
+      if (Array.isArray(x.seats) && x.seats.length) comp += '<div class="m">seats: ' + x.seats.map(esc).join(', ') + '</div>';
       var row = '<tr><td class="name">' + esc(x.title) + comp + '</td><td>' + statusChipCrew(x.crewStatus) + '</td>' +
         '<td class="r">' + (x.partials.length ? x.partials.map(function (p) { return fN(p.lines) + ' lines'; }).join(' · ') : 'no partials yet') + '</td>' +
         '<td class="m">' + esc(fDT(x.createdAt)) + '</td>' +
@@ -795,18 +870,22 @@
     if (anyRunning && !crewPoll) crewPoll = setInterval(loadRuns, 2500);
     if (!anyRunning && crewPoll) { clearInterval(crewPoll); crewPoll = null; }
   }
-  $('crew-project').addEventListener('change', loadRuns);
+  $('crew-project').addEventListener('change', function () { loadRuns(); syncSeatPanels(); });
+  $('seat-project').addEventListener('change', loadSeats);
   $('crew-start').addEventListener('submit', async function (e) {
     e.preventDefault();
-    var nb = Math.min(6, Math.max(1, Math.round(Number($('cs-builders').value)) || 3));
+    var nb = Math.min(6, Math.max(0, Math.round(Number($('cs-builders').value)) || 0));
     var na = Math.min(2, Math.max(0, Math.round(Number($('cs-auditor').value)) || 0));
+    var realSeats = Array.prototype.slice.call(document.querySelectorAll('#cs-seats input[type=checkbox]:checked')).map(function (cb) {
+      var cmd = document.querySelector('#cs-seats input[data-cmd="' + cb.value + '"]');
+      return { name: cb.value, command: cmd && cmd.value.trim() ? cmd.value.trim() : undefined };
+    });
+    if (nb + na + realSeats.length === 0) { $('crew-note').innerHTML = errLine('assign at least one worker or seat'); return; }
     if (nb + na > 8) { $('crew-note').innerHTML = errLine('a crew is capped at 8 seats'); return; }
-    var r = await api('/api/crew', { method: 'POST', body: JSON.stringify({
-      slug: $('crew-project').value,
-      title: $('cs-title').value.trim() || 'crew task',
-      roles: { builder: nb, auditor: na },
-      durationSec: Number($('cs-secs').value) || 30
-    }) });
+    var body = { slug: $('crew-project').value, title: $('cs-title').value.trim() || 'crew task', durationSec: Number($('cs-secs').value) || 30 };
+    if (nb || na) body.roles = { builder: nb, auditor: na };
+    if (realSeats.length) body.seats = realSeats;
+    var r = await api('/api/crew', { method: 'POST', body: JSON.stringify(body) });
     $('crew-note').innerHTML = r.ok
       ? okLine('crew ' + esc(r.data.runId) + ' — ' + nb + '×builder' + (na ? ' · ' + na + '×auditor' : '') + ' · process group ' + esc(String(r.data.pgid)))
       : errLine(r.data.error || 'could not start crew');
@@ -897,6 +976,7 @@
     'flow/workbench': { t: 'Model workbench', s: 'The names the customer calls — and the rungs behind them.', op: true, acct: true },
     'flow/catalog': { t: 'Catalog', s: 'What the pool can serve, per provider, checked daily.', op: true },
     'crew/board': { t: 'Board', s: 'Start a crew. Kill it mid-run — the partials stay.' },
+    'crew/seats': { t: 'Seats', s: 'The real agents on this project — one name, one key, one stream.' },
     'crew/feed': { t: 'Feed', s: 'The live project stream. Refusals land in seconds.' },
     'crew/portfolio': { t: 'Portfolio', s: 'Every project names its next human decision.' }
   };
@@ -915,7 +995,7 @@
   }
   var NAV = {
     flow: [['overview', 'Overview'], ['keys', 'Keys'], ['models', 'Models'], ['usage', 'Usage']],
-    crew: [['board', 'Board'], ['feed', 'Feed'], ['portfolio', 'Portfolio']]
+    crew: [['board', 'Board'], ['seats', 'Seats'], ['feed', 'Feed'], ['portfolio', 'Portfolio']]
   };
   var ICONS = {
     overview: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
@@ -925,6 +1005,7 @@
     desk: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="9" cy="9" r="3.5"/><path d="M3.5 19c1-3 3-4.5 5.5-4.5s4.5 1.5 5.5 4.5"/><path d="M17 8h4m-4 4h3"/></svg>',
     catalog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 4h11l3 3v13H5V4Z"/><path d="M9 4v5h6V4M9 13h6M9 17h6"/></svg>',
     board: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4m8-4v4M8 11h3m2 0h3"/></svg>',
+    seats: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c.5-3.5 2.5-5.5 5.5-5.5s5 2 5.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M15.5 14.8c2.8.2 4.6 2 5 4.7"/></svg>',
     feed: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 5h11m-11 4h14M5 13h9m-9 4h12"/></svg>',
     portfolio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>'
   };
@@ -969,6 +1050,7 @@
     if (r.key === 'flow/workbench' && r.param) openWorkbench(r.param);
     if (r.key === 'flow/catalog') loadCatalogView();
     if (r.key === 'crew/board') loadRuns();
+    if (r.key === 'crew/seats') loadSeats();
     if (r.key === 'crew/portfolio') loadPortfolio();
     document.body.classList.remove('side-open');
   }

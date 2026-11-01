@@ -13,7 +13,7 @@
 // State is written to <outDir>/state.json after every transition; the API
 // reads that file (fail-open) — the crew outlives the API that started it.
 import { spawn } from 'node:child_process';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -31,6 +31,7 @@ const state = {
   startedAt: Date.now(),
   taskTitle,
   roles: Array.from({ length: N }, (_, k) => roleOf(k + 1)),
+  seats: [], // real agents: spawned here (pid) or external (heartbeat presence)
   workers: [],
   partials: [],
 };
@@ -65,6 +66,57 @@ for (let i = 1; i <= N; i++) {
   children.push(p);
 }
 writeState();
+
+// ── real seats ── seats.json (mode 600, written by the API) lists the
+// project's real agents on this run. A seat with a command is spawned into
+// THIS process group — it inherits the kill contract. Its identity and a
+// run-scoped token ride in env only (never argv). A seat without a command
+// is external: it connects from anywhere with its seat key, and its
+// heartbeat (lastHeartbeat) is its presence on the board.
+try {
+  const spec = JSON.parse(readFileSync(join(outDir, 'seats.json'), 'utf8'));
+  const apiBase = process.env.JATIN_API_BASE || `http://127.0.0.1:${process.env.PORT || 8080}`;
+  for (const st of spec.seats) {
+    state.seats.push({ name: st.name, role: st.role, command: Boolean(st.command) });
+    if (st.command) {
+      const sp = spawn(st.command, [], {
+        shell: true,
+        stdio: 'ignore',
+        env: {
+          ...process.env,
+          JATIN_API_BASE: apiBase,
+          JATIN_PROJECT: spec.slug,
+          JATIN_RUN: runId,
+          JATIN_SEAT: st.name,
+          JATIN_SEAT_ROLE: st.role,
+          JATIN_SEAT_TOKEN: st.token,
+        },
+      });
+      state.seats[state.seats.length - 1].pid = sp.pid;
+      sp.on('exit', () => {
+        const x = state.seats.find((y) => y.name === st.name);
+        if (x) x.exited = true;
+        writeState();
+      });
+      children.push(sp);
+    }
+  }
+  writeState();
+} catch {
+  /* no real seats on this run — the simulated crew stands alone */
+}
+
+// a run is a BOUNDED window: when the budget elapses, the whole group gets
+// the kill treatment (SIGTERM → grace → SIGKILL) — real seats included.
+setTimeout(() => {
+  if (state.status === 'running') {
+    try {
+      process.kill(-process.pid, 'SIGTERM');
+    } catch {
+      /* group already gone */
+    }
+  }
+}, Number(durationMs) + 1000);
 
 process.on('SIGTERM', () => {
   state.status = 'killing';

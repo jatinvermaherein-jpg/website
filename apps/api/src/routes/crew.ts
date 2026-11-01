@@ -11,13 +11,14 @@
 import type { FastifyInstance } from 'fastify';
 import { Prisma } from '@prisma/client';
 import type { InputJsonValue } from '@prisma/client/runtime/library';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, randomBytes } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { readFileSync, statSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, statSync, mkdirSync, existsSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { prisma } from '../lib/prisma.js';
 import { requireUser } from '../lib/auth.js';
+import { SEAT_SESSION_PREFIX, seatSha256 } from '../lib/seatauth.js';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
 const RUNS_DIR = process.env.JATIN_RUNS_DIR || join(REPO_ROOT, 'runs');
@@ -146,6 +147,7 @@ export async function crewRoutes(app: FastifyInstance) {
         taskStatus: t.status,
         crewStatus: (state?.status as string) ?? (t.status === 'in_progress' ? 'unknown' : t.status),
         roles: (state?.roles as string[] | undefined) ?? (Array.isArray(refs.roles) ? (refs.roles as string[]) : null),
+        seats: (state?.seats as string[] | undefined) ?? (Array.isArray(refs.seats) ? (refs.seats as string[]) : []),
         partials,
         createdAt: t.createdAt.toISOString(),
       };
@@ -169,6 +171,7 @@ export async function crewRoutes(app: FastifyInstance) {
     const b = (req.body ?? {}) as {
       slug?: string; title?: string; workers?: number; durationSec?: number;
       roles?: { builder?: number; auditor?: number };
+      seats?: { name: string; command?: string }[];
     };
     const project = await prisma.project.findFirst({ where: { slug: b.slug, orgId: membership.orgId } });
     if (!project) return reply.code(404).send({ error: 'no such project' });
@@ -186,14 +189,46 @@ export async function crewRoutes(app: FastifyInstance) {
         ? [...Array(rb).fill('builder'), ...Array(ra).fill('auditor')]
         : Array(workers).fill('builder');
 
+    // REAL seats on the bus: named agents, each either spawned into this
+    // process group (command) or external (connects with its seat key from
+    // anywhere — its heartbeat IS its presence). A spawned seat gets a
+    // run-scoped session token (never a standing secret on this host).
+    const seatSpecs: { name: string; role: string; command: string; token: string }[] = [];
+    const externalSeats: string[] = [];
+    if (Array.isArray(b.seats)) {
+      for (const entry of b.seats) {
+        if (!entry || typeof entry.name !== 'string' || !entry.name.trim()) continue;
+        const seat = await prisma.seat.findFirst({
+          where: { orgId: membership.orgId, name: entry.name.trim().toLowerCase(), projects: { some: { projectId: project.id } } },
+        });
+        if (!seat) return reply.code(404).send({ error: `no seat named ${entry.name} on this project` });
+        const command = typeof entry.command === 'string' ? entry.command.trim() : '';
+        if (command) {
+          const token = SEAT_SESSION_PREFIX + randomBytes(24).toString('base64url');
+          await prisma.session.create({
+            data: { seatId: seat.id, tokenHash: seatSha256(token), expiresAt: new Date(Date.now() + durationSec * 1000 + 3_600_000) },
+          });
+          seatSpecs.push({ name: seat.name, role: seat.role, command, token });
+        } else {
+          externalSeats.push(seat.name);
+        }
+      }
+    }
+    const allSeats = [...seatSpecs.map((x) => x.name), ...externalSeats];
+    if (roleList.length === 0 && allSeats.length === 0) return reply.code(422).send({ error: 'assign at least one worker or seat' });
+
     const task = await prisma.task.create({
       data: { projectId: project.id, title, status: 'in_progress' },
     });
     const runId = randomUUID().replace(/-/g, '').slice(0, 12);
     const outDir = join(RUNS_DIR, runId);
     mkdirSync(outDir, { recursive: true });
+    if (seatSpecs.length) {
+      // the spec is a file, not argv — the tokens must not show in the process list
+      writeFileSync(join(outDir, 'seats.json'), JSON.stringify({ slug: project.slug, seats: seatSpecs }, null, 2), { mode: 0o600 });
+    }
 
-    const child = spawn(process.execPath, [SUPERVISOR, runId, outDir, String(workers), title, String(durationSec * 1000), roleList.join(',')], {
+    const child = spawn(process.execPath, [SUPERVISOR, runId, outDir, String(roleList.length), title, String(durationSec * 1000), roleList.join(',')], {
       detached: true,
       stdio: 'ignore',
       cwd: REPO_ROOT,
@@ -203,7 +238,7 @@ export async function crewRoutes(app: FastifyInstance) {
     await prisma.task
       .update({
         where: { id: task.id },
-        data: { artifactRefs: { $taskId: runId, outDir, roles: roleList } as unknown as InputJsonValue },
+        data: { artifactRefs: { $taskId: runId, outDir, roles: roleList, seats: allSeats } as unknown as InputJsonValue },
       })
       .catch(() => {});
 
@@ -214,6 +249,7 @@ export async function crewRoutes(app: FastifyInstance) {
       runId,
       workers,
       roles: roleList,
+      seats: allSeats,
       durationSec,
       pgid: child.pid,
     }).catch((e) => console.error('[crew] event write failed', e));

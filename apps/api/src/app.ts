@@ -8,6 +8,7 @@ import { accountRoutes } from './routes/account.js';
 import { flowRoutes } from './routes/flow.js';
 import { serviceRoutes } from './routes/services.js';
 import { streamRoutes } from './routes/stream.js';
+import { seatRoutes } from './routes/seats.js';
 import { crewRoutes } from './routes/crew.js';
 import { crosscheckRoutes } from './routes/crosscheck.js';
 import { benchRoutes } from './routes/bench.js';
@@ -80,6 +81,7 @@ export async function buildApp() {
   await app.register(flowRoutes, { prefix: '/api/flow' });
   await app.register(serviceRoutes, { prefix: '/api/flow' }); // search + image — one key, all three faces
   await app.register(streamRoutes, { prefix: '/api/projects' });
+  await app.register(seatRoutes, { prefix: '/api/projects' }); // the real agents
   await app.register(crewRoutes, { prefix: '/api/crew' });
   await app.register(crosscheckRoutes, { prefix: '/api/projects' });
   await app.register(benchRoutes, { prefix: '/api/projects' });
