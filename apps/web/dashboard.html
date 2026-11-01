@@ -176,17 +176,25 @@
 
     <!-- ===== CREW · Board ===== -->
     <section class="view" data-view="crew/board" hidden>
-      <div class="picker"><div class="field"><label for="crew-project">Project</label><select class="input" id="crew-project"><option value="">project…</option></select></div></div>
+      <div class="picker">
+        <div class="field"><label for="crew-project">Project</label><select class="input" id="crew-project"><option value="">project…</option></select></div>
+        <form id="proj-new" novalidate style="display:flex;gap:8px;align-items:flex-end">
+          <div class="field"><label for="pn-name">New project</label><input class="input" id="pn-name" maxlength="80" placeholder="name it" style="min-width:180px" /></div>
+          <button class="btn btn-ghost btn-sm" type="submit" style="margin-bottom:1px">Create</button>
+        </form>
+        <p class="note" id="proj-note" role="status" style="align-self:center;margin:0 0 8px"></p>
+      </div>
       <div class="cols">
         <div class="group"><header><h2>Runs</h2><p>Kill stops the run; its partials stay.</p></header><div id="runs"><div class="tbl-wrap"><div class="empty">pick a project</div></div></div></div>
         <form class="panel card form-stack" id="crew-start" novalidate>
           <h3>Start a crew</h3>
           <div class="field"><label for="cs-title">Title</label><input class="input" id="cs-title" name="title" maxlength="120" placeholder="Grade the batch" /></div>
-          <div class="form-row" style="grid-template-columns:1fr 1fr">
-            <div class="field"><label for="cs-workers">Workers · 1–8</label><input class="input mono" id="cs-workers" name="workers" type="number" min="1" max="8" value="3" /></div>
+          <div class="form-row" style="grid-template-columns:1fr 1fr 1fr">
+            <div class="field"><label for="cs-builders">Builders · 1–6</label><input class="input mono" id="cs-builders" name="builders" type="number" min="1" max="6" value="3" /></div>
+            <div class="field"><label for="cs-auditor">Auditors · 0–2</label><input class="input mono" id="cs-auditor" name="auditor" type="number" min="0" max="2" value="1" /></div>
             <div class="field"><label for="cs-secs">Run seconds</label><input class="input mono" id="cs-secs" name="durationSec" type="number" min="1" max="600" value="30" /></div>
           </div>
-          <p class="note" id="crew-note">Identical agents, five seats, one stream. SIGTERM to the group, then the grace, then SIGKILL.</p>
+          <p class="note" id="crew-note">Builders do the work; the auditor reviews their partials as they land — one stream, every seat visible. SIGTERM to the group, then the grace, then SIGKILL.</p>
           <button class="btn btn-gold" type="submit">Start crew</button>
         </form>
       </div>
@@ -730,6 +738,24 @@
       if (cur) sel.value = cur;
     });
   }
+  $('proj-new').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var name = $('pn-name').value.trim();
+    if (!name) { $('proj-note').innerHTML = errLine('give the project a name'); return; }
+    var btn = e.currentTarget.querySelector('button'); if (btn) btn.disabled = true;
+    var r = await api('/api/account/projects', { method: 'POST', body: JSON.stringify({ name: name }) });
+    if (btn) btn.disabled = false;
+    $('proj-note').innerHTML = r.ok
+      ? okLine('project ' + esc(r.data.slug) + ' is live — it takes crews now')
+      : errLine(r.data.error || 'could not create project');
+    if (r.ok) {
+      $('pn-name').value = '';
+      await loadProjects();
+      $('crew-project').value = r.data.slug;
+      $('feed-project').value = r.data.slug;
+      loadRuns();
+    }
+  });
   var crewPoll = null;
   function statusChipCrew(s) {
     return s === 'running' ? chip('running', 'green', true) : s === 'killed' ? chip('killed', 'red', true) : s === 'done' ? chip('done', 'green', true) : chip(s || 'unknown');
@@ -740,7 +766,10 @@
     var r = await api('/api/crew?slug=' + encodeURIComponent(slug));
     if (!r.ok) return;
     var rows = (r.data.runs || []).map(function (x) {
-      var row = '<tr><td class="name">' + esc(x.title) + '</td><td>' + statusChipCrew(x.crewStatus) + '</td>' +
+      var comp = Array.isArray(x.roles) && x.roles.length
+        ? '<div class="m">' + x.roles.filter(function (z) { return z === 'builder'; }).length + '×builder' + (x.roles.some(function (z) { return z === 'auditor'; }) ? ' · ' + x.roles.filter(function (z) { return z === 'auditor'; }).length + '×auditor' : '') + '</div>'
+        : '';
+      var row = '<tr><td class="name">' + esc(x.title) + comp + '</td><td>' + statusChipCrew(x.crewStatus) + '</td>' +
         '<td class="r">' + (x.partials.length ? x.partials.map(function (p) { return fN(p.lines) + ' lines'; }).join(' · ') : 'no partials yet') + '</td>' +
         '<td class="m">' + esc(fDT(x.createdAt)) + '</td>' +
         '<td class="act">' + (x.runId ? '<button type="button" class="btn btn-danger btn-sm" data-kill="' + esc(x.runId) + '"' + (x.crewStatus !== 'running' ? ' disabled' : '') + '>Kill</button>' : '') + '</td></tr>';
@@ -769,14 +798,17 @@
   $('crew-project').addEventListener('change', loadRuns);
   $('crew-start').addEventListener('submit', async function (e) {
     e.preventDefault();
+    var nb = Math.min(6, Math.max(1, Math.round(Number($('cs-builders').value)) || 3));
+    var na = Math.min(2, Math.max(0, Math.round(Number($('cs-auditor').value)) || 0));
+    if (nb + na > 8) { $('crew-note').innerHTML = errLine('a crew is capped at 8 seats'); return; }
     var r = await api('/api/crew', { method: 'POST', body: JSON.stringify({
       slug: $('crew-project').value,
       title: $('cs-title').value.trim() || 'crew task',
-      workers: Number($('cs-workers').value) || 3,
+      roles: { builder: nb, auditor: na },
       durationSec: Number($('cs-secs').value) || 30
     }) });
     $('crew-note').innerHTML = r.ok
-      ? okLine('crew ' + esc(r.data.runId) + ' — process group ' + esc(String(r.data.pgid)))
+      ? okLine('crew ' + esc(r.data.runId) + ' — ' + nb + '×builder' + (na ? ' · ' + na + '×auditor' : '') + ' · process group ' + esc(String(r.data.pgid)))
       : errLine(r.data.error || 'could not start crew');
     if (r.ok) setTimeout(loadRuns, 500);
   });

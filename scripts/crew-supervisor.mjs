@@ -6,6 +6,10 @@
 //   SIGTERM to the group → each worker stops cleanly (partial stays) →
 //   supervisor marks `killing`, grants 3s → SIGKILL to the group → `killed`.
 //
+// Seats carry roles: builders do the work; auditors review the builders'
+// partials as they land. The role spec arrives as a comma list, one entry
+// per seat, aligned to the worker index.
+//
 // State is written to <outDir>/state.json after every transition; the API
 // reads that file (fail-open) — the crew outlives the API that started it.
 import { spawn } from 'node:child_process';
@@ -13,9 +17,12 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-const [, , runId, outDir, workerCount, taskTitle, durationMs] = process.argv;
+const [, , runId, outDir, workerCount, taskTitle, durationMs, roleSpec] = process.argv;
 const workerPath = join(dirname(fileURLToPath(import.meta.url)), 'crew-worker.mjs');
 const stateFile = `${outDir}/state.json`;
+
+const N = Number(workerCount);
+const roleOf = (i) => (roleSpec ? roleSpec.split(',')[i - 1] || 'builder' : 'builder');
 
 const state = {
   runId,
@@ -23,6 +30,7 @@ const state = {
   pgid: process.pid,
   startedAt: Date.now(),
   taskTitle,
+  roles: Array.from({ length: N }, (_, k) => roleOf(k + 1)),
   workers: [],
   partials: [],
 };
@@ -39,10 +47,10 @@ mkdirSync(outDir, { recursive: true });
 writeState();
 
 const children = [];
-for (let i = 1; i <= Number(workerCount); i++) {
+for (let i = 1; i <= N; i++) {
   // NOT detached — the worker inherits this process group
-  const p = spawn(process.execPath, [workerPath, outDir, String(i), String(durationMs)], { stdio: 'ignore' });
-  state.workers.push({ i, pid: p.pid });
+  const p = spawn(process.execPath, [workerPath, outDir, String(i), String(durationMs), roleOf(i), String(N)], { stdio: 'ignore' });
+  state.workers.push({ i, pid: p.pid, role: roleOf(i) });
   state.partials.push(`${outDir}/partial-${i}.log`);
   p.on('exit', () => {
     const w = state.workers.find((x) => x.i === i);

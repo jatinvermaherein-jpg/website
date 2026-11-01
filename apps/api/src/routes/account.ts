@@ -184,6 +184,30 @@ export async function accountRoutes(app: FastifyInstance) {
     return { projects };
   });
 
+  // a project is the seat of a crew — anyone in the org can open one.
+  // slug is globally unique; a collision retries with a short salt.
+  app.post('/projects', async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    const membership = await orgOf(user.id);
+    if (!membership) return reply.code(404).send({ error: 'no org' });
+    const parsed = z.object({ name: z.string().min(1).max(80) }).safeParse(req.body ?? {});
+    if (!parsed.success) return reply.code(422).send({ error: 'invalid name' });
+    const base =
+      parsed.data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'project';
+    for (let i = 0; ; i++) {
+      const slug = i === 0 ? base : `${base}-${Math.random().toString(36).slice(2, 6)}`;
+      try {
+        const p = await prisma.project.create({
+          data: { orgId: membership.orgId, slug, name: parsed.data.name, status: 'active' },
+        });
+        return reply.code(201).send({ slug: p.slug, name: p.name, status: p.status, maxSeats: p.maxSeats });
+      } catch {
+        if (i >= 9) return reply.code(500).send({ error: 'could not allocate a project slug' });
+      }
+    }
+  });
+
   // Phase 4 — org aliases: an ordered list of provider targets the gateway
   // walks when the model is requested by alias (≤4 hops).
   const aliasTargetSchema = z.object({

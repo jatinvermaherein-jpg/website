@@ -145,6 +145,7 @@ export async function crewRoutes(app: FastifyInstance) {
         title: t.title,
         taskStatus: t.status,
         crewStatus: (state?.status as string) ?? (t.status === 'in_progress' ? 'unknown' : t.status),
+        roles: (state?.roles as string[] | undefined) ?? (Array.isArray(refs.roles) ? (refs.roles as string[]) : null),
         partials,
         createdAt: t.createdAt.toISOString(),
       };
@@ -165,13 +166,25 @@ export async function crewRoutes(app: FastifyInstance) {
     if (!user) return;
     const membership = await prisma.membership.findFirst({ where: { userId: user.id } });
     if (!membership) return reply.code(404).send({ error: 'no org' });
-    const b = (req.body ?? {}) as { slug?: string; title?: string; workers?: number; durationSec?: number };
+    const b = (req.body ?? {}) as {
+      slug?: string; title?: string; workers?: number; durationSec?: number;
+      roles?: { builder?: number; auditor?: number };
+    };
     const project = await prisma.project.findFirst({ where: { slug: b.slug, orgId: membership.orgId } });
     if (!project) return reply.code(404).send({ error: 'no such project' });
 
     const workers = Math.min(8, Math.max(1, Math.round(b.workers ?? 2)));
     const durationSec = Math.min(600, Math.max(1, Math.round(b.durationSec ?? 30)));
     const title = (b.title ?? `crew run ${new Date().toISOString()}`).slice(0, 200);
+
+    // composition: builders do the work, auditors review the builders'
+    // partials as they land. legacy `workers` (no roles) = all builders.
+    const rb = Math.min(8, Math.max(0, Math.round(b.roles?.builder ?? 0)));
+    const ra = Math.min(8, Math.max(0, Math.round(b.roles?.auditor ?? 0)));
+    const roleList: string[] =
+      rb + ra > 0
+        ? [...Array(rb).fill('builder'), ...Array(ra).fill('auditor')]
+        : Array(workers).fill('builder');
 
     const task = await prisma.task.create({
       data: { projectId: project.id, title, status: 'in_progress' },
@@ -180,7 +193,7 @@ export async function crewRoutes(app: FastifyInstance) {
     const outDir = join(RUNS_DIR, runId);
     mkdirSync(outDir, { recursive: true });
 
-    const child = spawn(process.execPath, [SUPERVISOR, runId, outDir, String(workers), title, String(durationSec * 1000)], {
+    const child = spawn(process.execPath, [SUPERVISOR, runId, outDir, String(workers), title, String(durationSec * 1000), roleList.join(',')], {
       detached: true,
       stdio: 'ignore',
       cwd: REPO_ROOT,
@@ -190,7 +203,7 @@ export async function crewRoutes(app: FastifyInstance) {
     await prisma.task
       .update({
         where: { id: task.id },
-        data: { artifactRefs: { $taskId: runId, outDir } as unknown as InputJsonValue },
+        data: { artifactRefs: { $taskId: runId, outDir, roles: roleList } as unknown as InputJsonValue },
       })
       .catch(() => {});
 
@@ -200,6 +213,7 @@ export async function crewRoutes(app: FastifyInstance) {
       status: 'started',
       runId,
       workers,
+      roles: roleList,
       durationSec,
       pgid: child.pid,
     }).catch((e) => console.error('[crew] event write failed', e));
