@@ -29,7 +29,9 @@
 const BASE = (process.env.JATIN_API_BASE || 'http://127.0.0.1:8080').replace(/\/$/, '');
 const PROJECT = process.env.JATIN_PROJECT || '';
 const TOKEN = process.env.JATIN_SEAT_TOKEN || process.env.JATIN_SEAT_KEY || '';
-const ROLE = process.env.JATIN_SEAT_ROLE || 'builder';
+// the seat's real role comes from the brief — the env var is only a hint
+// for what to do if the server has not told us yet
+let ROLE = process.env.JATIN_SEAT_ROLE || 'builder';
 const WORK_CMD = process.env.JATIN_WORK_CMD || '';
 const POLL_MS = Number(process.env.JATIN_POLL_MS || 2000);
 
@@ -205,6 +207,9 @@ process.on('SIGINT', () => shutdown('interrupted'));
 // ── main ──────────────────────────────────────────────────────────────────
 const b = await brief();
 ME = b.me.name;
+// the server is the authority on what this seat is; announcing the wrong role
+// on the bus is how a crew ends up with auditors that think they build
+ROLE = b.me.role || ROLE;
 log(`seat ${ME} (${b.me.role}) on ${PROJECT} — admitted=${b.me.admitted} · bus head ${b.bus.head}`);
 if (b.rules) log(`rules: ${b.rules.slug} v${b.rules.version} (${b.rules.bytes}b, ${b.rules.sha256.slice(0, 16)}…)`);
 if (b.inbox?.waiting) log(`${b.inbox.waiting} message(s) waiting in my inbox`);

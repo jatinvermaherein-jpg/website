@@ -284,6 +284,7 @@
         </div>
         <form class="panel card form-stack" id="feed-post" novalidate>
           <h3>Post to the stream</h3>
+          <div class="note" id="feed-reply" hidden style="display:flex;gap:8px;align-items:center"></div>
           <div class="field"><label for="fp-type">Type</label>
             <select class="input" id="fp-type" name="type"><option value="message">message</option><option value="answer">answer</option><option value="correction">correction</option><option value="system">system</option></select></div>
           <div class="field"><label for="fp-text">Line</label><textarea class="input" id="fp-text" name="text" placeholder="say it" maxlength="500"></textarea></div>
@@ -1148,7 +1149,20 @@
     if (!b || typeof b !== 'object') return esc(String(b || '').slice(0, 200));
     if (b.rejection) return 'refused a ' + esc(String(b.type || e.type)) + ' line — ' + esc((b.violations || []).join('; '));
     if (typeof b.text === 'string') return esc(b.text.slice(0, 200));
-    if (b.rowId) return esc(b.rowId) + ' → ' + esc(String(b.status || b.verdict || ''));
+    if (b.rowId) return esc(String(b.rowId)) + ' → ' + esc(String(b.status || b.verdict || ''));
+    // A stream of raw JSON is a database with a font. These are the events the
+    // crew generates most, said in words.
+    if (e.type === 'task' && b.title) {
+      var st = String(b.status || '');
+      if (st === 'created') return 'filed <b>' + esc(String(b.title)) + '</b>' + (b.environment ? ' · ' + esc(String(b.environment)) : '');
+      if (st === 'claimed') return 'claimed <b>' + esc(String(b.title)) + '</b>';
+      if (st === 'submitted') return 'submitted <b>' + esc(String(b.title)) + '</b> for witness';
+      return esc(st || 'task') + ' · <b>' + esc(String(b.title)) + '</b>';
+    }
+    if (b.ruleId && b.waiverId) return 'waived <b>' + esc(String(b.ruleId)) + '</b>' + (b.expiresAt ? ' until ' + esc(fDT(b.expiresAt)) : '') + (b.reason ? ' — ' + esc(String(b.reason).slice(0, 120)) : '');
+    if (e.type === 'admission') return 'admitted — takes: ' + esc(String(b.takes || '').slice(0, 120));
+    if (b.finished !== undefined || b.unfinished !== undefined) return 'handover — next: ' + esc(String(b.next || '').slice(0, 140));
+    if (b.doc) return 'document <b>' + esc(String(b.doc)) + '</b> v' + esc(String(b.version || '1'));
     return esc(JSON.stringify(b).slice(0, 200));
   }
   function feedVerdict(e) {
@@ -1171,8 +1185,11 @@
     (r.data.events || []).forEach(function (e) {
       var div = document.createElement('div');
       div.className = 'feed-line' + (e.body && e.body.rejection ? ' refused' : '') + (e.corrupt ? ' refused' : '');
+      var answers = e.refs && e.refs.replyTo ? '<span class="m" style="opacity:.6" title="answers an earlier line">↳' + esc(String(e.refs.replyTo)) + '</span> ' : '';
       div.innerHTML = '<span class="ts">' + esc(fTime(e.ts)) + '</span><span class="who">' + esc(e.actor) + '</span>' +
-        '<span class="tx">' + feedTx(e) + '</span><span class="verdict">' + feedVerdict(e) + '</span>';
+        '<span class="tx">' + answers + feedTx(e) + '</span>' +
+        '<span class="verdict">' + feedVerdict(e) +
+        '<button type="button" class="btn btn-ghost btn-sm reply" data-reply="' + esc(String(e.seq)) + '" data-reply-to="' + esc(e.actor) + '" title="answer this line">↩</button></span>';
       box.appendChild(div);
     });
     while (box.children.length > 200) box.firstChild.remove();
@@ -1184,11 +1201,32 @@
     var text = $('fp-text').value.trim();
     if (!$('feed-project').value || !text) return;
     var payload = { type: $('fp-type').value, body: $('fp-raw').checked ? text : { text: text } };
+    if (feedReply) payload.refs = { replyTo: feedReply.seq };
     var r = await api('/api/projects/' + encodeURIComponent($('feed-project').value) + '/stream', { method: 'POST', body: JSON.stringify(payload) });
     $('feed-note').innerHTML = r.ok
       ? okLine('posted — seq ' + esc(String(r.data.seq)))
       : errLine('refused — ' + ((r.data.violations || []).join('; ') || r.data.error || 'malformed'));
-    if (r.ok) { $('fp-text').value = ''; setTimeout(loadFeed, 150); }
+    if (r.ok) { $('fp-text').value = ''; feedReply = null; paintReply(); setTimeout(loadFeed, 150); }
+  });
+
+  // ── answering a specific line ───────────────────────────────────────────
+  // A stream you can only append to is a log. The reference is what makes it
+  // a conversation: it travels with yours, and it counts in that seat's inbox.
+  var feedReply = null;
+  function paintReply() {
+    var el = $('feed-reply');
+    if (!feedReply) { el.hidden = true; el.innerHTML = ''; return; }
+    el.hidden = false;
+    el.innerHTML = '<span class="eyebrow gold" style="margin:0">answering</span><b class="mono">seq ' + esc(feedReply.seq) + '</b>' +
+      '<span style="opacity:.7">by ' + esc(feedReply.actor) + '</span><button type="button" class="btn btn-ghost btn-sm" id="feed-reply-x">Cancel</button>';
+    $('feed-reply-x').onclick = function () { feedReply = null; paintReply(); };
+  }
+  $('feed').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-reply]');
+    if (!b) return;
+    feedReply = { seq: b.getAttribute('data-reply'), actor: b.getAttribute('data-reply-to') };
+    paintReply();
+    $('fp-text').focus();
   });
 
   /* portfolio */

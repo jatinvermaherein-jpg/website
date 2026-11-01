@@ -288,6 +288,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:14px}
 .feed-line .tx{color:var(--ink);white-space:normal;word-break:break-word}
 .feed-line.refused .tx{color:var(--red)}
 .feed-line .why{display:block;color:var(--ink-3);margin-top:2px}
+.feed-line .reply{opacity:0;margin-left:6px;padding:1px 6px;font-size:11px;transition:opacity .15s}
+.feed-line:hover .reply,.feed-line:focus-within .reply{opacity:.75}
+.feed-line .reply:hover{opacity:1}
 .caret{display:inline-block;width:8px;height:15px;background:var(--gold);vertical-align:-2px;margin-left:4px;animation:blink 1.1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 .term-body.feed{white-space:normal;overflow-x:hidden}
