@@ -115,6 +115,24 @@ model ProviderCredential {
   limits             KeyLimit[]
   windows            QuotaWindow[]
   requests           Request[]
+  liveness           ModelLiveness[]
+}
+
+// 0008 — per-key MODEL LIVENESS. The catalog knows a model NAME exists;
+// liveness proves this specific key's account can actually SERVE it
+// (availability is per account). Probes are 1-token pings, bounded sweeps.
+model ModelLiveness {
+  id           String    @id @default(cuid())
+  credentialId String
+  credential   ProviderCredential @relation(fields: [credentialId], references: [id])
+  provider     String
+  model        String
+  ok           Boolean   @default(false)
+  note         String?
+  lastCheckedAt DateTime @default(now())
+  createdAt    DateTime  @default(now())
+  @@unique([credentialId, provider, model])
+  @@index([provider, model])
 }
 
 // 0006 — the providers' model lists change (new models, retired ones),

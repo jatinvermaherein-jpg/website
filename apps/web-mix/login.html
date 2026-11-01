@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign in · JATIN</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#0B0E1A" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B0E1A'/%3E%3Cpath d='M16 4 26 10v12l-10 6L6 22V10Z' fill='none' stroke='%23F5F1E8' stroke-width='1.5'/%3E%3Cpath d='m6 10 10 6 10-6M16 16v12' fill='none' stroke='%23F5F1E8' stroke-opacity='.5' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='18' r='2.4' fill='%23D4AF6A'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="preloader.css" />
+  <link rel="stylesheet" href="site.css" />
+  <script src="preloader.js"></script>
+</head>
+<body class="auth-page" style="padding:0">
+  <div class="auth-wrap">
+    <a class="brand" href="index.html" aria-label="JATIN — home" style="align-self:center">
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true" style="width:26px;height:26px"><path d="M16 2 29 10v16l-13 8L3 26V10L16 2Z" stroke="#F5F1E8" stroke-width="1.5" stroke-linejoin="round"/><path d="m3 10 13 8 13-8M16 18v16M10 6l13 8v9l-7 4-7-4v-8" stroke="#F5F1E8" stroke-opacity=".5" stroke-width="1.5" stroke-linejoin="round"/><circle cx="16" cy="18" r="2.8" fill="#D4AF6A"/></svg>
+      JATIN
+    </a>
+
+    <div class="auth-card">
+      <h1 id="auth-title">Sign in</h1>
+      <p class="note" id="auth-sub" style="margin-top:4px">Username and password. One account opens both instruments.</p>
+
+      <div class="tabs" role="tablist" aria-label="Authentication">
+        <button type="button" id="tab-in" role="tab" aria-selected="true">Sign in</button>
+        <button type="button" id="tab-up" role="tab" aria-selected="false">Request access</button>
+      </div>
+
+      <form id="form-in" novalidate>
+        <div class="field"><label for="in-user">Username</label>
+          <input class="input" id="in-user" name="username" autocomplete="username" spellcheck="false" /></div>
+        <div class="field"><label for="in-pass">Password</label>
+          <input class="input" id="in-pass" name="password" type="password" autocomplete="current-password" /></div>
+        <p class="err-line" id="in-err" role="alert"></p>
+        <button class="btn btn-gold" id="in-go" type="submit">Sign in</button>
+      </form>
+
+      <form id="form-up" novalidate hidden>
+        <div class="field"><label for="up-user">Username</label>
+          <input class="input" id="up-user" name="username" autocomplete="username" spellcheck="false" minlength="3" maxlength="32" pattern="[a-z0-9][a-z0-9_.\-]*" placeholder="lowercase, 3–32" /></div>
+        <div class="field"><label for="up-pass">Password</label>
+          <input class="input" id="up-pass" name="password" type="password" autocomplete="new-password" minlength="8" /></div>
+        <p class="err-line" id="up-err" role="alert"></p>
+        <button class="btn btn-gold" id="up-go" type="submit">Request access</button>
+      </form>
+
+      <div class="pending-box" id="pending" hidden>
+        <span class="dot gold" aria-hidden="true"></span>Created. Your account is pending verification by the operator — you can sign in once it is verified.
+      </div>
+    </div>
+
+    <p class="auth-foot">One account. Both instruments.</p>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+    function $(id) { return document.getElementById(id); }
+    var dest = '/dashboard.html';
+
+    function post(path, body) {
+      return fetch(path, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, status: r.status, body: j }; }); });
+    }
+    function msg(r, fallback) {
+      var b = r.body || {};
+      return (typeof b.error === 'string' && b.error) || (typeof b.message === 'string' && b.message) || fallback;
+    }
+    function busy(btn, on, label) { btn.setAttribute('aria-busy', on ? 'true' : 'false'); btn.textContent = on ? '…' : label; }
+
+    // already signed in? go straight through
+    fetch('/api/auth/me', { credentials: 'same-origin' }).then(function (r) { if (r.ok) location.replace(dest); }).catch(function () {});
+
+    function tab(which) {
+      var up = which === 'up';
+      $('tab-in').setAttribute('aria-selected', String(!up));
+      $('tab-up').setAttribute('aria-selected', String(up));
+      $('form-in').hidden = up; $('form-up').hidden = !up; $('pending').hidden = true;
+      $('auth-title').textContent = up ? 'Request access' : 'Sign in';
+      $('auth-sub').textContent = up
+        ? 'New accounts are verified by the operator before you can sign in.'
+        : 'Username and password. One account opens both instruments.';
+      (up ? $('up-user') : $('in-user')).focus();
+    }
+    $('tab-in').onclick = function () { tab('in'); };
+    $('tab-up').onclick = function () { tab('up'); };
+    if (location.hash === '#request') tab('up');
+
+    $('form-in').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var username = $('in-user').value.trim(), password = $('in-pass').value;
+      $('in-err').textContent = ''; $('in-user').classList.remove('bad'); $('in-pass').classList.remove('bad');
+      if (!username || !password) { $('in-err').textContent = 'Enter your username and password.'; return; }
+      busy($('in-go'), true, 'Sign in');
+      post('/api/auth/login', { username: username, password: password }).then(function (r) {
+        if (r.ok) { location.href = dest; return; }
+        busy($('in-go'), false, 'Sign in');
+        $('in-pass').classList.add('bad');
+        $('in-err').textContent = r.status === 403 ? msg(r, 'This account is still pending verification by the operator.') : msg(r, 'Those details don’t match an account.');
+      }).catch(function () { busy($('in-go'), false, 'Sign in'); $('in-err').textContent = 'Can’t reach the server. Try again in a moment.'; });
+    });
+
+    $('form-up').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var username = $('up-user').value.trim(), password = $('up-pass').value;
+      $('up-err').textContent = ''; $('up-user').classList.remove('bad'); $('up-pass').classList.remove('bad');
+      if (!username || password.length < 8) { $('up-err').textContent = 'A username and a password of at least 8 characters, please.'; return; }
+      busy($('up-go'), true, 'Request access');
+      post('/api/auth/register', { username: username, password: password }).then(function (r) {
+        busy($('up-go'), false, 'Request access');
+        if (r.ok) { $('form-up').hidden = true; $('pending').hidden = false; return; }
+        if (r.status === 409) $('up-user').classList.add('bad');
+        $('up-err').textContent = msg(r, 'Couldn’t send the request. Check the details and try again.');
+      }).catch(function () { busy($('up-go'), false, 'Request access'); $('up-err').textContent = 'Can’t reach the server. Try again in a moment.'; });
+    });
+  })();
+  </script>
+</body>
+</html>

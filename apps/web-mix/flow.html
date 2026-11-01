@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flow — one key, one gateway · JATIN</title>
+  <meta name="description" content="FLOW is JATIN's AI gateway. One key, three faces — text, search, image — with real, verified model names. The providers behind them are not your business." />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#0B0E1A" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B0E1A'/%3E%3Cpath d='M16 4 26 10v12l-10 6L6 22V10Z' fill='none' stroke='%23F5F1E8' stroke-width='1.5'/%3E%3Cpath d='m6 10 10 6 10-6M16 16v12' fill='none' stroke='%23F5F1E8' stroke-opacity='.5' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='18' r='2.4' fill='%23D4AF6A'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="preloader.css" />
+  <link rel="stylesheet" href="site.css" />
+  <script src="preloader.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="index.html" aria-label="JATIN — home">
+        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 2 29 10v16l-13 8L3 26V10L16 2Z" stroke="#F5F1E8" stroke-width="1.5" stroke-linejoin="round"/><path d="m3 10 13 8 13-8M16 18v16M10 6l13 8v9l-7 4-7-4v-8" stroke="#F5F1E8" stroke-opacity=".5" stroke-width="1.5" stroke-linejoin="round"/><circle cx="16" cy="18" r="2.8" fill="#D4AF6A"/></svg>
+        JATIN
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a href="flow.html" aria-current="page">Flow</a>
+        <a href="crew.html">Crew</a>
+        <a href="login.html" class="signin">Sign in</a>
+      </nav>
+      <a class="xlink" href="crew.html">Crew →</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="phero">
+      <div class="wrap">
+        <p class="eyebrow gold fx">Instrument I · Flow</p>
+        <h1 class="display fx d1"><span class="t">Every key,</span><span class="b">one <span class="lean">gateway.</span></span></h1>
+        <p class="lede fx d2">One key, three faces. Real model names, verified daily against the upstream catalog — and nothing about who serves them.</p>
+        <div class="hero-meta fx d3">
+          <a href="login.html" class="btn btn-gold">Get a key <svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8h11M9 4l4 4-4 4"/></svg></a>
+          <a href="#how" class="btn btn-ghost">How the key is used</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- three faces + the gateway -->
+    <section class="arch" aria-labelledby="faces-h">
+      <div class="wrap" style="padding-bottom:clamp(64px,9vw,112px)">
+        <div class="sect-head"><p class="eyebrow">One key · three faces</p><h2 class="title" id="faces-h"><span class="t">Text, search, image.</span> One credential.</h2></div>
+        <div class="faces">
+          <article class="panel face">
+            <svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h24a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H16l-7 6v-6H6a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z"/><path d="M10 14h16M10 19h10" stroke-opacity=".6"/></svg>
+            <h3>Text</h3>
+            <p>OpenAI-compatible chat. You pick the model by its name — any name on your Models tab.</p>
+            <span class="model">model: "gemini-2.5-flash"</span>
+          </article>
+          <article class="panel face">
+            <svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M23 23l8 8"/><path d="M11 16h10M16 11v10" stroke-opacity=".5"/></svg>
+            <h3>Search</h3>
+            <p>Ask the web, get normalized results — same shape, every time.</p>
+            <span class="model">model: "search"</span>
+          </article>
+          <article class="panel face">
+            <svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="6" width="28" height="24" rx="3"/><circle cx="12" cy="14" r="2.5"/><path d="M4 26l8-7 6 5 5-4 9 7" stroke-opacity=".7"/></svg>
+            <h3>Image</h3>
+            <p>Describe it; receive a JPEG. Nothing more to wire.</p>
+            <span class="model">model: "image"</span>
+          </article>
+        </div>
+
+        <!-- the gateway (the A idea, in house ink) -->
+        <div class="panel gate" style="margin-top:32px">
+          <p class="eyebrow" style="justify-self:start">How it rides the wire</p>
+          <svg viewBox="0 0 680 240" role="img" aria-label="Three service channels enter one gateway and leave as one measured stream">
+            <defs>
+              <linearGradient id="gg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#D4AF6A" stop-opacity="0"/><stop offset=".5" stop-color="#D4AF6A"/><stop offset="1" stop-color="#D4AF6A" stop-opacity="0"/></linearGradient>
+            </defs>
+            <g class="g-mono" font-family="var(--mono)" letter-spacing="2">
+              <text x="24" y="58">TEXT</text>
+              <text x="24" y="126">SEARCH</text>
+              <text x="24" y="194">IMAGE</text>
+              <text x="340" y="26" text-anchor="middle">ONE GATEWAY</text>
+              <text x="656" y="126" text-anchor="end">ONE MEASURED STREAM</text>
+            </g>
+            <path d="M84 52h170l56 40h60M84 120h330M84 188h170l56-40h60" stroke="rgba(245,241,232,.28)" stroke-width="1.2" fill="none"/>
+            <path d="M410 120h246" stroke="rgba(245,241,232,.28)" stroke-width="1.2"/>
+            <path d="M84 52h170l56 40h60M84 120h330M84 188h170l56-40h60" stroke="url(#gg)" stroke-width="1.5" fill="none" opacity=".65"/>
+            <path d="M410 120h246" stroke="url(#gg)" stroke-width="1.5" fill="none" opacity=".65"/>
+            <ellipse cx="340" cy="120" rx="34" ry="64" fill="none" stroke="rgba(11,14,26,.9)" stroke-width="14"/>
+            <ellipse cx="340" cy="120" rx="34" ry="64" fill="none" stroke="rgba(212,175,106,.85)" stroke-width="2"/>
+            <ellipse cx="340" cy="120" rx="27" ry="56" fill="none" stroke="rgba(245,241,232,.35)" stroke-width="1"/>
+            <circle cx="340" cy="120" r="9" fill="#0B0E1A" stroke="#D4AF6A" stroke-width="1.5"/>
+            <path d="m337 116 6 4-6 4v-8Z" fill="#D4AF6A"/>
+            <g class="g-mono" font-family="var(--mono)">
+              <text x="340" y="216" text-anchor="middle">tokens in · tokens out · cost · latency · which key served</text>
+            </g>
+            <circle cx="656" cy="120" r="3.4" fill="#D4AF6A"/>
+          </svg>
+          <p class="caption" style="justify-self:start;margin-top:0">The client sees a model name and a result. The ledger keeps the provider's own numbers: tokens in and out, cost, latency, which key served — and the provider's identity stays on this side of the gate.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- how a client uses the key -->
+    <section class="sect" id="how" aria-labelledby="how-h" style="padding-top:0">
+      <div class="wrap">
+        <div class="sect-head"><p class="eyebrow">How a client uses your key</p><h2 class="title" id="how-h"><span class="t">Three steps.</span> One copy-paste.</h2>
+          <p class="lede">From issue to first token. No SDK rewrite, no new client.</p></div>
+        <div class="steps">
+          <article class="panel step">
+            <span class="n">01 · ISSUE</span>
+            <h3>Mint the key</h3>
+            <p>Dashboard → <b style="color:var(--ink)">Keys</b> → <i>Issue a gateway key</i>. Name it — <code>mobile-app</code>, <code>ci</code>, a partner. The key is minted as <code>jkn_…</code> and <b style="color:var(--ink)">shown exactly once</b>: there is no read path that returns it again.</p>
+          </article>
+          <article class="panel step">
+            <span class="n">02 · POINT</span>
+            <h3>Point any client at the gateway</h3>
+            <p>No SDK rewrite. Any OpenAI-compatible client works: set the base URL to <code>https://&lt;your-gateway&gt;/api/flow</code>, put the key in the <code>Authorization</code> header — plain HTTP works identically.</p>
+          </article>
+          <article class="panel step">
+            <span class="n">03 · CALL</span>
+            <h3>Call by name</h3>
+            <p><code>model</code> is a real name from the client's Models tab, plus <code>search</code> and <code>image</code>. The client never sees which provider answers. At the account's limit the gateway answers <code>429</code> with a retry hint.</p>
+          </article>
+        </div>
+
+        <div class="code-tabs" role="tablist" aria-label="Code examples">
+          <button type="button" class="on" data-tab="curl" role="tab" aria-selected="true">curl</button>
+          <button type="button" data-tab="js" role="tab" aria-selected="false">JavaScript · OpenAI SDK</button>
+          <button type="button" data-tab="py" role="tab" aria-selected="false">Python · OpenAI SDK</button>
+        </div>
+        <div class="term">
+          <div class="term-bar"><i></i><i></i><i></i><span>first call</span></div>
+          <div class="code-pane on" data-pane="curl">
+<pre><span class="c-dim">$</span> curl -X POST https://<span class="c-gold">your-host</span>/api/flow/chat/completions \
+    -H <span class="c-green">"Authorization: Bearer $JATIN_KEY"</span> \
+    -H <span class="c-green">"Content-Type: application/json"</span> \
+    -d <span class="c-green">'{
+      "model": "gemini-2.5-flash",
+      "messages": [{ "role": "user", "content": "One line on pearls." }]
+    }'</span>
+
+<span class="c-dim">→ 200 · 412 ms</span>
+<span class="c-blue">{ "choices": [{ "message": { "role": "assistant", "content": "Patience, layered." } }] }</span></pre>
+          </div>
+          <div class="code-pane" data-pane="js">
+<pre><span class="c-dim">import</span> OpenAI <span class="c-dim">from</span> <span class="c-green">"openai"</span>;
+
+<span class="c-dim">const</span> ai = <span class="c-dim">new</span> OpenAI({
+  baseURL: <span class="c-green">"https://&lt;your-gateway&gt;/api/flow"</span>,
+  apiKey:  <span class="c-gold">"jkn_…"</span>,
+});
+
+<span class="c-dim">const</span> r = <span class="c-dim">await</span> ai.chat.completions.create({
+  model:    <span class="c-green">"gemini-2.5-flash"</span>,   <span class="c-dim">// any verified name · "search" · "image"</span>
+  messages: [{ role: <span class="c-green">"user"</span>, content: <span class="c-green">"hi"</span> }],
+});
+console.log(r.choices[0].message.content);</pre>
+          </div>
+          <div class="code-pane" data-pane="py">
+<pre><span class="c-dim">from</span> openai <span class="c-dim">import</span> OpenAI
+
+ai = OpenAI(
+    base_url=<span class="c-green">"https://&lt;your-gateway&gt;/api/flow"</span>,
+    api_key=<span class="c-gold">"jkn_…"</span>,
+)
+
+r = ai.chat.completions.create(
+    model=<span class="c-green">"gemini-2.5-flash"</span>,   <span class="c-dim"># any verified name · "search" · "image"</span>
+    messages=[{"role": "user", "content": "hi"}],
+)
+print(r.choices[0].message.content)</pre>
+          </div>
+        </div>
+        <p class="caption">Search and image ride the same key: <code style="font-family:var(--mono);font-size:.9em">POST /api/flow/search</code> with <code style="font-family:var(--mono);font-size:.9em">{"query":"…"}</code> and <code style="font-family:var(--mono);font-size:.9em">POST /api/flow/image</code> with <code style="font-family:var(--mono);font-size:.9em">{"prompt":"…"}</code>. The names you see are the real ones — verified against the catalog daily.</p>
+      </div>
+    </section>
+
+    <!-- limits desk -->
+    <section class="arch" aria-labelledby="desk-h">
+      <div class="wrap" style="padding-bottom:clamp(64px,9vw,112px)">
+        <div class="sect-head"><p class="eyebrow">The limits desk</p><h2 class="title" id="desk-h"><span class="t">The owner's hand</span> on every tap.</h2>
+          <p class="lede">Limits are set per model, per customer. Every key a customer issues pools into those numbers — and a grant can never exceed what the pool can truly give. <span class="ill" style="margin-left:8px">illustrative numbers</span></p></div>
+        <div class="panel desk-mock">
+          <div class="bar">
+            <div><p class="eyebrow gold">Account · atelier-nord</p><p class="small" style="margin-top:4px">Limits matrix · mock-up</p></div>
+            <div class="clamp-note"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 7v3M8 12v.01"/></svg>llama-x rpm: 1000 → 48 — capped to 80% of the pool</div>
+          </div>
+          <div class="scroll-x">
+            <table class="tbl" aria-label="Per-model limits matrix (mock-up)">
+              <thead><tr><th>Model</th><th class="r">rpm</th><th class="r">tpm</th><th class="r">rpd</th><th class="r">monthly</th></tr></thead>
+              <tbody>
+                <tr><td class="name">all models</td><td class="r">120</td><td class="r">200,000</td><td class="r">5,000</td><td class="r">4,000,000</td></tr>
+                <tr class="group"><td class="name">gemini-2.5-flash</td><td class="r">300</td><td class="r">1,000,000</td><td class="r">20,000</td><td class="r">12,000,000</td></tr>
+                <tr class="sub"><td colspan="5"><div class="chips"><span class="pool-chip">rpm pool 600 · 180 granted elsewhere</span><span class="pool-chip">tpm pool 2.0M · 0 elsewhere</span></div></td></tr>
+                <tr class="group"><td class="name">llama-x</td><td class="r"><s style="color:var(--ink-3)">1000</s>&nbsp;<span style="color:var(--red)">48</span></td><td class="r">90,000</td><td class="r">1,200</td><td class="r">1,500,000</td></tr>
+                <tr class="sub"><td colspan="5"><div class="chips"><span class="pool-chip">rpm pool 60 · 40 granted elsewhere</span><span class="pool-chip over">above the pool turns red</span></div></td></tr>
+                <tr class="group"><td class="name">mistral-small-latest</td><td class="r">60</td><td class="r">120,000</td><td class="r">2,000</td><td class="r">2,500,000</td></tr>
+                <tr class="sub"><td colspan="5"><div class="chips"><span class="pool-chip">rpm pool 100 · 0 granted elsewhere</span></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p class="caption">Customers see their numbers, never the pool, never the provider.</p>
+      </div>
+    </section>
+
+    <!-- ledger -->
+    <section class="sect" aria-labelledby="ledger-h" style="padding-top:0">
+      <div class="wrap">
+        <div class="sect-head"><p class="eyebrow">The ledger</p><h2 class="title" id="ledger-h"><span class="t">The provider's</span> own numbers.</h2></div>
+        <div class="charts">
+          <figure class="panel chart-card" style="margin:0">
+            <header><span class="label">Requests · 30 days</span><span class="big">65,096</span></header>
+            <svg class="chart" viewBox="0 0 520 190" role="img" aria-label="Requests over 30 days, rising">
+              <defs><linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D4AF6A" stop-opacity=".32"/><stop offset="1" stop-color="#D4AF6A" stop-opacity="0"/></linearGradient></defs>
+              <line class="grid" x1="44" x2="512" y1="10" y2="10"/><line class="grid" x1="44" x2="512" y1="87" y2="87"/><line class="grid" x1="44" x2="512" y1="164" y2="164"/>
+              <text x="36" y="14" text-anchor="end">3k</text><text x="36" y="91" text-anchor="end">1.5k</text><text x="36" y="168" text-anchor="end">0</text>
+              <path d="M44.0 83.6 L60.1 54.1 L76.3 62.2 L92.4 57.7 L108.6 39.9 L124.7 40.5 L140.8 42.6 L157.0 31.2 L173.1 31.4 L189.2 38.1 L205.4 37.7 L221.5 42.8 L237.7 43.2 L253.8 62.2 L269.9 64.2 L286.1 61.1 L302.2 65.6 L318.3 84.5 L334.5 71.5 L350.6 77.5 L366.8 66.0 L382.9 66.5 L399.0 79.4 L415.2 65.1 L431.3 49.2 L447.4 48.0 L463.6 41.8 L479.7 35.9 L495.9 20.7 L512.0 14.1 L512 164 L44 164 Z" fill="url(#gA)"/>
+              <path d="M44.0 83.6 L60.1 54.1 L76.3 62.2 L92.4 57.7 L108.6 39.9 L124.7 40.5 L140.8 42.6 L157.0 31.2 L173.1 31.4 L189.2 38.1 L205.4 37.7 L221.5 42.8 L237.7 43.2 L253.8 62.2 L269.9 64.2 L286.1 61.1 L302.2 65.6 L318.3 84.5 L334.5 71.5 L350.6 77.5 L366.8 66.0 L382.9 66.5 L399.0 79.4 L415.2 65.1 L431.3 49.2 L447.4 48.0 L463.6 41.8 L479.7 35.9 L495.9 20.7 L512.0 14.1" fill="none" stroke="#D4AF6A" stroke-width="1.75" stroke-linejoin="round"/>
+              <circle cx="512" cy="14.1" r="3.5" fill="#D4AF6A"/>
+              <text x="44" y="184">−30d</text><text x="278" y="184" text-anchor="middle">−15d</text><text x="512" y="184" text-anchor="end">today</text>
+            </svg>
+          </figure>
+          <figure class="panel chart-card" style="margin:0">
+            <header><span class="label">Cost · 30 days</span><span class="big">$11.88</span></header>
+            <svg class="chart" viewBox="0 0 520 190" role="img" aria-label="Cost over 30 days, rising">
+              <defs><linearGradient id="gB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7FB4E6" stop-opacity=".3"/><stop offset="1" stop-color="#7FB4E6" stop-opacity="0"/></linearGradient></defs>
+              <line class="grid" x1="44" x2="512" y1="10" y2="10"/><line class="grid" x1="44" x2="512" y1="87" y2="87"/><line class="grid" x1="44" x2="512" y1="164" y2="164"/>
+              <text x="36" y="14" text-anchor="end">$.60</text><text x="36" y="91" text-anchor="end">$.30</text><text x="36" y="168" text-anchor="end">0</text>
+              <path d="M44.0 87.0 L60.1 71.6 L69.0 69.0 L92.4 69.0 L108.6 45.9 L124.7 51.1 L140.8 48.5 L157.0 45.9 L173.1 45.9 L189.2 53.6 L205.4 56.2 L221.5 48.5 L237.7 63.9 L253.8 63.9 L269.9 63.9 L286.1 63.9 L302.2 76.7 L318.3 87.0 L334.5 84.4 L350.6 74.2 L366.8 76.7 L382.9 76.7 L399.0 74.2 L415.2 69.0 L447.4 51.1 L463.6 61.3 L479.7 51.1 L495.9 38.2 L512.0 28.0 L512 164 L44 164 Z" fill="url(#gB)"/>
+              <path d="M44.0 87.0 L60.1 71.6 L69.0 69.0 L92.4 69.0 L108.6 45.9 L124.7 51.1 L140.8 48.5 L157.0 45.9 L173.1 45.9 L189.2 53.6 L205.4 56.2 L221.5 48.5 L237.7 63.9 L253.8 63.9 L269.9 63.9 L286.1 63.9 L302.2 76.7 L318.3 87.0 L334.5 84.4 L350.6 74.2 L366.8 76.7 L382.9 76.7 L399.0 74.2 L415.2 69.0 L447.4 51.1 L463.6 61.3 L479.7 51.1 L495.9 38.2 L512.0 28.0" fill="none" stroke="#7FB4E6" stroke-width="1.75" stroke-linejoin="round"/>
+              <circle cx="512" cy="28" r="3.5" fill="#7FB4E6"/>
+              <text x="44" y="184">−30d</text><text x="278" y="184" text-anchor="middle">−15d</text><text x="512" y="184" text-anchor="end">today</text>
+            </svg>
+          </figure>
+        </div>
+        <div class="panel card" style="margin-top:16px">
+          <p class="label" style="margin-bottom:18px;display:block">By model · 30 days</p>
+          <div class="bars">
+            <div class="bar-row"><span class="nm">gemini-2.5-flash</span><span class="tr"><i style="width:74%"></i></span><span class="v">48,120</span></div>
+            <div class="bar-row"><span class="nm">llama-x</span><span class="tr"><i style="width:21%"></i></span><span class="v">13,604</span></div>
+            <div class="bar-row"><span class="nm">search</span><span class="tr"><i style="width:4%"></i></span><span class="v">2,611</span></div>
+            <div class="bar-row"><span class="nm">image</span><span class="tr"><i style="width:1.2%"></i></span><span class="v">761</span></div>
+          </div>
+        </div>
+        <p class="caption" style="margin-top:20px"><span class="ill">illustrative numbers</span> &nbsp;In the dashboard these are the account's real, measured numbers — refreshed from the ledger.</p>
+      </div>
+    </section>
+
+    <section class="cta-band">
+      <div class="wrap">
+        <h2 class="display" style="font-size:clamp(40px,6vw,76px)"><span class="t">Open the</span><span class="b">Flow.</span></h2>
+        <div class="row">
+          <a href="login.html" class="btn btn-gold">Sign in to the Flow dashboard <svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8h11M9 4l4 4-4 4"/></svg></a>
+          <a href="crew.html" class="btn btn-ghost">Meet the Crew</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap">
+      <p class="line"><b style="color:var(--ink);font-weight:800;letter-spacing:.06em">JATIN</b> — Every drop, one pearl. One base. Two instruments.</p>
+      <nav aria-label="Footer"><a href="flow.html">Flow</a><a href="crew.html">Crew</a><a href="login.html">Sign in</a></nav>
+    </div>
+  </footer>
+
+  <script>
+    document.querySelectorAll('.code-tabs [role=tab]').forEach(function (t) {
+      t.addEventListener('click', function () {
+        document.querySelectorAll('.code-tabs [role=tab]').forEach(function (x) {
+          x.setAttribute('aria-selected', String(x === t));
+          x.classList.toggle('on', x === t);
+        });
+        document.querySelectorAll('.code-pane').forEach(function (p) {
+          p.classList.toggle('on', p.dataset.pane === t.dataset.tab);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

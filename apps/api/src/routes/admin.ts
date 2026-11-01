@@ -9,6 +9,7 @@ import { requireOperator } from '../lib/auth.js';
 import { ORG_LIMIT_KINDS } from '../lib/quota.js';
 import { poolMatrix, scopeProviders, poolCapacity, grantedElsewhere, usage30d, fractionForUsage, reconcileLimit } from '../lib/poolcap.js';
 import { providerCatalog, refreshStalePoolCatalogs, refreshCatalogForCredential, catalogStatusForTargets } from '../lib/catalog.js';
+import { liveRungModels, refreshModelLiveness, livenessForRungs } from '../lib/liveness.js';
 import { operatorOrgId } from './flow.js';
 import { TEXT_PROVIDERS as ALL_TEXT_PROVIDERS, SEARCH_PROVIDERS, IMAGE_PROVIDERS, upstreamBase } from '../lib/upstream.js';
 import { decryptSecret } from '../lib/vault.js';
@@ -280,6 +281,27 @@ export async function adminRoutes(app: FastifyInstance) {
     // anything left stale after the pass (failing providers)
     const left = await refreshStalePoolCatalogs(prisma, [opOrg]).catch(() => 0);
     return { refreshed: results, morePending: left };
+  });
+
+  // 0008 — model liveness: per pool key, does it actually SERVE each rung
+  // model (availability is per account — the catalog only knows the name)?
+  // GET = current matrix; POST = run a bounded sweep now (oldest first).
+  const livenessList = async (opOrg: string) => {
+    const rungs = await liveRungModels(prisma);
+    const m = await livenessForRungs(prisma, [opOrg], rungs);
+    return Object.values(m).map((r) => ({ ...r, checkedAt: r.checkedAt ? r.checkedAt.toISOString() : null }));
+  };
+  app.get('/models/liveness', async (req, reply) => {
+    const op = await requireOperator(req, reply);
+    if (!op) return;
+    return { rungs: await livenessList((await operatorOrgId()) ?? '') };
+  });
+  app.post('/models/check', async (req, reply) => {
+    const op = await requireOperator(req, reply);
+    if (!op) return;
+    const opOrg = (await operatorOrgId()) ?? '';
+    const checked = await refreshModelLiveness(prisma, [opOrg], 18).catch(() => 0);
+    return { checked, rungs: await livenessList(opOrg) };
   });
 
   // One-shot health check for a single pool key: one upstream /models call,

@@ -672,6 +672,16 @@
     $('wb-list').innerHTML = skel(); $('wb-editor').innerHTML = '<div class="skel-block"><i class="skel"></i><i class="skel"></i></div>';
     var a = await api('/api/admin/users/' + uid + '/aliases');
     var cat = await fetchCatalog();
+    var lv = await api('/api/admin/models/liveness');
+    var liveMap = {};
+    ((lv.data && lv.data.rungs) || []).forEach(function (r) { liveMap[r.provider + '/' + r.model] = r; });
+    function liveChip(key) {
+      var l = liveMap[key];
+      if (!l) return '<span class="pool-chip" style="opacity:.65" title="no fresh liveness check yet">unverified</span>';
+      if (l.live > 0) return '<span class="pool-chip" title="fresh 1-token check: ' + l.live + ' of ' + l.total + ' pool keys serve this model right now">live ' + l.live + '/' + l.total + ' keys</span>';
+      if (l.dead > 0) return '<span class="pool-chip over" title="fresh check: no pool key serves this model — re-point the rung">no key serves it</span>';
+      return '<span class="pool-chip" style="opacity:.65" title="no fresh liveness check yet">unverified</span>';
+    }
     var aliases = a.ok ? a.data.aliases || [] : [];
     var u = deskUsers.find(function (x) { return x.id === uid; });
     var rows = aliases.map(function (al) {
@@ -680,7 +690,7 @@
         ? '<span class="m">missing today: ' + al.catalog.missing.map(function (m) { return '<span class="m">' + esc(m) + '</span>'; }).join(', ') + '</span>'
         : '<span class="m">—</span>';
       return '<tr><td class="name"><span class="catdot ' + (st === 'ok' ? 'ok' : st === 'warn' ? 'warn' : '') + '" title="catalog: ' + esc(st || 'unknown') + '"></span>' + esc(al.alias) + '</td>' +
-        '<td>' + missing + '</td><td class="m">' + esc((al.targets || []).map(function (t) { return t.provider + '/' + t.providerModelId; }).join('<br>')) + '</td>' +
+        '<td>' + missing + '</td><td class="m">' + (al.targets || []).map(function (t) { return esc(t.provider + '/' + t.providerModelId) + ' ' + liveChip(t.provider + '/' + t.providerModelId); }).join('<br>') + '</td>' +
         '<td class="act"><button type="button" class="btn btn-ghost btn-sm" data-edit="' + esc(al.alias) + '">edit</button></td></tr>';
     });
     $('wb-list').innerHTML = rows.length ? tbl([['Name'], ['Catalog'], ['Rungs (hidden from the customer)'], ['']], rows)
@@ -726,7 +736,7 @@
     function renderLadder() {
       $('wb-count').textContent = wbRungs.length;
       $('wb-ladder').innerHTML = wbRungs.length
-        ? wbRungs.map(function (t, i) { return '<span class="rung"><b>' + (i + 1) + '</b> ' + esc(t.provider) + '/' + esc(t.providerModelId) + '<button type="button" data-drop="' + i + '" aria-label="remove rung">×</button></span>'; }).join('')
+        ? wbRungs.map(function (t, i) { return '<span class="rung"><b>' + (i + 1) + '</b> ' + esc(t.provider) + '/' + esc(t.providerModelId) + ' ' + liveChip(t.provider + '/' + t.providerModelId) + '<button type="button" data-drop="' + i + '" aria-label="remove rung">×</button></span>'; }).join('')
         : '<span class="note">no rungs yet — pick a model above, then “+ add rung”</span>';
       document.querySelectorAll('#wb-ladder [data-drop]').forEach(function (b) {
         b.addEventListener('click', function () { wbRungs.splice(Number(b.dataset.drop), 1); renderLadder(); });
@@ -761,9 +771,14 @@
       if (r.ok) {
         var good = (r.data.refreshed || []).filter(function (x) { return x.ok; }).length;
         var bad = (r.data.refreshed || []).length - good;
-        $('wb-note').innerHTML = okLine('catalog checked — ' + good + ' key(s) answered' + (bad ? ', ' + bad + ' unreachable (stays stale, retried hourly)' : ''));
+        $('wb-note').innerHTML = okLine('checking liveness of every rung on every key…');
         catalogCache = null;
         cat = await fetchCatalog(); fillCat();
+        var lc = await api('/api/admin/models/check', { method: 'POST' });
+        if (lc.ok) {
+          $('wb-note').innerHTML = okLine('catalog checked — ' + good + ' key(s) answered' + (bad ? ', ' + bad + ' unreachable (stays stale, retried hourly)' : '') + ' · ' + (lc.data.checked || 0) + ' liveness probe(s) run — the rest cycles hourly');
+        }
+        openWorkbench(uid);
       } else $('wb-note').innerHTML = errLine('catalog check failed');
     });
     document.querySelectorAll('#wb-list [data-edit]').forEach(function (b) {

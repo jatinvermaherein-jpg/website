@@ -5,6 +5,7 @@ import { buildApp } from './app.js';
 import { prisma } from './lib/prisma.js';
 import { hashPassword } from './lib/hash.js';
 import { refreshStalePoolCatalogs } from './lib/catalog.js';
+import { refreshModelLiveness } from './lib/liveness.js';
 import { operatorOrgId } from './routes/flow.js';
 
 async function ensureOperator(): Promise<void> {
@@ -57,7 +58,12 @@ console.log(`[jatin] api on http://0.0.0.0:${port} — landing + preloader at /`
 const catalogTick = async (): Promise<void> => {
   try {
     const op = await operatorOrgId();
-    if (op) await refreshStalePoolCatalogs(prisma, [op]);
+    if (op) {
+      await refreshStalePoolCatalogs(prisma, [op]);
+      // 0008 — keep per-key MODEL liveness fresh too: which keys can actually
+      // serve each rung model. Bounded (a few probes/tick), strictly background.
+      void refreshModelLiveness(prisma, [op], 6).catch(() => {});
+    }
   } catch (e) {
     console.error('[jatin] catalog tick failed', e);
   }
