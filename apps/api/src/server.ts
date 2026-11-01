@@ -39,6 +39,12 @@ async function ensureOperator(): Promise<void> {
 
 loadDotEnv();
 
+// Say it at boot, not at the first request that needs it. A missing master
+// key means every secret-touching route will answer 503; better to know now.
+if (!process.env.MASTER_KEY) {
+  console.warn('[jatin] MASTER_KEY is not set — provider keys and project env cannot be encrypted (secret routes will answer 503)');
+}
+
 const app = await buildApp();
 
 try {

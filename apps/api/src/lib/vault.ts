@@ -8,7 +8,14 @@ import type { PrismaClient } from '@prisma/client';
 
 function master(): Buffer {
   const k = process.env.MASTER_KEY;
-  if (!k) throw new Error('MASTER_KEY is required (32 random bytes, base64)');
+  if (!k) {
+    // A missing master key is a misconfiguration, not a bug in the request.
+    // Answering 500 made it look like the endpoint was broken; 503 with the
+    // real reason is what an operator can act on.
+    const e = new Error('MASTER_KEY is not configured — this server cannot store or read secrets') as Error & { statusCode?: number };
+    e.statusCode = 503;
+    throw e;
+  }
   return Buffer.from(k, 'base64');
 }
 
