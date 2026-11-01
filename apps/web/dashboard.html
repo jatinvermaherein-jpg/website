@@ -485,9 +485,16 @@
       .forEach(function (s) { rows.push('<tr><td class="name">' + esc(s.name) + '</td><td>' + chip('live', 'green', true) + '</td><td><span class="m">service face</span></td>' + (IS_OP ? '<td></td>' : '') + '</tr>'); });
     $('alias-list').innerHTML = rows.length
       ? tbl(IS_OP ? [['Name'], ['Status'], ['Faces'], ['Rungs (you only)']] : [['Name'], ['Status'], ['Faces']], rows)
-      : empty(IS_OP ? 'No aliases yet' : 'No model names assigned to your account yet', IS_OP ? 'the operator can call provider/model directly' : 'the operator will assign them from the desk');
+      : empty(IS_OP ? 'No names yet' : 'No model names assigned to your account yet', IS_OP ? 'you can call the pool directly — or give an account its first name from the Desk' : 'the operator will assign them');
+    if (!rows.length && IS_OP) {
+      var cta = document.createElement('button');
+      cta.type = 'button'; cta.className = 'btn btn-ghost btn-sm'; cta.textContent = 'Open the Desk →';
+      cta.style.marginTop = '12px';
+      cta.onclick = function () { location.hash = 'flow/desk'; };
+      $('alias-list').appendChild(cta);
+    }
     $('api-model-note').innerHTML = IS_OP
-      ? 'OpenAI-compatible, streaming. <code>model</code> is one of the names above, plus <code>search</code> and <code>image</code>. “Verified” means a fresh catalog check saw it upstream today.'
+      ? 'OpenAI-compatible, streaming. <code>model</code> is one of the names above, plus <code>search</code> and <code>image</code>. “Verified” means a fresh catalog check found it in the provider’s catalog today.'
       : 'OpenAI-compatible, streaming. <code>model</code> is one of the <b>names above</b> — text models, plus <code>search</code> and <code>image</code>. One key, three faces; every number is measured.';
     var sel = $('gk-model');
     sel.innerHTML = '<option value="">(pick one…)</option>' +
