@@ -328,6 +328,9 @@ export async function flowRoutes(app: FastifyInstance) {
           model: upstreamModel,
           stream: body.stream ?? true,
         };
+        // Google's OpenAI-compatible endpoint 400s on OpenAI-specific fields
+        // it does not implement ("store", "service_tier", ...) — drop them.
+        if (target.provider === 'google') for (const k of ['store', 'service_tier']) delete upstreamBody[k];
         if (upstreamBody.stream) upstreamBody.stream_options = { include_usage: true };
 
         const doUpstream = (withStreamOptions: boolean) =>
@@ -358,8 +361,9 @@ export async function flowRoutes(app: FastifyInstance) {
           const errText = await res.text().catch(() => '');
           let message = `upstream ${res.status}`;
           try {
-            const j = JSON.parse(errText);
-            message = j?.error?.message ?? j?.message ?? message;
+            const j: unknown = JSON.parse(errText);
+            const e = Array.isArray(j) ? (j[0] as { error?: { message?: string }; message?: string }) : (j as { error?: { message?: string }; message?: string });
+            message = e?.error?.message ?? e?.message ?? message;
           } catch {
             if (errText) message = errText.slice(0, 400);
           }
@@ -367,6 +371,13 @@ export async function flowRoutes(app: FastifyInstance) {
 
           if (res.status === 401 || res.status === 403) {
             await prisma.providerCredential.update({ where: { id: credential.id }, data: { status: 'dead' } }).catch(() => {});
+            await finish('error', { tokensIn: 0, tokensOut: 0, source: 'provider' }, 0, degraded);
+            continue;
+          } else if (res.status === 404) {
+            // "not found or you do not have permission" is keyed per account —
+            // one key may lack a model the next one has. Soft skip, no penalty.
+            await finish('error', { tokensIn: 0, tokensOut: 0, source: 'provider' }, 0, degraded);
+            continue;
           } else if (res.status === 429 || res.status >= 500) {
             await prisma.providerCredential
               .update({ where: { id: credential.id }, data: { status: 'cooldown', cooldownUntil: new Date(Date.now() + COOLDOWN_MS) } })
