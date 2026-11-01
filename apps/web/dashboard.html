@@ -194,7 +194,7 @@
             <div class="field"><label for="cs-auditor">Auditors · 0–2</label><input class="input mono" id="cs-auditor" name="auditor" type="number" min="0" max="2" value="1" /></div>
             <div class="field"><label for="cs-secs">Run seconds</label><input class="input mono" id="cs-secs" name="durationSec" type="number" min="1" max="600" value="30" /></div>
           </div>
-          <div class="field"><label>Real seats on the bus</label><div id="cs-seats" class="note" style="display:grid;gap:6px">pick a project first</div></div>
+          <div class="field"><label>Real seats on the bus <span class="m">— always attached</span></label><div id="cs-seats" class="note" style="display:grid;gap:6px">pick a project first</div></div>
           <p class="note" id="crew-note">Builders do the work; the auditor reviews their partials as they land — one stream, every seat visible. SIGTERM to the group, then the grace, then SIGKILL.</p>
           <button class="btn btn-gold" type="submit">Start crew</button>
         </form>
@@ -896,9 +896,14 @@
     var box = $('cs-seats');
     if (!slug || !seatsCache.length) { box.innerHTML = '<span class="m">' + (slug ? 'no seats on this project yet — open one under Seats' : 'pick a project first') + '</span>'; return; }
     box.innerHTML = seatsCache.filter(function (x) { return x.status !== 'vacant'; }).map(function (x) {
-      return '<label class="note" style="display:grid;gap:4px;cursor:pointer"><span>' + '<input type="checkbox" value="' + esc(x.name) + '" /> ' + esc(x.name) + ' <span class="m">· ' + esc(x.role) + '</span></span>' +
-        '<input class="input mono" data-cmd="' + esc(x.name) + '" placeholder="start it on this host (blank = runs elsewhere)" style="min-width:0" /></label>';
+      // every seat is on every run — there is nothing to tick. The only
+      // choice left is whether the crew spawns it here or it joins from
+      // anywhere with its key (blank = elsewhere).
+      return '<label class="note" style="display:grid;gap:4px"><span>' +
+        '<span class="chip" style="margin-right:6px">on</span> ' + esc(x.name) + ' <span class="m">· ' + esc(x.role) + '</span></span>' +
+        '<input class="input mono" data-cmd="' + esc(x.name) + '" placeholder="blank = joins from anywhere with its key" style="min-width:0" /></label>';
     }).join('');
+    if (!box.innerHTML) box.innerHTML = '<span class="m">no seats yet — open one under Seats</span>';
   }
   $('seat-new').addEventListener('submit', async function (e) {
     e.preventDefault();
@@ -961,18 +966,18 @@
     e.preventDefault();
     var nb = Math.min(6, Math.max(0, Math.round(Number($('cs-builders').value)) || 0));
     var na = Math.min(2, Math.max(0, Math.round(Number($('cs-auditor').value)) || 0));
-    var realSeats = Array.prototype.slice.call(document.querySelectorAll('#cs-seats input[type=checkbox]:checked')).map(function (cb) {
-      var cmd = document.querySelector('#cs-seats input[data-cmd="' + cb.value + '"]');
-      return { name: cb.value, command: cmd && cmd.value.trim() ? cmd.value.trim() : undefined };
+    // every seat on the project rides every run — no tick, no forgetting
+    var realSeats = Array.prototype.slice.call(document.querySelectorAll('#cs-seats input[data-cmd]')).map(function (el) {
+      return { name: el.getAttribute('data-cmd'), command: el.value.trim() ? el.value.trim() : undefined };
     });
     if (nb + na + realSeats.length === 0) { $('crew-note').innerHTML = errLine('assign at least one worker or seat'); return; }
     if (nb + na > 8) { $('crew-note').innerHTML = errLine('a crew is capped at 8 seats'); return; }
     var body = { slug: $('crew-project').value, title: $('cs-title').value.trim() || 'crew task', durationSec: Number($('cs-secs').value) || 30 };
     if (nb || na) body.roles = { builder: nb, auditor: na };
-    if (realSeats.length) body.seats = realSeats;
+    if (realSeats.length) body.seats = realSeats; // otherwise the API attaches the whole team
     var r = await api('/api/crew', { method: 'POST', body: JSON.stringify(body) });
     $('crew-note').innerHTML = r.ok
-      ? okLine('crew ' + esc(r.data.runId) + ' — ' + nb + '×builder' + (na ? ' · ' + na + '×auditor' : '') + ' · process group ' + esc(String(r.data.pgid)))
+      ? okLine('crew ' + esc(r.data.runId) + ' — ' + nb + '×builder' + (na ? ' · ' + na + '×auditor' : '') + ' · seats: ' + esc((r.data.seats && r.data.seats.length ? r.data.seats.join(', ') : 'none on this project')) + ' · process group ' + esc(String(r.data.pgid)))
       : errLine(r.data.error || 'could not start crew');
     if (r.ok) setTimeout(loadRuns, 500);
   });

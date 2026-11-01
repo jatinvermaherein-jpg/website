@@ -281,3 +281,47 @@ test('D6: the reaper writes the terminal record for an expired run', async (t) =
 
   rmSync(join(runsDir, runId), { recursive: true, force: true });
 });
+
+// Seats are on every run — a run must never silently drop the team.
+// Previously `seats: []` was the normal case because the dashboard made you
+// tick a box, and the API attached nothing when the field was absent.
+test('every active seat rides every run when seats are not specified', async (t) => {
+  process.env.JATIN_RUNTIME = process.env.JATIN_RUNTIME || 'persistent';
+  const app = await buildApp();
+  await app.ready();
+  t.after(() => app.close());
+
+  const operator = await prisma.user.findFirst({ where: { isOperator: true } });
+  const opLogin = await app.inject({
+    method: 'POST', url: '/api/auth/login',
+    payload: { username: operator!.username, password: process.env.ADMIN_PASSWORD! },
+  });
+  const opToken: string = opLogin.json().token;
+  const asOp = { authorization: `Bearer ${opToken}` };
+  const opOrg = (await prisma.membership.findFirst({ where: { userId: operator!.id } }))!;
+
+  const slug = `a${Date.now().toString(36)}`;
+  await prisma.project.create({ data: { orgId: opOrg.orgId, slug, name: 'AutoSeat', status: 'active' } });
+
+  for (const [name, role] of [['auditor', 'auditor'], ['builder-x', 'builder'], ['scout', 'scout']]) {
+    const r = await app.inject({ method: 'POST', url: `/api/projects/${slug}/seats`, headers: asOp, payload: { name, role } });
+    assert.equal(r.statusCode, 201);
+  }
+  // a revoked seat must NOT be attached — its key is dead
+  const gone = await app.inject({ method: 'POST', url: `/api/projects/${slug}/seats`, headers: asOp, payload: { name: 'gone', role: 'builder' } });
+  await app.inject({
+    method: 'POST',
+    url: `/api/projects/${slug}/seats/${gone.json().seat.id}/revoke`,
+    headers: asOp,
+  });
+
+  // start a crew WITHOUT naming seats
+  const r = await app.inject({
+    method: 'POST', url: '/api/crew', headers: asOp,
+    payload: { slug, title: 'auto-attach', durationSec: 1, roles: { builder: 1, auditor: 1 } },
+  });
+  assert.equal(r.statusCode, 201);
+  const seats: string[] = r.json().seats;
+  assert.deepEqual(seats.sort(), ['auditor', 'builder-x', 'scout'], 'the whole live team must be attached');
+  assert.ok(!seats.includes('gone'), 'a revoked seat must not be attached');
+});

@@ -253,10 +253,26 @@ export async function crewRoutes(app: FastifyInstance) {
     // process group (command) or external (connects with its seat key from
     // anywhere — its heartbeat IS its presence). A spawned seat gets a
     // run-scoped session token (never a standing secret on this host).
+    // EVERY active seat on the project is on every run. A seat is a member of
+    // the team, not an opt-in per run — a run that silently dropped the
+    // auditor was the normal case, and it is not a decision a human should
+    // have to remember to tick.
+    //
+    // An explicit `seats` array still wins (it is how a spawned command is
+    // given), but omitting it attaches the whole team, external by default.
     const seatSpecs: { name: string; role: string; command: string; token: string }[] = [];
     const externalSeats: string[] = [];
-    if (Array.isArray(b.seats)) {
-      for (const entry of b.seats) {
+    const requestedSeats: { name: string; command?: string }[] = Array.isArray(b.seats)
+      ? (b.seats as { name: string; command?: string }[])
+      : (
+          await prisma.seat.findMany({
+            where: { orgId: membership.orgId, status: { notIn: ['archived', 'vacant'] }, projects: { some: { projectId: project.id } } },
+            orderBy: { createdAt: 'asc' },
+            select: { name: true },
+          })
+        ).map((x) => ({ name: x.name }));
+    if (requestedSeats.length) {
+      for (const entry of requestedSeats) {
         if (!entry || typeof entry.name !== 'string' || !entry.name.trim()) continue;
         const seat = await prisma.seat.findFirst({
           where: { orgId: membership.orgId, name: entry.name.trim().toLowerCase(), projects: { some: { projectId: project.id } } },
@@ -343,6 +359,7 @@ export async function crewRoutes(app: FastifyInstance) {
       status: 'running',
       outDir,
       project: project.slug,
+      seats: allSeats, // say who rode along — a run never silently drops the team
     });
   });
 
