@@ -70,7 +70,7 @@
         <div class="group"><header><h2>Provider keys — the pool</h2><p>Stored encrypted, write-only. Limits are applied per provider and never typed.</p></header>
           <div id="keys"><div class="tbl-wrap"><div class="skel-block"><i class="skel"></i><i class="skel"></i></div></div></div>
           <form class="panel card form-stack" id="add-key" novalidate style="margin-top:16px">
-            <h3 style="font-size:18px">Add a pool key</h3>
+            <h3 style="font-size:18px">Add a provider key</h3>
             <div class="form-row">
               <div class="field"><label for="ak-provider">Provider</label>
                 <select class="input" id="ak-provider" name="provider">
@@ -1074,11 +1074,18 @@
     IS_OP = !!data.operator;
     USERNAME = data.username || '';
     $('hello').textContent = USERNAME;
+    if (!IS_OP) {
+      var byoH = document.querySelector('#byo-sec h2');
+      if (byoH) byoH.textContent = 'Your provider keys (optional)';
+      var byoP = byoH && byoH.parentElement.querySelector('p');
+      if (byoP) byoP.textContent = 'Yours, not ours — stored encrypted, write-only. Your calls can ride on them; the shared capacity covers the rest.';
+    }
     $('status-marks').innerHTML = statusChip(data.status) + (IS_OP ? chip('operator') : chip('member'));
     if (data.status && data.status !== 'active') $('pending-note').hidden = false;
     if (!IS_OP) {
+      // operator-only: desk, per-user limits/workbench, catalog.
+      // the BYO section stays visible — those keys are the member's own.
       document.querySelectorAll('[data-op]').forEach(function (el) { el.hidden = true; el.style.display = 'none'; });
-      $('byo-sec').hidden = true;
     }
     buildNav('flow');
     if (!location.hash) history.replaceState(null, '', '#flow/overview');
