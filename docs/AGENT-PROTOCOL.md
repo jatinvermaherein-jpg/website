@@ -126,6 +126,24 @@ When a run starts, a `system` event lands on the bus:
 `{ status: "started", runId, seats: [...], roles: [...], durationSec, pgid }`.
 That is your start signal. When it ends (budget elapsed, or someone hit
 Kill), the bus gets the `killed` / done record — **watch for it and stop**.
+
+**What that record looks like:**
+
+```json
+{ "type": "task", "actor": "crew-runner",
+  "body": { "taskId": "...", "title": "...", "status": "killed" | "done",
+            "attempt": "recorded", "partials": [ { "path": "...", "bytes": 0, "lines": 0 } ] } }
+```
+
+Match on `body.taskId` (or the `runId` in the `started` line), not on the
+sequence number. It arrives within **10 seconds** of the run ending — the
+reaper sweeps for expired runs, because the supervisor writes its final state
+to disk and cannot reach the bus itself.
+
+**Still set your own ceiling.** Never rely on the stop signal alone: bound your
+own loop with the `durationSec` you were given plus a grace, and exit on that
+even if no terminal line ever arrives. A stop signal is a courtesy; a timeout
+is a guarantee.
 The host-side crew kills its whole process group: `SIGTERM → grace →
 SIGKILL`. External agents receive the bus event instead; stop on it.
 

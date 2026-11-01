@@ -234,3 +234,50 @@ test('Hardening: D1 impersonation, D2 operator, D3 admission, env, docs, brief',
   res = await app.inject({ method: 'GET', url: `/api/projects/${otherSlug}/brief`, headers: seatHeaders });
   assert.equal(res.statusCode, 404);
 });
+
+// D6 — a run that ends by BUDGET EXPIRY must still land a terminal record on
+// the bus. The supervisor writes state.json but has no DB access, and the API
+// only recorded terminal state on an explicit Kill or when a human opened the
+// run page. An external seat told to "watch for the killed record and stop"
+// therefore waited forever.
+test('D6: the reaper writes the terminal record for an expired run', async (t) => {
+  const app = await buildApp();
+  await app.ready();
+  t.after(() => app.close());
+
+  const { reapEndedRuns } = await import('../routes/crew.js');
+  const { mkdirSync, writeFileSync, rmSync } = await import('node:fs');
+  const { join, resolve } = await import('node:path');
+
+  const operator = await prisma.user.findFirst({ where: { isOperator: true } });
+  const opOrg = (await prisma.membership.findFirst({ where: { userId: operator!.id } }))!;
+  const slug = `r${Date.now().toString(36)}`;
+  const project = await prisma.project.create({ data: { orgId: opOrg.orgId, slug, name: 'Reap', status: 'active' } });
+
+  const runsDir = process.env.JATIN_RUNS_DIR || resolve(process.cwd(), '..', '..', 'runs');
+  const runId = `reap${Date.now().toString(36)}`;
+  mkdirSync(join(runsDir, runId), { recursive: true });
+  writeFileSync(join(runsDir, runId, 'state.json'), JSON.stringify({ runId, status: 'killed', pgid: 1, startedAt: Date.now() }));
+
+  const task = await prisma.task.create({ data: { projectId: project.id, title: 'expired run', status: 'in_progress', runId } });
+
+  const before = await prisma.event.count({ where: { projectId: project.id } });
+  assert.equal(before, 0, 'no terminal record before the sweep');
+
+  const recorded = await reapEndedRuns();
+  assert.ok(recorded.includes(runId), 'the sweep must pick up the expired run');
+
+  const after = await prisma.event.findMany({ where: { projectId: project.id, type: 'task' }, orderBy: { seq: 'asc' } });
+  assert.equal(after.length, 1, 'exactly one terminal record');
+  assert.equal((after[0]!.body as { status?: string }).status, 'killed');
+
+  const t2 = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+  assert.equal(t2.status, 'killed');
+
+  // running it again must not write a second record (CAS guard)
+  await reapEndedRuns();
+  const again = await prisma.event.count({ where: { projectId: project.id, type: 'task' } });
+  assert.equal(again, 1, 'a second sweep must not duplicate the record');
+
+  rmSync(join(runsDir, runId), { recursive: true, force: true });
+});

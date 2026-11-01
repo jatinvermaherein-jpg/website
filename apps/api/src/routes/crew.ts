@@ -127,7 +127,57 @@ async function recordState(runId: string, status: 'killed' | 'done') {
   }).catch((e) => console.error('[crew] event write failed', e));
 }
 
+// ── the reaper (D6) ───────────────────────────────────────────────────────
+// A run ends when its budget elapses. The supervisor records that in
+// state.json — but it holds no database credentials and cannot write the bus,
+// and the API's only paths to a terminal record were "someone hit Kill" and
+// "someone opened the run page".
+//
+// So a run that expires on its own budget left no `killed` line at all. The
+// protocol tells an EXTERNAL seat exactly the opposite: "when it ends, the bus
+// gets the killed/done record — watch for it and stop." It never came. An
+// agent following the protocol would run until a human noticed.
+//
+// This sweep closes it: every 10s, any open task whose state.json says
+// killed/done gets its terminal record written once (recordState is already
+// CAS-guarded, so racing with a kill or a GET is safe).
+const REAP_MS = Number(process.env.JATIN_REAP_MS || 10_000);
+let reaper: NodeJS.Timeout | null = null;
+
+export async function reapEndedRuns(): Promise<string[]> {
+  const recorded: string[] = [];
+  try {
+    const open = await prisma.task.findMany({
+      where: { runId: { not: null }, status: 'in_progress' },
+      select: { runId: true },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    for (const t of open) {
+      if (!t.runId) continue;
+      const status = stateOf(t.runId)?.status;
+      if (status === 'killed' || status === 'done') {
+        await recordState(t.runId, status).catch(() => {});
+        recorded.push(t.runId);
+      }
+    }
+  } catch {
+    /* fail open — the sweep is a courtesy; state.json is the truth */
+  }
+  return recorded;
+}
+
+export function startRunReaper(): void {
+  if (reaper) return;
+  reaper = setInterval(() => void reapEndedRuns(), REAP_MS);
+  reaper.unref?.();
+}
+
 export async function crewRoutes(app: FastifyInstance) {
+  // every run gets a terminal record on the bus, even when its budget simply
+  // elapsed and nobody ever opened the page (D6)
+  startRunReaper();
+
   // list the crew runs for a project (default: the org's first project)
   app.get('/', async (req, reply) => {
     const user = await requireUser(req, reply);
