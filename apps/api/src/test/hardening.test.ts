@@ -209,6 +209,46 @@ test('Hardening: D1 impersonation, D2 operator, D3 admission, env, docs, brief',
   res = await publish({ slug: 'spec', title: 'nope', body: 'x' }, { authorization: `Bearer ${builderKey}` });
   assert.equal(res.statusCode, 403);
 
+  // ── D7 — a builder cannot grade its own work ───────────────────────────
+  const builderHeaders = { authorization: `Bearer ${builderKey}` };
+  // admit the builder first, so the refusal below is about ROLE and not admission
+  res = await post(
+    { type: 'admission', body: { takes: 'build the thing', stale: 'nothing yet', doesNotUnderstand: 'the spec' } },
+    builderHeaders,
+  );
+  assert.equal(res.statusCode, 201);
+
+  res = await post(
+    { type: 'verdict', body: { rowId: 'R-1', seat: 'builder-1', direction: 'assert', environment: 'unit', verdict: 'pass', evidence: [{ kind: 'repo' }] } },
+    builderHeaders,
+  );
+  assert.equal(res.statusCode, 403, 'D7: a builder must not file verdicts');
+  assert.match(res.json().error, /does not file verdicts/);
+
+  // …and a builder cannot file a verdict ATTRIBUTED to the auditor either
+  res = await post(
+    { type: 'verdict', body: { rowId: 'R-2', seat: 'auditor-1', direction: 'assert', environment: 'unit', verdict: 'pass', evidence: [{ kind: 'repo' }] } },
+    builderHeaders,
+  );
+  assert.equal(res.statusCode, 403);
+
+  // the auditor cannot launder a verdict under another seat's name either —
+  // D1 pinned `actor`, this pins the verdict's own `seat` field
+  res = await post({
+    type: 'verdict',
+    body: { rowId: 'R-3', seat: 'builder-1', direction: 'assert', environment: 'unit', verdict: 'pass', evidence: [{ kind: 'repo' }] },
+  });
+  assert.equal(res.statusCode, 422, 'D1: a verdict cannot name a different seat than the credential');
+  assert.match(res.json().error, /filed under your own seat/);
+
+  // the auditor filing as itself still works, and is still demoted to unproven
+  res = await post({
+    type: 'verdict',
+    body: { rowId: 'R-4', seat: 'auditor-1', direction: 'assert', environment: 'unit', verdict: 'pass', evidence: [{ kind: 'repo' }] },
+  });
+  assert.equal(res.statusCode, 201);
+  assert.equal(res.json().verdict, 'unproven');
+
   // a rules publish advances the project's active version
   const after = await prisma.project.findUniqueOrThrow({ where: { id: project.id } });
   assert.equal(after.activeRulesetVersion, 2);
@@ -226,7 +266,9 @@ test('Hardening: D1 impersonation, D2 operator, D3 admission, env, docs, brief',
   assert.ok(brief.env.some((e: { name: string }) => e.name === 'DATABASE_PASSWORD'));
   assert.ok(!JSON.stringify(brief).includes('rotated-secret-456'), 'the brief must never carry a secret value');
   assert.ok(brief.team.some((s: { name: string }) => s.name === 'builder-1'));
-  assert.equal(brief.team.find((s: { name: string }) => s.name === 'builder-1').admitted, false);
+  // the builder was admitted in the D7 block above — a seat's standing is on the brief
+  assert.equal(brief.team.find((s: { name: string }) => s.name === 'builder-1').admitted, true);
+  assert.equal(brief.team.find((s: { name: string }) => s.name === 'builder-1').role, 'builder');
 
   // a seat not on this project sees nothing
   const otherSlug = `x${Date.now().toString(36)}`;

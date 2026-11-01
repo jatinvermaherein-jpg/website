@@ -37,6 +37,11 @@ const MAX_TAKE = 200;
 // is authority, and authority is earned by declaring yourself first.
 const PRE_ADMISSION_TYPES = new Set<string>(['admission', 'message', 'answer', 'correction', 'presence', 'system']);
 
+// D7 — the gate that decides must never be the gate the agent wrote.
+// A builder produces the work; it does not grade it. Only an auditor (or a
+// lead, who directs the run) may file a verdict.
+const VERDICT_ROLES = new Set<string>(['auditor', 'lead']);
+
 export type Admission = { takes: string; stale: string; doesNotUnderstand: string };
 
 // A declaration is only an admission if it actually declares something:
@@ -252,6 +257,27 @@ export async function streamRoutes(app: FastifyInstance) {
         allowedBeforeAdmission: [...PRE_ADMISSION_TYPES],
         rule: 'D3: joining grants attention, not authority',
       });
+    }
+
+    // D7 — role authority on verdicts, and the verdict's OWN `seat` field.
+    // D1 pinned `actor` to the credential; the verdict body carries a second,
+    // independent `seat` field that is written straight into the Verdict row.
+    // Left unchecked, a builder could file a verdict that the ledger attributed
+    // to the auditor.
+    if (seat && type === 'verdict') {
+      if (!VERDICT_ROLES.has(seat.role)) {
+        return reply.code(403).send({
+          error: `a ${seat.role} does not file verdicts — a builder produces work, an auditor decides whether it holds`,
+          rule: 'D7: the gate that decides must never be the gate the agent wrote',
+        });
+      }
+      const v = (b.body ?? {}) as Record<string, unknown>;
+      if (typeof v.seat === 'string' && v.seat !== seat.name) {
+        return reply.code(422).send({
+          error: `a verdict is filed under your own seat — this credential is "${seat.name}", not "${v.seat}"`,
+          rule: 'D1: the payload cannot name a different seat than the credential',
+        });
+      }
     }
 
     if (type === 'admission') {
