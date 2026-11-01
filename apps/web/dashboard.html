@@ -557,11 +557,23 @@
     ['monthly_images', 'img/mo'], ['monthly_searches', 'search/mo']
   ];
   var limAccount = null;
-  function scopeLabel(key) {
-    if (key === 'all') return 'everything <span class="m">(all models)</span>';
-    if (key === 'search') return 'search calls';
-    if (key === 'image') return 'image calls';
-    return 'model <span class="mono">' + esc(key) + '</span>';
+  function limFields(key, byKey) {
+    return '<div class="lim-grid">' + LIMIT_FIELDS.map(function (f) {
+      var l = byKey[key + '|' + f[0]];
+      var isMoney = moneyKind(f[0]);
+      var val = l && l.limit != null ? (isMoney ? (l.limit / 100).toFixed(2) : l.limit) : '';
+      return '<label class="lim-field"><span>' + f[1] + (isMoney ? ' ($)' : '') + '</span>' +
+        '<input class="cell-in" data-kind="' + f[0] + '" data-scope="' + key + '"' + (isMoney ? ' data-money="1" min="0" ' : ' min="1" ') +
+        ' step="any" placeholder="∞" value="' + val + '" title="blank = unlimited"></label>';
+    }).join('') + '</div>';
+  }
+  function limPoolChips(key, pool) {
+    if (!pool) return '';
+    return '<div class="chips">' + LIMIT_FIELDS.map(function (f) {
+      var p = pool[f[0]]; if (!p) return '';
+      var capS = p.cap == null ? '∞' : (moneyKind(f[0]) ? fUsd(p.cap) : fK(p.cap));
+      return '<span class="pool-chip" data-pool="' + key + '|' + f[0] + '" data-cap="' + (p.cap == null ? '' : p.cap) + '" title="the pool’s real capacity for ' + f[1] + '">' + f[1] + ' pool ' + capS + (p.elsewhere ? ' · ' + (moneyKind(f[0]) ? fUsd(p.elsewhere) : fN(p.elsewhere)) + ' committed' : '') + '</span>';
+    }).join('') + '</div>';
   }
   async function openLimits(uid) {
     limAccount = uid;
@@ -573,29 +585,27 @@
     var scopes = (d.scopes && d.scopes.length) ? d.scopes : [null, 'search', 'image'];
     var byKey = {};
     (d.limits || []).forEach(function (l) { byKey[(l.model || 'all') + '|' + l.kind] = l; });
-    var body = scopes.map(function (s) {
-      var key = s === null ? 'all' : s;
-      var inputs = LIMIT_FIELDS.map(function (f) {
-        var l = byKey[key + '|' + f[0]];
-        var isMoney = moneyKind(f[0]);
-        var val = l && l.limit != null ? (isMoney ? (l.limit / 100).toFixed(2) : l.limit) : '';
-        return '<td class="r"><input class="cell-in" data-kind="' + f[0] + '" data-scope="' + key + '"' + (isMoney ? ' data-money="1" min="0" ' : ' min="1" ') + 'step="any" placeholder="∞" value="' + val + '" title="' + (isMoney ? 'max cost this month, in dollars' : f[1] + ' — blank = unlimited') + '"/></td>';
-      }).join('');
-      var chips2 = (s !== null && d.pool && d.pool[s]) ? LIMIT_FIELDS.map(function (f) {
-        var p = d.pool[s][f[0]]; if (!p) return '';
-        var capS = p.cap == null ? '∞' : (moneyKind(f[0]) ? fUsd(p.cap) : fK(p.cap));
-        return '<span class="pool-chip" data-pool="' + key + '|' + f[0] + '" data-cap="' + (p.cap == null ? '' : p.cap) + '" title="the pool’s real capacity for ' + f[1] + '">' + kindLabel(f[0]) + ' pool ' + capS + (p.elsewhere ? ' · ' + (moneyKind(f[0]) ? fUsd(p.elsewhere) : fN(p.elsewhere)) + ' committed to others' : '') + '</span>';
-      }).join('') : '';
-      return '<tr class="' + (s ? 'group' : '') + '"><td class="name">' + scopeLabel(key) + '</td>' + inputs + '</tr>' +
-        (chips2 ? '<tr class="sub"><td colspan="' + (LIMIT_FIELDS.length + 1) + '"><div class="chips">' + chips2 + '</div></td></tr>' : '');
+    var modelScopes = scopes.filter(function (x) { return x !== null && x !== 'search' && x !== 'image'; });
+    var modelCards = modelScopes.map(function (m) {
+      return '<div class="lim-card"><div class="lim-card-h"><span class="mono" style="font-size:15px">' + esc(m) + '</span>' + limPoolChips(m, (d.pool || {})[m]) + '</div>' + limFields(m, byKey) + '</div>';
     }).join('');
+    var modelEmpty = modelScopes.length ? '' :
+      '<div class="lim-card"><p class="note" style="margin:0 0 12px">This account can call no model names yet. Grant names in the workbench — every granted name gets its own limits card here.</p>' +
+      '<button type="button" class="btn btn-ghost btn-sm" id="lim-wb">Open workbench →</button></div>';
     $('org-limits').innerHTML =
       '<div class="panel desk-mock">' +
-      '<div class="bar"><div><p class="eyebrow gold">Account · ' + esc(u ? u.username : uid) + '</p><p class="small" style="margin-top:4px">Blank = unlimited. Every grant is clamped to the pool’s real capacity — an over-grant shrinks to fit, it can never over-sell.</p></div>' +
+      '<div class="bar"><div><p class="eyebrow gold">Account · ' + esc(u ? u.username : uid) + '</p>' +
+      '<p class="small" style="margin-top:4px">Pick a model, set its limit. Blank = unlimited. Every grant is clamped to the pool’s real capacity — an over-grant shrinks to fit, it can never over-sell.</p></div>' +
       '<div class="clamp-note" title="grants are clamped to the pool’s real capacity"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 7v3M8 12v.01"/></svg>grant can never exceed the pool</div></div>' +
-      '<div class="scroll-x"><table class="tbl"><thead><tr><th>Scope</th>' +
-      LIMIT_FIELDS.map(function (f) { return '<th class="r" title="blank = unlimited">' + f[1] + (moneyKind(f[0]) ? ' ($)' : '') + '</th>'; }).join('') +
-      '</tr></thead><tbody>' + body + '</tbody></table></div></div>';
+      '<p class="eyebrow" style="margin-top:16px">Model names — this account’s</p>' + modelCards + modelEmpty +
+      '<p class="eyebrow" style="margin-top:18px">Everything (all models) — the account-wide cap</p>' +
+      '<div class="lim-card">' + limFields('all', byKey) + '</div>' +
+      '<p class="eyebrow" style="margin-top:18px">Service calls</p>' +
+      '<div class="lim-card"><div class="lim-card-h"><span style="font-size:14px">search</span>' + limPoolChips('search', (d.pool || {})['search']) + '</div>' + limFields('search', byKey) + '</div>' +
+      '<div class="lim-card"><div class="lim-card-h"><span style="font-size:14px">image</span>' + limPoolChips('image', (d.pool || {})['image']) + '</div>' + limFields('image', byKey) + '</div>' +
+      '</div>';
+    var wbBtn = $('lim-wb');
+    if (wbBtn) wbBtn.onclick = function () { location.hash = 'flow/workbench/' + uid; };
     $('lim-usage').textContent = 'uses ' + Math.round((d.fraction == null ? 0.8 : d.fraction) * 100) + '% of the pool · 30-day: ' +
       (d.usage30d ? fN(d.usage30d.requests) + ' req · ' + fUsd(d.usage30d.costCents) : 'n/a');
     $('lim-clamps').textContent = '';
@@ -627,12 +637,12 @@
       var caps = r2.data.caps || [];
       $('lim-clamps').innerHTML = caps.length
         ? caps.map(function (c) {
-            var body = c.kind === 'monthly_cost_cents'
+            var txt = c.kind === 'monthly_cost_cents'
               ? '$' + (Number(c.requested) / 100).toFixed(2) + ' → $' + (Number(c.effective) / 100).toFixed(2)
               : esc(c.requested) + ' → ' + esc(c.effective);
-            return '<span class="clamp">' + esc(c.model || 'all') + ' ' + kindLabel(c.kind) + ': ' + body + ' (pool)</span>';
+            return '<span class="clamp">' + esc(c.model || 'all') + ' ' + kindLabel(c.kind) + ': ' + txt + ' (pool)</span>';
           }).join(' · ')
-        : okLine('saved — ' + (r2.data.limits || []).length + ' active limit(s), applied per model');
+        : okLine('saved — ' + (r2.data.limits || []).length + ' active limit(s)');
       (r2.data.limits || []).forEach(function (l) {
         var input = document.querySelector('#org-limits .cell-in[data-scope="' + (l.model || 'all') + '"][data-kind="' + l.kind + '"]');
         if (!input) return;

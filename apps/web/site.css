@@ -598,3 +598,12 @@ body::after{opacity:.035}
 
 /* the switch: the pressed state is a line, not a fill */
 .switch button[aria-pressed=true]{background:rgba(245,241,232,.03)}
+
+/* limits editor — one card per model name, labelled fields */
+.lim-card{border:1px solid var(--line);border-radius:var(--r-lg,12px);padding:14px 16px;margin-top:10px;background:rgba(245,241,232,.015)}
+.lim-card-h{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.lim-card-h .chips{margin:0}
+.lim-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px}
+.lim-field{display:flex;flex-direction:column;gap:5px}
+.lim-field>span{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.lim-field .cell-in{width:100%}

@@ -319,9 +319,13 @@ export async function flowRoutes(app: FastifyInstance) {
           target: credential.id,
         });
 
+        // Google's catalog lists ids as "models/<id>"; its OpenAI-compatible
+        // endpoint wants the bare id. Normalize at the call site.
+        const upstreamModel =
+          target.provider === 'google' ? target.providerModelId.replace(/^models\//, '') : target.providerModelId;
         const upstreamBody: Record<string, unknown> = {
           ...body,
-          model: target.providerModelId,
+          model: upstreamModel,
           stream: body.stream ?? true,
         };
         if (upstreamBody.stream) upstreamBody.stream_options = { include_usage: true };
@@ -373,7 +377,7 @@ export async function flowRoutes(app: FastifyInstance) {
             await finish('error', { tokensIn: 0, tokensOut: 0, source: 'provider' }, 0, false);
             return caller.detailed
               ? reply.code(res.status).send({ error: lastError })
-              : reply.code(400).send({ error: 'bad request' });
+              : reply.code(400).send({ error: 'this model could not be served just now — try again, or use a different model name' });
           }
           await finish('error', { tokensIn: 0, tokensOut: 0, source: 'provider' }, 0, degraded);
           continue;
