@@ -201,6 +201,58 @@
       </div>
     </section>
 
+    <!-- ===== CREW · Work ===== -->
+    <section class="view" data-view="crew/work" hidden>
+      <div class="picker">
+        <div class="field"><label for="work-project">Project</label><select class="input" id="work-project"><option value="">project…</option></select></div>
+        <p class="note" id="work-note" role="status" style="align-self:center;margin:0 0 8px"></p>
+      </div>
+
+      <div class="decide" id="work-truth" role="status" style="margin-bottom:16px">
+        <span class="eyebrow">what "done" means here</span>
+        <span id="work-truth-line">A task is done when a <b>different</b> seat witnesses it with a falsification attempt <i>and</i> an instrument control. Those are not the same thing.</span>
+      </div>
+
+      <div class="cols">
+        <div class="group">
+          <header><h2>The board</h2><p>Claim, submit and witness belong to seats. A gate the operator can close is not a gate.</p></header>
+          <div id="work-counts" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
+          <div id="work-tasks"><div class="tbl-wrap"><div class="empty">pick a project</div></div></div>
+        </div>
+        <form class="panel card form-stack" id="work-new" novalidate>
+          <h3>File work</h3>
+          <div class="field"><label for="wn-title">What must be true</label><input class="input" id="wn-title" maxlength="120" placeholder="ingest is idempotent" /></div>
+          <div class="field"><label for="wn-accept">Acceptance</label><input class="input" id="wn-accept" maxlength="200" placeholder="same row twice → one row" /></div>
+          <div class="field"><label for="wn-env">Environment</label><input class="input mono" id="wn-env" maxlength="40" value="local-stack" /></div>
+          <p class="note" id="wn-note">A task with no acceptance is a wish. The witness rejects on the wording, not on the intent.</p>
+          <button class="btn btn-gold" type="submit">Put it on the board</button>
+        </form>
+      </div>
+
+      <div class="cols" style="margin-top:22px">
+        <div class="group">
+          <header><h2>The ledger</h2><p>Every row, resolved: live waivers applied, who decided it, how many verdicts back it.</p></header>
+          <div id="work-ledger"><div class="tbl-wrap"><div class="empty">pick a project</div></div></div>
+        </div>
+        <!-- data-op without hidden: the !IS_OP branch hides it. Section views get
+             unhidden by route(), this form does not. -->
+        <form class="panel card form-stack" id="work-waive" novalidate data-op>
+          <h3>Grant a waiver</h3>
+          <div class="field"><label for="ww-rule">Row</label><input class="input mono" id="ww-rule" maxlength="12" placeholder="J-01" /></div>
+          <div class="field"><label for="ww-scope">Scope</label><input class="input" id="ww-scope" maxlength="200" placeholder="parser, until the rewrite lands" /></div>
+          <div class="field"><label for="ww-days">Days</label><input class="input mono" id="ww-days" type="number" min="1" max="365" value="7" /></div>
+          <div class="field"><label for="ww-reason">Why</label><textarea class="input" id="ww-reason" maxlength="2000" placeholder="at least ten characters, and it has to be true"></textarea></div>
+          <p class="note" id="ww-note">Every waiver expires. An exception with no deadline is a policy.</p>
+          <button class="btn btn-ghost" type="submit">Waive</button>
+        </form>
+        <div class="panel card" id="work-breach-panel">
+          <h3>Breaches</h3>
+          <p class="note">A rule broken while no waiver was in force. Filed by seats on the stream; counted here.</p>
+          <div id="work-breaches" class="note mono">—</div>
+        </div>
+      </div>
+    </section>
+
     <!-- ===== CREW · Seats ===== -->
     <section class="view" data-view="crew/seats" hidden>
       <div class="picker"><div class="field"><label for="seat-project">Project</label><select class="input" id="seat-project"><option value="">project…</option></select></div></div>
@@ -839,7 +891,7 @@
   async function loadProjects() {
     var r = await api('/api/account/projects');
     if (!r.ok) return;
-    ['crew-project', 'feed-project', 'seat-project'].forEach(function (id) {
+    ['crew-project', 'feed-project', 'seat-project', 'work-project'].forEach(function (id) {
       var sel = $(id), cur = sel.value;
       sel.innerHTML = (r.data.projects || []).map(function (p) { return '<option value="' + esc(p.slug) + '">' + esc(p.name) + '</option>'; }).join('') || '<option value="">no projects</option>';
       if (cur) sel.value = cur;
@@ -921,6 +973,113 @@
     $('seat-key-copy').onclick = function () { navigator.clipboard && navigator.clipboard.writeText($('seat-key').textContent); };
     await loadSeats();
   });
+
+  /* ================= crew · work ================= */
+  // The board and the ledger, for the human. Deliberately read-mostly: seats
+  // claim, submit and witness. An operator who can close their own work has
+  // no gate, so this page files work and grants exceptions — nothing else.
+  var TASK_CHIP = { backlog: ['backlog', ''], in_progress: ['in progress', 'gold'], review: ['review', 'gold'], done: ['done', 'green'], blocked: ['blocked', 'red'] };
+  var LEDGER_CHIP = { pass: ['pass', 'green'], fail: ['fail', 'red'], unproven: ['unproven', 'gold'], waived: ['waived', 'gold'] };
+  function tChip(x) { var c = TASK_CHIP[x] || [x || 'unknown', '']; return chip(c[0], c[1], true); }
+  function lChip(x) { var c = LEDGER_CHIP[x] || [x || 'unknown', '']; return chip(c[0], c[1], true); }
+
+  async function loadWork() {
+    var slug = $('work-project').value;
+    if (!slug) {
+      $('work-tasks').innerHTML = empty('Pick a project', 'the board is per project');
+      $('work-ledger').innerHTML = empty('Pick a project', 'so is the ledger');
+      $('work-counts').innerHTML = '';
+      $('work-breaches').textContent = '—';
+      return;
+    }
+    var base = '/api/projects/' + encodeURIComponent(slug);
+    var r = await api(base + '/tasks');
+    if (!r.ok) {
+      $('work-tasks').innerHTML = empty('Board unavailable', r.data.error || '');
+      $('work-counts').innerHTML = '';
+    } else {
+      var tasks = r.data.tasks || [], counts = r.data.counts || {};
+      $('work-counts').innerHTML = ['backlog', 'in_progress', 'review', 'done', 'blocked'].map(function (k) {
+        return chip((counts[k] || 0) + ' ' + (TASK_CHIP[k] ? TASK_CHIP[k][0] : k), counts[k] ? (TASK_CHIP[k][1] || '') : '', true);
+      }).join('');
+      $('work-tasks').innerHTML = tbl(
+        [['Task'], ['Status', 'r'], ['Owner'], ['Witness'], ['Environment'], ['Acceptance']],
+        tasks.map(function (t) {
+          return '<tr>' +
+            '<td><b>' + esc(t.title) + '</b><div class="mono" style="opacity:.55;font-size:11px">' + esc(t.id.slice(-8)) + '</div></td>' +
+            '<td class="r">' + tChip(t.status) + '</td>' +
+            '<td>' + (t.owner ? esc(t.owner) : '<span style="opacity:.5">—</span>') + '</td>' +
+            '<td>' + (t.witness ? esc(t.witness) : '<span style="opacity:.5">—</span>') + '</td>' +
+            '<td class="mono">' + esc(t.environment || '—') + '</td>' +
+            '<td>' + esc(t.acceptance || '—') + '</td></tr>';
+        }),
+      );
+    }
+    var l = await api(base + '/ledger');
+    if (!l.ok) {
+      $('work-ledger').innerHTML = empty('Ledger unavailable', l.data.error || '');
+      $('work-breaches').textContent = '—';
+    } else {
+      var rows = l.data.rows || [];
+      var live = l.data.liveWaivers || [];
+      $('work-ledger').innerHTML = tbl(
+        [['Row'], ['Requirement'], ['Status', 'r'], ['Decided by'], ['Verdicts', 'r'], ['Witnessed', 'r'], ['Waiver']],
+        rows.map(function (x) {
+          return '<tr>' +
+            '<td class="mono"><b>' + esc(x.rowId) + '</b>' + (x.registered ? '' : '<div class="mono" style="opacity:.5;font-size:11px">unregistered</div>') + '</td>' +
+            '<td>' + esc(x.requirement) + '</td>' +
+            '<td class="r">' + lChip(x.status) + '</td>' +
+            '<td class="mono">' + esc(x.decidedBy || '—') + '</td>' +
+            '<td class="r mono">' + fN(x.verdicts || 0) + '</td>' +
+            '<td class="r mono">' + fN(x.witnessed || 0) + '</td>' +
+            '<td class="mono">' + (x.waiver ? 'until ' + fDT(x.waiver.expiresAt) : '—') + '</td></tr>';
+        }),
+      );
+      $('work-breaches').innerHTML = (l.data.breaches || 0) + ' recorded' +
+        (live.length ? '<div style="margin-top:10px;opacity:.75">live waivers: ' + live.map(function (w) { return '<b>' + esc(w.ruleId) + '</b> to ' + fDT(w.expiresAt); }).join(' · ') + '</div>' : '');
+    }
+  }
+  $('work-project').addEventListener('change', loadWork);
+  $('work-new').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var slug = $('work-project').value;
+    if (!slug) { $('wn-note').innerHTML = errLine('pick a project first'); return; }
+    var title = $('wn-title').value.trim();
+    if (!title) { $('wn-note').innerHTML = errLine('say what must be true'); return; }
+    var btn = e.currentTarget.querySelector('button'); if (btn) btn.disabled = true;
+    var r = await api('/api/projects/' + encodeURIComponent(slug) + '/tasks', {
+      method: 'POST',
+      body: JSON.stringify({
+        title: title,
+        acceptance: $('wn-accept').value.trim() || undefined,
+        environment: $('wn-env').value.trim() || undefined,
+      }),
+    });
+    if (btn) btn.disabled = false;
+    if (!r.ok) { $('wn-note').innerHTML = errLine(r.data.error || 'could not file it'); return; }
+    $('wn-title').value = ''; $('wn-accept').value = '';
+    $('wn-note').innerHTML = okLine('on the board — a seat can claim it now');
+    await loadWork();
+  });
+  $('work-waive').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var slug = $('work-project').value;
+    if (!slug) { $('ww-note').innerHTML = errLine('pick a project first'); return; }
+    var r = await api('/api/projects/' + encodeURIComponent(slug) + '/waivers', {
+      method: 'POST',
+      body: JSON.stringify({
+        ruleId: $('ww-rule').value.trim(),
+        reason: $('ww-reason').value.trim(),
+        scope: $('ww-scope').value.trim() || 'project',
+        days: Number($('ww-days').value) || 7,
+      }),
+    });
+    if (!r.ok) { $('ww-note').innerHTML = errLine(r.data.error || 'refused'); return; }
+    $('ww-rule').value = ''; $('ww-reason').value = ''; $('ww-scope').value = '';
+    $('ww-note').innerHTML = okLine('waived until ' + fDT(r.data.expiresAt));
+    await loadWork();
+  });
+
   var crewPoll = null;
   function statusChipCrew(s) {
     return s === 'running' ? chip('running', 'green', true) : s === 'killed' ? chip('killed', 'red', true) : s === 'done' ? chip('done', 'green', true) : chip(s || 'unknown');
@@ -1066,6 +1225,7 @@
     'flow/workbench': { t: 'Model workbench', s: 'The names the customer calls — and the rungs behind them.', op: true, acct: true },
     'flow/catalog': { t: 'Catalog', s: 'What the pool can serve, per provider, checked daily.', op: true },
     'crew/board': { t: 'Board', s: 'Start a crew. Kill it mid-run — the partials stay.' },
+    'crew/work': { t: 'Work', s: 'The board and the ledger. Seats claim and witness; you file work and grant exceptions.' },
     'crew/seats': { t: 'Seats', s: 'The real agents on this project — one name, one key, one stream.' },
     'crew/feed': { t: 'Feed', s: 'The live project stream. Refusals land in seconds.' },
     'crew/portfolio': { t: 'Portfolio', s: 'Every project names its next human decision.' }
@@ -1085,7 +1245,7 @@
   }
   var NAV = {
     flow: [['overview', 'Overview'], ['keys', 'Keys'], ['models', 'Models'], ['usage', 'Usage']],
-    crew: [['board', 'Board'], ['seats', 'Seats'], ['feed', 'Feed'], ['portfolio', 'Portfolio']]
+    crew: [['board', 'Board'], ['work', 'Work'], ['seats', 'Seats'], ['feed', 'Feed'], ['portfolio', 'Portfolio']]
   };
   var ICONS = {
     overview: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
@@ -1095,6 +1255,7 @@
     desk: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="9" cy="9" r="3.5"/><path d="M3.5 19c1-3 3-4.5 5.5-4.5s4.5 1.5 5.5 4.5"/><path d="M17 8h4m-4 4h3"/></svg>',
     catalog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 4h11l3 3v13H5V4Z"/><path d="M9 4v5h6V4M9 13h6M9 17h6"/></svg>',
     board: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4m8-4v4M8 11h3m2 0h3"/></svg>',
+    work: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="16.5" r="3"/><path d="M16.6 16.5l1 1 1.8-2"/></svg>',
     seats: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c.5-3.5 2.5-5.5 5.5-5.5s5 2 5.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M15.5 14.8c2.8.2 4.6 2 5 4.7"/></svg>',
     feed: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 5h11m-11 4h14M5 13h9m-9 4h12"/></svg>',
     portfolio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>'
@@ -1140,6 +1301,7 @@
     if (r.key === 'flow/workbench' && r.param) openWorkbench(r.param);
     if (r.key === 'flow/catalog') loadCatalogView();
     if (r.key === 'crew/board') loadRuns();
+    if (r.key === 'crew/work') loadWork();
     if (r.key === 'crew/seats') loadSeats();
     if (r.key === 'crew/portfolio') loadPortfolio();
     document.body.classList.remove('side-open');
