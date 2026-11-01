@@ -16,6 +16,7 @@ import { portfolioRoutes } from './routes/portfolio.js';
 import { projectEnvRoutes } from './routes/projectenv.js';
 import { docRoutes } from './routes/docs.js';
 import { briefRoutes } from './routes/brief.js';
+import { conversationRoutes } from './routes/conversation.js';
 import { staticRoutes } from './static.js';
 import { prisma } from './lib/prisma.js';
 
@@ -91,6 +92,7 @@ export async function buildApp() {
   await app.register(projectEnvRoutes, { prefix: '/api/projects' }); // the environment a project's agents run inside
   await app.register(docRoutes, { prefix: '/api/projects' }); // versioned rules, specs, attachments
   await app.register(briefRoutes, { prefix: '/api/projects' }); // what a seat gets at join
+  await app.register(conversationRoutes, { prefix: '/api/projects' }); // inbox, threads, handover
   await app.register(portfolioRoutes, { prefix: '/api/portfolio' });
   app.register(staticRoutes);
 

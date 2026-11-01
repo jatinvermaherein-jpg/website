@@ -287,6 +287,22 @@ export async function streamRoutes(app: FastifyInstance) {
       }
     }
 
+    // THREADS — a reply must point at a line that exists. A dangling replyTo
+    // would make a thread walk off into nothing, so it is refused at post.
+    let refs = b.refs;
+    const rawRefs = (b.refs ?? {}) as Record<string, unknown>;
+    let replyActor: string | undefined;
+    if (rawRefs.replyTo !== undefined) {
+      const target = String(rawRefs.replyTo);
+      if (!/^\d+$/.test(target)) return reply.code(422).send({ error: 'refs.replyTo must be the seq of an existing line' });
+      const parent = await prisma.event.findFirst({ where: { projectId: project.id, seq: BigInt(target) } });
+      if (!parent) return reply.code(422).send({ error: `no line ${target} on this project — a reply must answer something real` });
+      // answering yourself is allowed (an edit-in-place by replying), but we
+      // record WHO was answered so their inbox can find it.
+      replyActor = parent.actor;
+      refs = { ...rawRefs, replyTo: target, replyActor };
+    }
+
     const violations = validateEvent(String(type), actor, b.body);
 
     // Phase 10 — the fidelity ladder: verdicts only run UP. A row that
@@ -324,7 +340,7 @@ export async function streamRoutes(app: FastifyInstance) {
       return reply.code(422).send({ error: 'rejected at post — the line is malformed and was not written', violations });
     }
 
-    const ev = await appendEvent(project.id, type, actor, b.body, b.refs);
+    const ev = await appendEvent(project.id, type, actor, b.body, refs);
 
     // D3 — the admission becomes durable only after the line is written.
     if (seat && type === 'admission' && !seat.admittedAt) {

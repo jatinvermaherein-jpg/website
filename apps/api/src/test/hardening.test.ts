@@ -345,7 +345,8 @@ test('every active seat rides every run when seats are not specified', async (t)
   const slug = `a${Date.now().toString(36)}`;
   await prisma.project.create({ data: { orgId: opOrg.orgId, slug, name: 'AutoSeat', status: 'active' } });
 
-  for (const [name, role] of [['auditor', 'auditor'], ['builder-x', 'builder'], ['scout', 'scout']]) {
+  const roster: [string, string][] = [['auditor', 'auditor'], ['builder-x', 'builder'], ['scout', 'scout']];
+  for (const [name, role] of roster) {
     const r = await app.inject({ method: 'POST', url: `/api/projects/${slug}/seats`, headers: asOp, payload: { name, role } });
     assert.equal(r.statusCode, 201);
   }
@@ -366,4 +367,102 @@ test('every active seat rides every run when seats are not specified', async (t)
   const seats: string[] = r.json().seats;
   assert.deepEqual(seats.sort(), ['auditor', 'builder-x', 'scout'], 'the whole live team must be attached');
   assert.ok(!seats.includes('gone'), 'a revoked seat must not be attached');
+});
+
+// The conversation layer — inbox, threads, handover.
+// The defect this closes: an agent could only learn what was said TO it by
+// downloading the whole stream and filtering by hand.
+test('conversation: inbox is what was said to me, threads hold, handover lands on the bus', async (t) => {
+  const app = await buildApp();
+  await app.ready();
+  t.after(() => app.close());
+
+  const operator = await prisma.user.findFirst({ where: { isOperator: true } });
+  const opLogin = await app.inject({
+    method: 'POST', url: '/api/auth/login',
+    payload: { username: operator!.username, password: process.env.ADMIN_PASSWORD! },
+  });
+  const asOp = { authorization: `Bearer ${opLogin.json().token}` };
+  const opOrg = (await prisma.membership.findFirst({ where: { userId: operator!.id } }))!;
+  const slug = `c${Date.now().toString(36)}`;
+  await prisma.project.create({ data: { orgId: opOrg.orgId, slug, name: 'Convo', status: 'active' } });
+
+  const mk = async (name: string, role: string) => {
+    const r = await app.inject({ method: 'POST', url: `/api/projects/${slug}/seats`, headers: asOp, payload: { name, role } });
+    return { id: r.json().seat.id, key: r.json().key as string } as { id: string; key: string };
+  };
+  const a = await mk('auditor-a', 'auditor');
+  const b = await mk('builder-b', 'builder');
+  const H = (k: string) => ({ authorization: `Bearer ${k}` });
+  const post = (body: unknown, k: string) =>
+    app.inject({ method: 'POST', url: `/api/projects/${slug}/stream`, headers: H(k), payload: body as never });
+
+  const joiners: [string, string][] = [[a.key, 'auditor-a'], [b.key, 'builder-b']];
+  for (const [k, who] of joiners) {
+    const r = await post({ type: 'admission', body: { takes: `work as ${who}`, stale: 'nothing', doesNotUnderstand: 'little' } }, k);
+    assert.equal(r.statusCode, 201);
+  }
+
+  // a broadcast belongs to the stream, not to an inbox
+  const broad = await post({ type: 'message', body: { text: 'standup in 5', to: 'all' } }, a.key);
+  assert.equal(broad.statusCode, 201);
+
+  // a line addressed to the builder
+  const ask = await post({ type: 'message', body: { text: 'build the parser', to: 'builder-b' } }, a.key);
+  assert.equal(ask.statusCode, 201);
+  const askSeq = ask.json().seq;
+
+  // ── inbox: only what was addressed to me ──────────────────────────────
+  let r = await app.inject({ method: 'GET', url: `/api/projects/${slug}/inbox`, headers: H(b.key) });
+  assert.equal(r.statusCode, 200);
+  assert.equal(r.json().unread, 1, 'the addressed line only — not the broadcast');
+  assert.equal(r.json().messages[0].text, 'build the parser');
+  assert.equal(r.json().messages[0].actor, 'auditor-a');
+
+  r = await app.inject({ method: 'GET', url: `/api/projects/${slug}/inbox`, headers: H(a.key) });
+  assert.equal(r.json().unread, 0, 'the auditor has nothing addressed to it yet');
+
+  // ── threading: a reply points at a real line ──────────────────────────
+  const reply = await post({ type: 'answer', body: { text: 'parser done, 41 pass' }, refs: { replyTo: askSeq } }, b.key);
+  assert.equal(reply.statusCode, 201);
+
+  // the reply landed in the auditor's inbox, because it answered the auditor
+  r = await app.inject({ method: 'GET', url: `/api/projects/${slug}/inbox`, headers: H(a.key) });
+  assert.equal(r.json().unread, 1);
+  assert.equal(r.json().messages[0].text, 'parser done, 41 pass');
+
+  const thread = await app.inject({ method: 'GET', url: `/api/projects/${slug}/thread/${reply.json().seq}`, headers: H(a.key) });
+  assert.equal(thread.statusCode, 200);
+  assert.equal(thread.json().root, askSeq, 'the thread walks up to the question');
+  assert.equal(thread.json().count, 2, 'question + answer');
+
+  // a reply to nothing is refused
+  const dangling = await post({ type: 'message', body: { text: 'into the void' }, refs: { replyTo: '999' } }, b.key);
+  assert.equal(dangling.statusCode, 422);
+  assert.match(dangling.json().error, /must answer something real/);
+
+  // ── handover ───────────────────────────────────────────────────────────
+  r = await app.inject({
+    method: 'POST', url: `/api/projects/${slug}/handover`, headers: H(b.key),
+    payload: { finished: 'the parser', unfinished: 'the formatter', next: 'wire the formatter, tests first' },
+  });
+  assert.equal(r.statusCode, 201);
+  const hSeq = r.json().seq;
+
+  const hs = await app.inject({ method: 'GET', url: `/api/projects/${slug}/handover`, headers: H(a.key) });
+  assert.equal(hs.json().handovers.length, 1);
+  assert.equal(hs.json().handovers[0].next, 'wire the formatter, tests first');
+
+  // the handover is on the bus like any other line
+  const bus = await app.inject({ method: 'GET', url: `/api/projects/${slug}/stream?afterSeq=0&limit=100`, headers: H(a.key) });
+  const hLine = bus.json().events.find((e: { seq: string }) => e.seq === hSeq);
+  assert.ok(hLine, 'the handover must appear on the bus');
+  assert.match(hLine.body.text, /unfinished: the formatter/);
+
+  // ── the brief carries both: onboarding in one call ────────────────────
+  r = await app.inject({ method: 'GET', url: `/api/projects/${slug}/brief`, headers: H(a.key) });
+  assert.equal(r.statusCode, 200);
+  assert.equal(r.json().inbox.waiting, 1, 'the auditor has the builder reply waiting');
+  assert.equal(r.json().lastHandovers[0].actor, 'builder-b');
+  assert.equal(r.json().lastHandovers[0].next, 'wire the formatter, tests first');
 });

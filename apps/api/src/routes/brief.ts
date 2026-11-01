@@ -61,12 +61,19 @@ export async function briefRoutes(app: FastifyInstance) {
 
     const project = await prisma.project.findUniqueOrThrow({ where: { id: projectId } });
 
-    const [docs, env, team, tasks, lastEvent] = await Promise.all([
+    const [docs, env, team, tasks, lastEvent, inbox, handovers] = await Promise.all([
       prisma.projectDoc.findMany({ where: { projectId, archivedAt: null }, orderBy: [{ slug: 'asc' }, { version: 'desc' }] }),
       prisma.projectEnv.findMany({ where: { projectId }, orderBy: { name: 'asc' } }),
       prisma.seat.findMany({ where: { status: { not: 'archived' }, projects: { some: { projectId } } }, orderBy: { createdAt: 'asc' } }),
       prisma.task.findMany({ where: { projectId, status: 'in_progress' }, orderBy: { createdAt: 'desc' }, take: 5 }),
       prisma.event.findFirst({ where: { scopeId: projectId }, orderBy: { seq: 'desc' }, select: { seq: true } }),
+      // what is waiting for THIS seat — the same rule as /inbox: addressed to
+      // me by name, OR a reply to something I wrote.
+      Promise.all([
+        prisma.event.findMany({ where: { projectId, body: { path: ['to'], equals: actor } }, select: { seq: true } }),
+        prisma.event.findMany({ where: { projectId, refs: { path: ['replyActor'], equals: actor } }, select: { seq: true } }),
+      ]).then(([a, b]) => new Set([...a, ...b].map((x) => x.seq.toString())).size),
+      prisma.handover.findMany({ where: { projectId }, orderBy: { ts: 'desc' }, take: 3 }),
     ]);
 
     const latest = new Map<string, (typeof docs)[number]>();
@@ -116,6 +123,18 @@ export async function briefRoutes(app: FastifyInstance) {
         admitted: s.admittedAt !== null,
       })),
       running: tasks.map((t) => ({ taskId: t.id, runId: t.runId, title: t.title })),
+      // the conversation, at a glance: is anything waiting for you, and what
+      // did the last agent to stop say the next one should do
+      inbox: { waiting: inbox, fetch: `/api/projects/${project.slug}/inbox` },
+      lastHandovers: handovers.map((h) => {
+        let parsed: Record<string, unknown> = {};
+        try {
+          parsed = JSON.parse(h.body) as Record<string, unknown>;
+        } catch {
+          parsed = {};
+        }
+        return { at: h.ts.toISOString(), actor: parsed.actor, finished: parsed.finished, unfinished: parsed.unfinished, next: parsed.next };
+      }),
       readBy: actor,
     };
   });
