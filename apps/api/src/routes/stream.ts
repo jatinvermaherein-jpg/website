@@ -24,12 +24,11 @@
 //   D4  cursor ids are namespaced (`seat:<id>` / `user:<id>`) so the two id
 //       spaces can never collide.
 import type { FastifyInstance } from 'fastify';
-import { Prisma } from '@prisma/client';
-import type { InputJsonValue } from '@prisma/client/runtime/library';
 import { prisma } from '../lib/prisma.js';
 import { requireUser } from '../lib/auth.js';
 import { seatFromBearer, touchSeat } from '../lib/seatauth.js';
 import { validateEvent, coerceVerdict, ENV_RANK, type EventType } from '../lib/envelope.js';
+import { appendEvent, appendQuietly } from '../lib/append.js';
 
 const MAX_TAKE = 200;
 
@@ -92,59 +91,6 @@ function eventView(ev: {
     refs: ev.refs ?? undefined,
     ...(corrupt ? { corrupt: true } : {}),
   };
-}
-
-async function appendEvent(projectId: string, type: EventType, actor: string, body: unknown, refs?: Record<string, unknown>) {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await prisma.$transaction(
-        async (tx) => {
-          const last = await tx.event.findFirst({ where: { scopeId: projectId }, orderBy: { seq: 'desc' }, select: { seq: true } });
-          const seq = (last?.seq ?? 0n) + 1n;
-          let finalBody: unknown = body;
-          if (type === 'verdict') {
-            const v = body as Record<string, unknown>;
-            const { verdict, coerced } = coerceVerdict(v);
-            finalBody = { ...v, verdict, coerced };
-            await tx.verdict.create({
-              data: {
-                projectId,
-                rowId: v.rowId as string,
-                seat: v.seat as string,
-                direction: v.direction as string,
-                environment: v.environment as string,
-                fidelity: typeof v.fidelity === 'number' ? v.fidelity : 0,
-                verdict,
-                evidence: v.evidence as InputJsonValue,
-                falsification: (v.falsification as InputJsonValue | undefined) ?? undefined,
-                instrumentControl: (v.instrumentControl as InputJsonValue | undefined) ?? undefined,
-                witnessDigest: (v.witnessDigest as string | undefined) ?? undefined,
-                attestedNotWitnessed: v.attestedNotWitnessed === false ? false : true,
-                benchDigest: (v.benchDigest as string | undefined) ?? undefined,
-              },
-            });
-          }
-          return tx.event.create({
-            data: {
-              scopeId: projectId,
-              projectId,
-              seq,
-              type,
-              actor,
-              body: finalBody as InputJsonValue,
-              refs: (refs ?? undefined) as InputJsonValue | undefined,
-            },
-          });
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
-    } catch (e) {
-      // P2002 = two writers claimed the same seq — the serializable tx may
-      // still let one through; retry with a fresh max
-      if ((e as { code?: string })?.code === 'P2002' && attempt < 5) continue;
-      throw e;
-    }
-  }
 }
 
 export async function streamRoutes(app: FastifyInstance) {
@@ -330,17 +276,16 @@ export async function streamRoutes(app: FastifyInstance) {
       // schema defect, which needs the record to be counted). The system
       // event describing the refusal is a WELL-FORMED line about the
       // malformed one.
-      await appendEvent(project.id, 'system', 'stream-gate', {
-        rejection: true,
-        type: String(type),
-        actor,
-        violations,
-        at: new Date().toISOString(),
-      }).catch((e) => console.error('[stream] rejection telemetry failed', e));
+      await appendQuietly({
+        projectId: project.id,
+        type: 'system',
+        actor: 'stream-gate',
+        body: { rejection: true, type: String(type), actor, violations, at: new Date().toISOString() },
+      });
       return reply.code(422).send({ error: 'rejected at post — the line is malformed and was not written', violations });
     }
 
-    const ev = await appendEvent(project.id, type, actor, b.body, refs);
+    const ev = await appendEvent({ projectId: project.id, type, actor, body: b.body, refs });
 
     // D3 — the admission becomes durable only after the line is written.
     if (seat && type === 'admission' && !seat.admittedAt) {

@@ -20,6 +20,7 @@ import { prisma } from '../lib/prisma.js';
 import { requireUser } from '../lib/auth.js';
 import { SEAT_SESSION_PREFIX, seatSha256 } from '../lib/seatauth.js';
 import { decryptSecret } from '../lib/vault.js';
+import { appendEvent, appendQuietly } from '../lib/append.js';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
 const RUNS_DIR = process.env.JATIN_RUNS_DIR || join(REPO_ROOT, 'runs');
@@ -65,35 +66,6 @@ function partialViews(outDir: string) {
   return views;
 }
 
-// append a stream event for a scope — seq read + write in ONE serializable
-// transaction with retry (same law as the stream route)
-async function appendTaskEvent(projectId: string, body: Record<string, unknown>): Promise<void> {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      await prisma.$transaction(
-        async (tx) => {
-          const last = await tx.event.findFirst({ where: { scopeId: projectId }, orderBy: { seq: 'desc' }, select: { seq: true } });
-          await tx.event.create({
-            data: {
-              scopeId: projectId,
-              projectId,
-              seq: (last?.seq ?? 0n) + 1n,
-              type: 'task',
-              actor: 'crew-runner',
-              body: body as InputJsonValue,
-            },
-          });
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
-      return;
-    } catch (e) {
-      if ((e as { code?: string })?.code === 'P2002' && attempt < 5) continue;
-      throw e;
-    }
-  }
-}
-
 // record a final-state transition ONCE. The compare-and-swap on the Task
 // status is atomic in the DB, so the kill timer and a concurrent GET can
 // both call this and only the first performs the transition + appends the
@@ -118,13 +90,18 @@ async function recordState(runId: string, status: 'killed' | 'done') {
   if (cas.count === 0) return; // someone else recorded it first
 
   const partials = partialViews(outDir);
-  await appendTaskEvent(task.projectId, {
-    taskId: task.id,
-    title: task.title,
-    status,
-    attempt: 'recorded',
-    partials: partials.map((p) => ({ path: p.path, bytes: p.bytes, lines: p.lines })),
-  }).catch((e) => console.error('[crew] event write failed', e));
+  await appendQuietly({
+    projectId: task.projectId,
+    type: 'task',
+    actor: 'crew-runner',
+    body: {
+      taskId: task.id,
+      title: task.title,
+      status,
+      attempt: 'recorded',
+      partials: partials.map((p) => ({ path: p.path, bytes: p.bytes, lines: p.lines })),
+    },
+  });
 }
 
 // ── the reaper (D6) ───────────────────────────────────────────────────────
@@ -340,17 +317,12 @@ export async function crewRoutes(app: FastifyInstance) {
       })
       .catch(() => {});
 
-    await appendTaskEvent(project.id, {
-      taskId: task.id,
-      title,
-      status: 'started',
-      runId,
-      workers,
-      roles: roleList,
-      seats: allSeats,
-      durationSec,
-      pgid: child.pid,
-    }).catch((e) => console.error('[crew] event write failed', e));
+    await appendQuietly({
+      projectId: project.id,
+      type: 'task',
+      actor: 'crew-runner',
+      body: { taskId: task.id, title, status: 'started', runId, workers, roles: roleList, seats: allSeats, durationSec, pgid: child.pid },
+    });
 
     return reply.code(201).send({
       runId,

@@ -373,6 +373,11 @@ model Task {
   id             String   @id @default(cuid())
   // the crew run this task is — a real column, not a JSON path
   runId          String?  @unique
+  // the work loop: what it must be proven at, and the row it satisfies
+  environment    String   @default("local-stack")
+  rowId          String?
+  claimedAt      DateTime?
+  submittedAt    DateTime?
   projectId      String
   project        Project  @relation(fields: [projectId], references: [id])
   title          String

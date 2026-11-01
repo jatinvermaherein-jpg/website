@@ -61,7 +61,7 @@ export async function briefRoutes(app: FastifyInstance) {
 
     const project = await prisma.project.findUniqueOrThrow({ where: { id: projectId } });
 
-    const [docs, env, team, tasks, lastEvent, inbox, handovers] = await Promise.all([
+    const [docs, env, team, tasks, lastEvent, inbox, handovers, boardTasks] = await Promise.all([
       prisma.projectDoc.findMany({ where: { projectId, archivedAt: null }, orderBy: [{ slug: 'asc' }, { version: 'desc' }] }),
       prisma.projectEnv.findMany({ where: { projectId }, orderBy: { name: 'asc' } }),
       prisma.seat.findMany({ where: { status: { not: 'archived' }, projects: { some: { projectId } } }, orderBy: { createdAt: 'asc' } }),
@@ -74,12 +74,55 @@ export async function briefRoutes(app: FastifyInstance) {
         prisma.event.findMany({ where: { projectId, refs: { path: ['replyActor'], equals: actor } }, select: { seq: true } }),
       ]).then(([a, b]) => new Set([...a, ...b].map((x) => x.seq.toString())).size),
       prisma.handover.findMany({ where: { projectId }, orderBy: { ts: 'desc' }, take: 3 }),
+      // the work, so a seat that just joined does not have to ask what to do.
+      // bounded: a brief is a starting point, not the archive.
+      prisma.task.findMany({
+        where: { projectId },
+        orderBy: [{ createdAt: 'desc' }],
+        take: 200,
+        select: { id: true, title: true, status: true, acceptanceVerb: true, environment: true, ownerId: true, witnessId: true, createdAt: true },
+      }),
     ]);
 
     const latest = new Map<string, (typeof docs)[number]>();
     for (const d of docs) if (!latest.has(d.slug)) latest.set(d.slug, d);
 
     const rules = latest.get('rules');
+
+    // ── the board ────────────────────────────────────────────────────────
+    const counts = { backlog: 0, in_progress: 0, review: 0, done: 0, blocked: 0 } as Record<string, number>;
+    for (const t of boardTasks) counts[t.status] = (counts[t.status] ?? 0) + 1;
+    const mySeatId = seat ? seat.id : null;
+    const myRole = seat ? (me as { role?: string }).role : 'operator';
+    // a task is claimable if nobody owns it and it has not been closed
+    const claimable = boardTasks.filter((t) => t.status === 'backlog' && !t.ownerId);
+    // what I could witness: awaiting a second opinion, and it is not my own work
+    const witnessable =
+      myRole === 'auditor' || myRole === 'lead'
+        ? boardTasks.filter((t) => t.status === 'review' && t.ownerId !== mySeatId)
+        : [];
+    // mine = work that still needs ME to act. A submitted task in review is not
+    // mine to touch: it is waiting on a different seat, by design.
+    const mine = mySeatId ? boardTasks.filter((t) => t.ownerId === mySeatId && t.status === 'in_progress') : [];
+    const awaitingWitness = mySeatId ? boardTasks.filter((t) => t.ownerId === mySeatId && t.status === 'review') : [];
+
+    // the single next thing, now that the board is known
+    if (seat) {
+      const m = me as { admitted: boolean; nextStep: string };
+      if (!m.admitted) {
+        m.nextStep = 'POST an admission line before any verdict or task — {takes, stale, doesNotUnderstand}';
+      } else if (witnessable.length > 0) {
+        m.nextStep = `witness ${witnessable.length} task(s) waiting on review — jatin_witness with a falsification attempt`;
+      } else if (claimable.length > 0) {
+        m.nextStep = `claim a task: ${claimable[0]?.title ?? claimable[0]?.id}`;
+      } else if (mine.length > 0) {
+        m.nextStep = `finish and submit your task: ${mine[0]?.title ?? mine[0]?.id}`;
+      } else if (awaitingWitness.length > 0) {
+        m.nextStep = `your work is in review and waiting on a different seat to witness it — you cannot witness it yourself; ask an auditor or the lead`;
+      } else {
+        m.nextStep = 'no work on the board — read the bus, and say what you are taking';
+      }
+    }
 
     return {
       project: {
@@ -123,6 +166,15 @@ export async function briefRoutes(app: FastifyInstance) {
         admitted: s.admittedAt !== null,
       })),
       running: tasks.map((t) => ({ taskId: t.id, runId: t.runId, title: t.title })),
+      // work: what exists, what is free, what is waiting on a second opinion
+      board: {
+        counts,
+        claimable: claimable.slice(0, 10).map((t) => ({ id: t.id, title: t.title, environment: t.environment, acceptance: t.acceptanceVerb })),
+        witnessable: witnessable.slice(0, 10).map((t) => ({ id: t.id, title: t.title, environment: t.environment, acceptance: t.acceptanceVerb })),
+        mine: mine.slice(0, 10).map((t) => ({ id: t.id, title: t.title, status: t.status })),
+        awaitingWitness: awaitingWitness.slice(0, 10).map((t) => ({ id: t.id, title: t.title, status: t.status })),
+        fetch: `/api/projects/${project.slug}/tasks`,
+      },
       // the conversation, at a glance: is anything waiting for you, and what
       // did the last agent to stop say the next one should do
       inbox: { waiting: inbox, fetch: `/api/projects/${project.slug}/inbox` },

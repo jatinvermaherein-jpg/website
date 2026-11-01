@@ -14,6 +14,7 @@ import { createHash } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import type { InputJsonValue } from '@prisma/client/runtime/library';
 import { prisma } from '../lib/prisma.js';
+import { appendEvent } from '../lib/append.js';
 import { requireUser } from '../lib/auth.js';
 
 function digestOf(parts: Record<string, unknown>): string {
@@ -47,22 +48,7 @@ async function seatContext(slug: string, seatId: string, orgId: string) {
 async function appendBenchEvent(projectId: string, body: Record<string, unknown>, actor: string) {
   for (let attempt = 0; ; attempt++) {
     try {
-      await prisma.$transaction(
-        async (tx) => {
-          const last = await tx.event.findFirst({ where: { scopeId: projectId }, orderBy: { seq: 'desc' }, select: { seq: true } });
-          await tx.event.create({
-            data: {
-              scopeId: projectId,
-              projectId,
-              seq: (last?.seq ?? 0n) + 1n,
-              type: 'bench',
-              actor,
-              body: body as InputJsonValue,
-            },
-          });
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
+      await appendEvent({ projectId, type: 'bench', actor, body });
       return;
     } catch (e) {
       if ((e as { code?: string })?.code === 'P2002' && attempt < 5) continue;

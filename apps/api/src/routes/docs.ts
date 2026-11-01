@@ -23,6 +23,7 @@ import { createHash } from 'node:crypto';
 import { prisma } from '../lib/prisma.js';
 import { requireUser } from '../lib/auth.js';
 import { seatFromBearer, touchSeat } from '../lib/seatauth.js';
+import { appendQuietly } from '../lib/append.js';
 
 const KINDS = ['rules', 'doc', 'attachment', 'reference'] as const;
 const WRITER_ROLES = new Set(['lead', 'scribe']);
@@ -186,18 +187,12 @@ export async function docRoutes(app: FastifyInstance) {
     }
 
     // the bus learns a document changed — that is how an agent knows to re-read
-    await prisma.event
-      .create({
-        data: {
-          scopeId: ctx.projectId,
-          projectId: ctx.projectId,
-          seq: (await prisma.event.findFirst({ where: { scopeId: ctx.projectId }, orderBy: { seq: 'desc' }, select: { seq: true } }))!.seq + 1n,
-          type: 'system',
-          actor: ctx.actor,
-          body: { doc: docSlug, kind, version, sha256: hash, title } as never,
-        },
-      })
-      .catch(() => {});
+    await appendQuietly({
+      projectId: ctx.projectId,
+      type: 'system',
+      actor: ctx.actor,
+      body: { doc: docSlug, kind, version, sha256: hash, title, changed: 'document' },
+    });
 
     return reply.code(201).send({
       slug: created.slug,

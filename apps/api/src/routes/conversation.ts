@@ -28,6 +28,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { requireUser } from '../lib/auth.js';
 import { seatFromBearer, touchSeat } from '../lib/seatauth.js';
+import { appendEvent } from '../lib/append.js';
 
 type Who = { projectId: string; slug: string; actor: string; isSeat: boolean };
 
@@ -213,20 +214,13 @@ export async function conversationRoutes(app: FastifyInstance) {
       },
     });
 
-    // and put it on the bus, in one serializable transaction like every other line
-    const ev = await prisma.$transaction(async (tx) => {
-      const last = await tx.event.findFirst({ where: { scopeId: me.projectId }, orderBy: { seq: 'desc' }, select: { seq: true } });
-      return tx.event.create({
-        data: {
-          scopeId: me.projectId,
-          projectId: me.projectId,
-          seq: (last?.seq ?? 0n) + 1n,
-          type: 'message',
-          actor: me.actor,
-          body: { text, to: 'all', handover: true, finished, unfinished, next } as never,
-          refs: { ...(refs ?? {}), handoverId: row.id } as never,
-        },
-      });
+    // and put it on the bus, through the one authority like every other line
+    const ev = await appendEvent({
+      projectId: me.projectId,
+      type: 'message',
+      actor: me.actor,
+      body: { text, to: 'all', handover: true, finished, unfinished, next },
+      refs: { ...(refs ?? {}), handoverId: row.id },
     });
 
     return reply.code(201).send({ handoverId: row.id, seq: ev.seq.toString(), at: row.ts.toISOString() });

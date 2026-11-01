@@ -13,11 +13,11 @@ import { createHash } from 'node:crypto';
 import { exec } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { requireUser } from '../lib/auth.js';
 import { REPO_ROOT } from '../lib/paths.js';
 import { ENVIRONMENTS } from '../lib/envelope.js';
+import { appendQuietly } from '../lib/append.js';
 
 const COMMAND_TIMEOUT_MS = 15000;
 const ROW_ID_RE = /^J-\d{1,4}$/;
@@ -122,18 +122,12 @@ export async function crosscheckRoutes(app: FastifyInstance) {
         consequence: b.consequence ?? null,
       },
     });
-    await prisma.event
-      .create({
-        data: {
-          scopeId: project.id,
-          projectId: project.id,
-          seq: await nextSeqIn(project.id),
-          type: 'ledger',
-          actor: b.bySeat ?? user.username,
-          body: { rowId: b.rowId, status, bySeat: b.bySeat ?? user.username, requirement: b.requirement ?? null, environment },
-        },
-      })
-      .catch((e) => console.error('[crosscheck] event write failed', e));
+    await appendQuietly({
+      projectId: project.id,
+      type: 'ledger',
+      actor: b.bySeat ?? user.username,
+      body: { rowId: b.rowId, status, bySeat: b.bySeat ?? user.username, requirement: b.requirement ?? null, environment },
+    });
     return reply.code(201).send({ rowId: row.rowId, status: row.status, ts: row.ts });
   });
 
@@ -255,22 +249,4 @@ export async function crosscheckRoutes(app: FastifyInstance) {
     });
     return { project: project.slug, rows };
   });
-}
-
-// seq assignment — same law as the stream/crew routes
-async function nextSeqIn(scopeId: string): Promise<bigint> {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await prisma.$transaction(
-        async (tx) => {
-          const last = await tx.event.findFirst({ where: { scopeId }, orderBy: { seq: 'desc' }, select: { seq: true } });
-          return (last?.seq ?? 0n) + 1n;
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
-    } catch (e) {
-      if ((e as { code?: string })?.code === 'P2002' && attempt < 5) continue;
-      throw e;
-    }
-  }
 }
