@@ -256,6 +256,11 @@ model Project {
   budgetCapCents       Float?
   maxSeats             Int      @default(20)
   activeRulesetVersion Int?
+  // THE SOURCE OF TRUTH. A crew that cannot reach the repository is a chat
+  // room. Every seat works in a git worktree of this repo, and the only way
+  // work becomes real is a push that lands here.
+  repoUrl              String?
+  defaultBranch        String   @default("main")
   archivedAt           DateTime?
   createdAt            DateTime @default(now())
   rulesets             Ruleset[]
@@ -380,6 +385,10 @@ model Task {
   runId          String?  @unique
   // the work loop: what it must be proven at, and the row it satisfies
   environment    String   @default("local-stack")
+  // the branch a seat built this on, and the commit it produced — review
+  // reads the diff from these, not from a description of them
+  branch         String?
+  headCommit     String?
   rowId          String?
   claimedAt      DateTime?
   submittedAt    DateTime?

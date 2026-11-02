@@ -11,17 +11,20 @@ test('replay window: age AND seen-set, with the boundary asserted', () => {
   const sig = 'sha256:abc';
 
   assert.equal(g.accept(sig, t).ok, true, 'a fresh signed call is accepted');
-  assert.equal(g.accept(sig, t).ok, false, 'the same call twice is refused');
-  assert.equal(g.accept(sig, t).reason, 'already-seen');
+  const twice = g.accept(sig, t);
+  assert.equal(twice.ok, false, 'the same call twice is refused');
+  assert.equal(twice.ok ? '' : twice.reason, 'already-seen');
 
   t += 4 * 60_000;
   assert.equal(g.accept('sha256:def', t - 4 * 60_000).ok, true, 'inside the window is fine');
-  assert.equal(g.accept('sha256:ghi', t - 5 * 60_000 - 1).ok, false, 'one ms over five minutes is refused');
-  assert.equal(g.accept('sha256:ghi', t - 5 * 60_000 - 1).reason, 'too-old');
+  const stale = g.accept('sha256:ghi', t - 5 * 60_000 - 1);
+  assert.equal(stale.ok, false, 'one ms over five minutes is refused');
+  assert.equal(stale.ok ? '' : stale.reason, 'too-old');
 
   t += 30 * 60_000;
-  assert.equal(g.accept('sha256:jkl', t + 10 * 60_000).ok, false, 'a call from the far future is refused');
-  assert.equal(g.accept('sha256:jkl', t + 10 * 60_000).reason, 'from-the-future');
+  const future = g.accept('sha256:jkl', t + 10 * 60_000);
+  assert.equal(future.ok, false, 'a call from the far future is refused');
+  assert.equal(future.ok ? '' : future.reason, 'from-the-future');
 });
 
 test('replay window: the seen-set is bounded, and a replayed signature is still caught', () => {
