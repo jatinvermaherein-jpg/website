@@ -28,7 +28,10 @@ import { appendEvent, appendQuietly } from '../lib/append.js';
 import { ENVIRONMENTS } from '../lib/envelope.js';
 
 const ROW_ID_RE = /^J-\d{1,4}$/;
-const WITNESS_ROLES = new Set(['auditor', 'lead']);
+// ONLY an auditor. A lead runs the crew; letting the lead also rule on the
+// work puts the person who directed it in charge of judging it. The rule is
+// "everything is audited by an auditor" — not "by someone senior enough".
+const WITNESS_ROLES = new Set(['auditor']);
 const CREATOR_ROLES = new Set(['lead', 'scribe', 'auditor']);
 
 type Who =

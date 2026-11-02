@@ -60,13 +60,14 @@ test('work loop: create → claim → submit → witness, with separation of dut
   };
   const builder = await mk('builder-1', 'builder');
   const auditor = await mk('auditor-1', 'auditor');
+  const lead = await mk('lead-1', 'lead');
   const H = (k: string) => ({ authorization: `Bearer ${k}` });
 
   const streamPost = (body: unknown, k: string) =>
     app.inject({ method: 'POST', url: `/api/projects/${slug}/stream`, headers: H(k), payload: body as never });
 
-  // both admit
-  for (const [k, who] of [[builder.key, 'builder-1'], [auditor.key, 'auditor-1']] as [string, string][]) {
+  // everyone admits
+  for (const [k, who] of [[builder.key, 'builder-1'], [auditor.key, 'auditor-1'], [lead.key, 'lead-1']] as [string, string][]) {
     const r = await streamPost({ type: 'admission', body: { takes: `work as ${who}`, stale: 'nothing', doesNotUnderstand: 'little' } }, k);
     assert.equal(r.statusCode, 201);
   }
@@ -78,6 +79,7 @@ test('work loop: create → claim → submit → witness, with separation of dut
   });
   assert.equal(r.statusCode, 201);
   const taskId: string = r.json().id;
+  const taskProjectId = (await prisma.task.findUniqueOrThrow({ where: { id: taskId }, select: { projectId: true } })).projectId;
   assert.equal(r.json().status, 'backlog');
   assert.equal(r.json().environment, 'staging');
 
@@ -122,6 +124,31 @@ test('work loop: create → claim → submit → witness, with separation of dut
   assert.equal(r.statusCode, 403);
   assert.match(r.json().error, /witness your own work/);
 
+  // ── the lead cannot witness ────────────────────────────────────────────
+  // "Everything is audited by an auditor" is not "by whoever is senior".
+  // A lead directs the work; letting it also pass judgement on that work
+  // puts the director of the work in charge of judging it.
+  r = await app.inject({
+    method: 'POST', url: `/api/projects/${slug}/tasks/${taskId}/witness`, headers: H(lead.key),
+    payload: {
+      verdict: 'pass',
+      reason: 'I directed this and I am satisfied',
+      falsification: { command: 'npm test', output_digest: 'sha256:aaaa' },
+      instrumentControl: { command: 'npm test -- broken', output_digest: 'sha256:bbbb', expected_failure: 'red' },
+    },
+  });
+  assert.equal(r.statusCode, 403, 'a lead must not be able to close work');
+  assert.match(r.json().error, /a lead does not witness/);
+
+  // ── the human operator cannot witness either ───────────────────────────
+  // A gate the person paying for the work can close is not a gate.
+  r = await app.inject({
+    method: 'POST', url: `/api/projects/${slug}/tasks/${taskId}/witness`, headers: asOp,
+    payload: { verdict: 'pass', reason: 'I own this project and I say it is fine' },
+  });
+  assert.equal(r.statusCode, 403);
+  assert.match(r.json().error, /witnessed by a seat/);
+
   // a pass with no falsification attempt is recorded unproven and closes nothing
   r = await app.inject({
     method: 'POST', url: `/api/projects/${slug}/tasks/${taskId}/witness`, headers: H(auditor.key),
@@ -159,6 +186,34 @@ test('work loop: create → claim → submit → witness, with separation of dut
     assert.equal(row.status, 'unproven', 'and so does the ledger — one truth, three views');
     assert.equal(row.decidedBy, 'auditor-1');
     assert.equal(row.registered, false, 'and it says the row was never registered');
+  }
+
+  // ── the invariant holds even if a route forgets it ─────────────────────
+  // The storage layer refuses a task that claims to be done with nobody
+  // having witnessed it. This is what stops the next crew.ts from happening.
+  {
+    // a task nobody has witnessed — the constraint only bites when witnessId
+    // is null, so the probe needs a virgin row. (The task above already has a
+    // witness from the unproven attempts: somebody looked, and refused.)
+    const virgin = await prisma.task.create({
+      data: { projectId: taskProjectId, title: 'closes itself', environment: 'local-stack' },
+    });
+    let refused = false;
+    let message = '';
+    try {
+      await prisma.task.update({ where: { id: virgin.id }, data: { status: 'done' } });
+    } catch (e) {
+      refused = true;
+      message = String((e as Error).message);
+    }
+    assert.equal(refused, true, 'the database must refuse done-without-a-witness');
+    assert.match(message, /Task_done_requires_a_witness|check constraint/i);
+    const still = await prisma.task.findUniqueOrThrow({ where: { id: virgin.id } });
+    assert.equal(still.status, 'backlog', 'and the row is untouched by the attempt');
+    // a witnessed row is allowed to close — the constraint is a floor, not a wall
+    await prisma.task.update({ where: { id: virgin.id }, data: { witnessId: auditor.id, status: 'done' } });
+    const closed = await prisma.task.findUniqueOrThrow({ where: { id: virgin.id } });
+    assert.equal(closed.status, 'done', 'with a witness on the row, done is permitted');
   }
 
   // a real witness attempt, with a control that failed as expected — this closes it

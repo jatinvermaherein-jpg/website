@@ -98,9 +98,7 @@ export async function briefRoutes(app: FastifyInstance) {
     const claimable = boardTasks.filter((t) => t.status === 'backlog' && !t.ownerId);
     // what I could witness: awaiting a second opinion, and it is not my own work
     const witnessable =
-      myRole === 'auditor' || myRole === 'lead'
-        ? boardTasks.filter((t) => t.status === 'review' && t.ownerId !== mySeatId)
-        : [];
+      myRole === 'auditor' ? boardTasks.filter((t) => t.status === 'review' && t.ownerId !== mySeatId) : [];
     // mine = work that still needs ME to act. A submitted task in review is not
     // mine to touch: it is waiting on a different seat, by design.
     const mine = mySeatId ? boardTasks.filter((t) => t.ownerId === mySeatId && t.status === 'in_progress') : [];

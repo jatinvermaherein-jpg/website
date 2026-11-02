@@ -96,14 +96,17 @@ test('Phase 7: crew runner — group kill mid-task, partials stay, attempt KILLE
   const taskRow = await prisma.task.findUniqueOrThrow({ where: { id: run.task.id } });
   assert.equal(taskRow.status, 'killed');
 
-  // ── a short crew that finishes → done ────────────────────────────────────
+  // ── a short crew that finishes → the RUN is done, the WORK is not ────────
+  // A finished run used to write `done` straight onto the Task, closing it
+  // with no auditor, no witness and no verdict. The runner produces work; an
+  // auditor decides whether it is finished. So the task lands in `review`.
   res = await app.inject({ method: 'POST', url: '/api/crew', headers: H, payload: { slug, title: 'short task', workers: 1, durationSec: 1 } });
   assert.equal(res.statusCode, 201);
   const shortRunId: string = res.json().runId;
   await sleep(2600);
   res = await app.inject({ method: 'GET', url: `/api/crew/${shortRunId}`, headers: H });
   const done = res.json();
-  assert.equal(done.status, 'done');
-  assert.equal(done.task.status, 'done');
+  assert.equal(done.status, 'done', 'the run itself is over');
+  assert.equal(done.task.status, 'review', 'the task awaits an auditor — a runner cannot close its own work');
   assert.equal(done.partials[0]!.lines > 1, true);
 });

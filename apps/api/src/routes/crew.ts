@@ -70,10 +70,17 @@ function partialViews(outDir: string) {
 // status is atomic in the DB, so the kill timer and a concurrent GET can
 // both call this and only the first performs the transition + appends the
 // stream event. (The stream is append-only; a transition is recorded once.)
-async function recordState(runId: string, status: 'killed' | 'done') {
+//
+// A finished RUN is not finished WORK. The runner used to write `done` here,
+// which meant a task could reach the closed state with no auditor, no
+// witness and no verdict — the one thing the gate exists to prevent. A run
+// that exits cleanly has produced work that is ready to be judged, so it
+// leaves the task in `review`. Only an auditor's witness can close it.
+async function recordState(runId: string, end: 'killed' | 'finished') {
   const outDir = join(RUNS_DIR, runId);
   const task = await taskByRun(runId);
   if (!task) return;
+  const status = end === 'killed' ? 'killed' : 'review';
 
   const cas = await prisma.task.updateMany({
     where: { id: task.id, status: { notIn: ['killed', 'done'] } },
@@ -98,6 +105,7 @@ async function recordState(runId: string, status: 'killed' | 'done') {
       taskId: task.id,
       title: task.title,
       status,
+      ...(end === 'finished' ? { note: 'the run finished — the work is unproven until an auditor witnesses it' } : {}),
       attempt: 'recorded',
       partials: partials.map((p) => ({ path: p.path, bytes: p.bytes, lines: p.lines })),
     },
@@ -134,7 +142,7 @@ export async function reapEndedRuns(): Promise<string[]> {
       if (!t.runId) continue;
       const status = stateOf(t.runId)?.status;
       if (status === 'killed' || status === 'done') {
-        await recordState(t.runId, status).catch(() => {});
+        await recordState(t.runId, status === 'killed' ? 'killed' : 'finished').catch(() => {});
         recorded.push(t.runId);
       }
     }
@@ -346,7 +354,7 @@ export async function crewRoutes(app: FastifyInstance) {
 
     if (killTimers.has(runId)) return { runId, status: state.status, note: 'kill already in flight' };
     if (state.status === 'killed' || state.status === 'done') {
-      await recordState(runId, state.status === 'killed' ? 'killed' : 'done');
+      await recordState(runId, state.status === 'killed' ? 'killed' : 'finished');
       return { runId, status: state.status, note: 'already ' + state.status };
     }
 
@@ -397,7 +405,7 @@ export async function crewRoutes(app: FastifyInstance) {
     if (!task) return reply.code(404).send({ error: 'no such run' });
 
     // lazy sync: the supervisor wrote the final state; reflect it once
-    if (state.status === 'done' && task.status !== 'done') await recordState(runId, 'done');
+    if (state.status === 'done' && task.status !== 'review' && task.status !== 'done') await recordState(runId, 'finished');
     if (state.status === 'killed' && task.status !== 'killed') await recordState(runId, 'killed');
 
     const refreshed = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
