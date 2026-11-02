@@ -70,18 +70,101 @@ async function api(method, path, body) {
 }
 
 // ── the model ──────────────────────────────────────────────────────────────
+const MAX_MODEL_TRIES = Number(process.env.JATIN_MODEL_TRIES ?? 8);
+
+// Models are not always available. A rate limit is not a failure — it is an
+// instruction with a number in it. Wait the number, then continue: a seat that
+// dies on the first 429 is a seat that cannot be left running.
 async function chat(messages, tools) {
-  const res = await fetch(`${MODEL_BASE}/chat/completions`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${MODEL_KEY}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, messages, tools, tool_choice: 'auto', temperature: TEMPERATURE }),
-  });
-  const text = await res.text();
-  if (!res.ok) throw new Error(`model ${res.status}: ${text.slice(0, 400)}`);
-  const data = JSON.parse(text);
-  const choice = data?.choices?.[0];
-  if (!choice) throw new Error(`model returned no choice: ${text.slice(0, 300)}`);
-  return choice.message;
+  let lastError = '';
+  for (let attempt = 1; attempt <= MAX_MODEL_TRIES; attempt++) {
+    let res;
+    try {
+      res = await fetch(`${MODEL_BASE}/chat/completions`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${MODEL_KEY}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ model: MODEL, messages, tools, tool_choice: 'auto', temperature: TEMPERATURE }),
+      });
+    } catch (e) {
+      lastError = `network: ${e.message}`;
+      await sleep(2000 * attempt);
+      continue;
+    }
+    const text = await res.text();
+
+    // 429 / 402 / 503 — read the retry hint if the endpoint gave one
+    if (res.status === 429 || res.status === 402 || res.status >= 500) {
+      let wait = 5000 * attempt;
+      try {
+        const body = JSON.parse(text);
+        const hint = Number(body?.error?.retry_after ?? body?.retry_after_s ?? body?.retry_after);
+        const m = String(body?.error?.message || '').match(/retry after (\d+)/i);
+        if (Number.isFinite(hint) && hint > 0) wait = hint * 1000;
+        else if (m) wait = Number(m[1]) * 1000;
+        else if (/every (\d+) seconds/i.test(String(body?.error?.message))) {
+          wait = Number(String(body.error.message).match(/every (\d+) seconds/i)[1]) * 1000;
+        }
+      } catch {
+        /* not json — fall back to the backoff */
+      }
+      log(`model busy (${res.status}) — waiting ${Math.round(wait / 1000)}s (try ${attempt}/${MAX_MODEL_TRIES})`);
+      await sleep(wait + 500);
+      lastError = `${res.status}: ${text.slice(0, 200)}`;
+      continue;
+    }
+
+    if (!res.ok) throw new Error(`model ${res.status}: ${text.slice(0, 400)}`);
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      lastError = `unparseable body: ${text.slice(0, 200)}`;
+      await sleep(2000 * attempt);
+      continue;
+    }
+    const choice = data?.choices?.[0];
+    if (!choice) {
+      lastError = `no choice: ${text.slice(0, 300)}`;
+      await sleep(2000 * attempt);
+      continue;
+    }
+    return choice.message;
+  }
+  throw new Error(`model unavailable after ${MAX_MODEL_TRIES} tries — ${lastError}`);
+}
+
+// Some OpenAI-compatible endpoints leak their internal chat format into the
+// function name — gpt-oss through Pollinations emits `post<|channel|>commentary`.
+// The tool is obviously `post`. Strip the control tokens rather than failing a
+// turn over a formatting artefact of somebody else's server.
+function cleanToolName(name) {
+  if (typeof name !== 'string') return '';
+  return name.split('<|')[0].replace(/[^a-zA-Z0-9_]/g, '').trim();
+}
+
+// and the same tokens in a message we send BACK will be rejected upstream
+// ("unexpected tokens remaining in message header"), so scrub our own history
+function scrub(text) {
+  return typeof text === 'string' ? text.replace(/<\|[^|>]*\|>/g, '').trim() : text;
+}
+
+// Different models wrap tool arguments differently. gpt-oss on Pollinations
+// returns {"input": {"taskId": "..."}}, which is not the schema and would be
+// passed straight through as junk. Unwrap the wrapper, never guess the rest.
+function toolArgs(raw, toolName) {
+  let args;
+  try {
+    args = JSON.parse(raw || '{}');
+  } catch {
+    return {};
+  }
+  if (args && typeof args === 'object' && Object.keys(args).length === 1 && args.input && typeof args.input === 'object') {
+    const schema = TOOLS.find((t) => t.function.name === toolName)?.function.parameters || {};
+    const props = Object.keys(schema.properties || {});
+    // only unwrap when the wrapper key is not itself a real parameter
+    if (!props.includes('input')) args = args.input;
+  }
+  return args;
 }
 
 // ── tools: the seat's actual reach ─────────────────────────────────────────
@@ -344,7 +427,21 @@ async function oneTurn(briefData, role, goal) {
       console.error(`brain: model call failed at step ${steps}: ${e.message}`);
       break;
     }
-    messages.push(msg);
+    // keep the history clean: an echoed control token is a 400 next turn
+    const cleanMsg = {
+      role: 'assistant',
+      content: scrub(msg.content ?? null),
+      ...(msg.tool_calls
+        ? {
+            tool_calls: msg.tool_calls.map((c) => ({
+              id: c.id,
+              type: 'function',
+              function: { name: cleanToolName(c.function?.name), arguments: c.function?.arguments || '{}' },
+            })),
+          }
+        : {}),
+    };
+    messages.push(cleanMsg);
 
     const calls = msg.tool_calls || [];
     if (!calls.length) {
@@ -355,13 +452,8 @@ async function oneTurn(briefData, role, goal) {
     }
 
     for (const call of calls) {
-      const name = call.function?.name;
-      let args = {};
-      try {
-        args = JSON.parse(call.function?.arguments || '{}');
-      } catch {
-        args = {};
-      }
+      const name = cleanToolName(call.function?.name);
+      const args = toolArgs(call.function?.arguments, name);
       if (name === 'finish') {
         finished = args;
         break;
