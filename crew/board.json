@@ -1,0 +1,27 @@
+{
+  "cycle": 0,
+  "note": "The board lives in the repository, so the bus and the source of truth are the same object. A turn reads this, does one task, and writes it back to master.",
+  "tasks": [
+    {
+      "id": "t001",
+      "title": "parse the retry hint out of a rate-limited response body",
+      "description": "Create apps/api/src/lib/retry.ts exporting a pure function parseRetryAfterMs(body: string): number. It must handle three shapes a provider might use: a JSON field retry_after (seconds, possibly a string), the phrase 'retry after N seconds', and the phrase 'every N seconds'. Return milliseconds, capped at 300000. Return 0 when nothing is found. No I/O, no dependencies.",
+      "acceptance": "pure function; returns 0 when no hint; caps at 300000; handles all three shapes",
+      "status": "todo",
+      "owner": null,
+      "branch": null,
+      "commit": null
+    },
+    {
+      "id": "t002",
+      "title": "assert the replay window at its boundary",
+      "description": "Create apps/api/src/lib/replay.window.test.ts with tests for the existing ReplayGuard in apps/api/src/lib/replay.ts: a signature exactly at the window edge is accepted, one millisecond past it is refused, and a timestamp far in the future is refused rather than accepted.",
+      "acceptance": "the boundary is asserted explicitly, not approximately",
+      "status": "todo",
+      "owner": null,
+      "branch": null,
+      "commit": null,
+      "attempts": 0
+    }
+  ]
+}

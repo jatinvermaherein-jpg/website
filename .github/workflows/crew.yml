@@ -1,0 +1,85 @@
+# A crew that runs whether or not anyone is watching.
+#
+# GitHub is the host: the runner exists on a schedule, the repository is the
+# state, and nothing has to be held open. That is the whole trick — "non-stop"
+# needs a machine that never dies, and this one is already running.
+name: crew
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # 96 turns a day. Every one is a real commit or a real stand-down.
+  workflow_dispatch:
+    inputs:
+      seat:
+        description: which seat takes this turn
+        default: builder-1
+      role:
+        description: builder or auditor
+        default: builder
+  push:
+    branches: [master]        # a human pushing wakes the crew immediately
+
+concurrency:
+  group: crew-turn
+  cancel-in-progress: false   # turns queue; they never overlap
+
+permissions:
+  contents: write             # to push branches
+
+jobs:
+  turn:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # the crew's test gate needs a database. It gets a THROWAWAY one, so a
+    # turn can never be blocked by whatever the live board happens to contain.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: jatin
+          POSTGRES_PASSWORD: jatin
+          POSTGRES_DB: jatin
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://jatin:jatin@localhost:5432/jatin
+      APP_DATABASE_URL: postgresql://jatin_app:jatin_app@localhost:5432/jatin
+      JWT_SECRET: 0123456789abcdef0123456789abcdef
+      MASTER_KEY: Zm9vYmFyYmF6cXV4Zm9vYmFyYmF6cXV4Zm9vYmFyYmE=
+      ADMIN_USERNAME: jatin
+      ADMIN_PASSWORD: jatin-local-dev-password
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: prepare a clean database
+        run: |
+          ./node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma
+          ./node_modules/.bin/prisma generate
+          npm run db:seed
+
+      - name: run one crew turn
+        env:
+          MODEL_BASE: ${{ secrets.CREW_MODEL_BASE }}
+          MODEL: ${{ secrets.CREW_MODEL }}
+          MODEL_KEY: ${{ secrets.CREW_MODEL_KEY }}
+          CREW_SEAT: ${{ inputs.seat || 'builder-1' }}
+          CREW_ROLE: ${{ inputs.role || 'builder' }}
+        run: node scripts/crew-turn.mjs
+
+      - name: say what happened
+        if: always()
+        run: |
+          echo "### crew turn" >> $GITHUB_STEP_SUMMARY
+          node -e "const b=require('./crew/board.json');console.log('\`\`\`\n'+JSON.stringify(b,null,2)+'\n\`\`\`')" >> $GITHUB_STEP_SUMMARY
