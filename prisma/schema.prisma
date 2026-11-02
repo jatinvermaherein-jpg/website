@@ -294,6 +294,11 @@ model ProjectEnv {
   valueStored String // envelope — never returned by any read path
   keyMask     String
   isSecret    Boolean      @default(true)
+  // may a seat that joined ITSELF receive this value? Off by default: an
+  // agent that provisions its own bench should still only get what the
+  // operator deliberately opened. The crew-spawn path ignores this flag —
+  // a spawned seat is inside the operator's process tree by definition.
+  seatVisible Boolean      @default(false)
   updatedAt   DateTime     @default(now())
   versions    EnvVersion[]
   @@unique([projectId, name])

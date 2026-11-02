@@ -161,7 +161,9 @@ async function runWork(task) {
       encoding: 'utf8',
       timeout: Math.min(10 * 60_000, Number(process.env.JATIN_WORK_TIMEOUT_MS || 300_000)),
       maxBuffer: 8 * 1024 * 1024,
-      env: { ...process.env, JATIN_TASK_ID: task.id, JATIN_TASK_TITLE: task.title },
+      // project env first, then the run's own vars — a project variable must
+      // never be able to shadow the task identity
+      env: { ...PROJECT_ENV, ...process.env, JATIN_TASK_ID: task.id, JATIN_TASK_TITLE: task.title },
     });
   } catch (e) {
     ok = false;
@@ -224,6 +226,26 @@ if (inb.messages?.length) {
   cursor = inb.head || cursor;
 }
 
+// ── the project's environment ────────────────────────────────────────────
+// The brief carries NAMES. This fetches the VALUES the operator has opened to
+// seats, so an agent joining by itself runs with the same environment a
+// spawned seat gets. Without this, onboarding means "here are the names of
+// things you cannot use".
+let PROJECT_ENV = {};
+async function loadProjectEnv() {
+  const r = await api('GET', `/api/projects/${PROJECT}/env/values`);
+  if (!r.ok) {
+    if (r.status === 409) return; // not admitted yet — the main flow admits first
+    log(`env: not available (${r.status}) ${JSON.stringify(r.data).slice(0, 120)}`);
+    return;
+  }
+  PROJECT_ENV = r.data.values || {};
+  const n = Object.keys(PROJECT_ENV).length;
+  const closed = (r.data.notOpenedToSeats || []).length;
+  if (n) log(`env: ${n} value(s) available to me${closed ? ` · ${closed} not opened to seats` : ''}`);
+  else if (closed) log(`env: ${closed} variable(s) exist but none are opened to seats — ask the operator`);
+}
+
 // ── what the board says I should be doing ────────────────────────────────
 // A builder with nothing to claim, or an auditor with something to witness,
 // used to look identical from here: idle. That is how a crew turns back into
@@ -249,6 +271,8 @@ async function reportStanding() {
     log(`next: ${r.data.me.nextStep}`);
   }
 }
+
+await loadProjectEnv();
 
 if (WORK_CMD) {
   const task = await claimNext();

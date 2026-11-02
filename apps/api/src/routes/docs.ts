@@ -26,6 +26,22 @@ import { seatFromBearer, touchSeat } from '../lib/seatauth.js';
 import { appendQuietly } from '../lib/append.js';
 
 const KINDS = ['rules', 'doc', 'attachment', 'reference'] as const;
+
+// a filename is part of a download being usable: "rules-v1" with no suffix
+// opens in nothing. Only the types we actually expect need a mapping.
+const EXT: Record<string, string> = {
+  'application/pdf': '.pdf',
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/webp': '.webp',
+  'image/svg+xml': '.svg',
+  'application/json': '.json',
+  'text/csv': '.csv',
+  'text/plain': '.txt',
+  'text/markdown': '.md',
+  'application/zip': '.zip',
+};
+const extFor = (mime: string | null) => (mime ? EXT[mime.split(';')[0]!.trim()] ?? '' : '');
 const WRITER_ROLES = new Set(['lead', 'scribe']);
 
 export const docSha = (body: string) => createHash('sha256').update(body, 'utf8').digest('hex');
@@ -126,6 +142,53 @@ export async function docRoutes(app: FastifyInstance) {
       at: doc.ts.toISOString(),
       body: doc.body,
     };
+  });
+
+  // ── the bytes ───────────────────────────────────────────────────────────
+  // An "attachment" that only exists as a JSON string is not an attachment:
+  // you cannot open it, and a PDF is not something you read in a browser tab
+  // of escaped text. This serves the stored body as its actual content type,
+  // with the digest as an ETag so a client can tell whether it changed.
+  //
+  // Integrity is checked first. If the stored body no longer hashes to what
+  // was recorded, the response is 409 — not a corrupted file handed over
+  // quietly with a 200.
+  app.get('/:slug/docs/:docSlug/raw', async (req, reply) => {
+    const ctx = await resolveCtx(req as never, reply as never);
+    if (!ctx) return;
+    const { docSlug } = req.params as { slug: string; docSlug: string };
+    const q = req.query as { version?: string };
+    const version = q.version && /^\d+$/.test(q.version) ? Number(q.version) : undefined;
+
+    const doc = await prisma.projectDoc.findFirst({
+      where: { projectId: ctx.projectId, slug: docSlug, ...(version ? { version } : { archivedAt: null }) },
+      orderBy: { version: 'desc' },
+    });
+    if (!doc) return reply.code(404).send({ error: `no document "${docSlug}"` });
+
+    const actual = docSha(doc.body);
+    if (actual !== doc.contentHash) {
+      return reply.code(409).send({
+        error: 'this document no longer matches the digest recorded when it was stored — refusing to serve it',
+        expected: doc.contentHash,
+        actual,
+      });
+    }
+
+    // base64 bodies (what an upload writes) are decoded; anything else is
+    // served as-is, so a markdown doc still downloads as text
+    const isB64 = doc.mime && doc.mime !== 'text/markdown' && /^[A-Za-z0-9+/=\s]+$/.test(doc.body.slice(0, 200));
+    const bytes = isB64 ? Buffer.from(doc.body, 'base64') : Buffer.from(doc.body, 'utf8');
+
+    const safeName = `${doc.slug}-v${doc.version}${extFor(doc.mime)}`;
+    reply
+      .header('content-type', doc.mime || 'application/octet-stream')
+      .header('content-length', String(bytes.length))
+      .header('etag', `"${doc.contentHash}"`)
+      .header('cache-control', 'private, max-age=60')
+      .header('content-disposition', `inline; filename="${safeName}"`)
+      .header('x-content-sha256', doc.contentHash);
+    return reply.send(bytes);
   });
 
   // publish a new version

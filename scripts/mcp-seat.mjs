@@ -153,6 +153,12 @@ const TOOLS = [
     },
   },
   {
+    name: 'jatin_env',
+    description:
+      'The project environment values the operator has opened to seats. The brief carries names only; this carries values, and every value handed over is audited. Variables listed under notOpenedToSeats exist but are deliberately not yours to read.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
     name: 'jatin_docs',
     description: 'The project document index (rules, specs, attachments) — latest version per document, with a sha256.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
@@ -197,6 +203,8 @@ async function call(name, a) {
       return api('GET', `/api/projects/${PROJECT}/ledger`);
     case 'jatin_handover':
       return api('POST', `/api/projects/${PROJECT}/handover`, { finished: a.finished, unfinished: a.unfinished, next: a.next });
+    case 'jatin_env':
+      return api('GET', `/api/projects/${PROJECT}/env/values`);
     case 'jatin_docs':
       return api('GET', `/api/projects/${PROJECT}/docs`);
     case 'jatin_doc':
