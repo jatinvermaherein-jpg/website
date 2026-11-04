@@ -1,33 +1,50 @@
-# Jatin API — one image, any Docker host.
-# Render's free tier auto-detects this file (zero config).
-# Multi-stage: dev deps and build tooling never ship in the runtime image.
-
-FROM node:20-slim AS build
-# openssl must be present at GENERATE time too — Prisma picks the query
-# engine (debian-openssl-3.0.x vs 1.1.x) based on what it detects here, and
-# the runtime stage has openssl 3.x. Mismatched stages = "could not locate
-# the Query Engine" on every query.
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+# Railway build — the crew bus, on a host that never sleeps.
+#
+# This image does ONE job: serve the bus. It does not run agents, does not
+# run a browser, and does not need a model key. A bus with no brain is still
+# a bus; that is the whole point of splitting them.
+#
+# Monorepo-aware: build context is the repo root, because prisma/ and
+# scripts/ live there and apps/api imports across.
+FROM node:20-bookworm-slim AS build
 WORKDIR /app
-COPY package.json package-lock.json ./
-COPY apps/api/package.json apps/api/
-RUN npm ci
-COPY . .
-RUN npx prisma generate && npm run build
 
-FROM node:20-slim
-# Prisma's query engine needs libssl, which node:20-slim does not ship.
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
-ENV NODE_ENV=production PORT=8080
+# the prisma engine needs these two at install time
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY package.json package-lock.json* ./
+COPY apps/api/package.json ./apps/api/
+RUN npm ci --workspace @jatin/api --include-workspace-root 2>/dev/null || npm install
+
+COPY prisma ./prisma
+COPY scripts ./scripts
+COPY apps/api ./apps/api
+
+# generate the client BEFORE the build — tsc fails on types that do not exist
+RUN ./node_modules/.bin/prisma generate --schema prisma/schema.prisma
+RUN npm run build -w @jatin/api
+
+# ── runtime ────────────────────────────────────────────────────────────────
+FROM node:20-bookworm-slim AS run
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package.json ./
+COPY --from=build /app/apps/api/dist ./apps/api/dist
+COPY --from=build /app/apps/api/package.json ./apps/api/package.json
 COPY --from=build /app/prisma ./prisma
-COPY --from=build /app/apps/api ./apps/api
-# the web build ships too: hitting the API host at / serves the real site
-# (Netlify is the primary host; this is the fallback that keeps the link live)
-COPY --from=build /app/apps/web ./apps/web
-EXPOSE 8080
-# Migrations run at every instance start — idempotent, and a loud failure
-# if the database is unreachable. Never a silent schema drift.
-CMD ["sh", "-c", "npx prisma migrate deploy --schema prisma/schema.prisma && exec node apps/api/dist/server.js"]
+COPY --from=build /app/scripts ./scripts
+COPY package.json ./
+
+# migrate on boot, then serve. A bus that is up but unbootstrapped answers
+# 500s to a crew that cannot tell why.
+CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma && node apps/api/dist/server.js"]
+
+# Railway uses this to decide the container is alive. If /health stops
+# answering, the platform restarts — which is exactly the behaviour a bus
+# needs and a tunnel never had.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8080)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
