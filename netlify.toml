@@ -1,21 +1,16 @@
-# Jatin — the WEBSITE on Netlify (free tier, no card). The API runs on
-# Render (free tier, no card — crews work there), the DB on Supabase.
+# Jatin — the WEBSITE on Netlify (free tier). The CREW bus runs on Railway.
 #
-# The dashboard talks to /api/* same-origin; Netlify proxies it
-# SERVER-SIDE to the API, so the browser never leaves the site's origin
-# (no CORS needed, SSE passes through as a plain stream). Direct calls
-# also work — the API answers CORS for WEB_ORIGIN (the site's URL).
-#
-# ONE-time note: the API service on Render is named `jatin-api`, so the
-# proxy target below is final. (If the name was taken and you had to use
-# another, update the URL here and push again.)
+# Deploy the bus on Railway first, then set CREW_URL below to its domain
+# (e.g. https://jatin-crew.up.railway.app). The dashboard talks to /api/*
+# same-origin; Netlify proxies it server-side to the Railway bus (no CORS,
+# SSE passes through as a plain stream).
 
 [build]
   publish = "apps/web"
 
 [[redirects]]
   from = "/api/*"
-  to = "https://jatin-api.onrender.com/api/:splat"
+  to = "https://PLACEHOLDER-RAILWAY-URL.up.railway.app/api/:splat"
   status = 200
 
 [[headers]]

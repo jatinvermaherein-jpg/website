@@ -15,7 +15,8 @@
     "typecheck": "npm run typecheck -w @jatin/api",
     "test": "npm run test -w @jatin/api",
     "gates:tree": "bash scripts/scan-tree.sh",
-    "start": "node apps/api/dist/server.js"
+    "start": "node src/crew-api.mjs",
+    "crew": "node src/crew-api.mjs"
   },
   "devDependencies": {
     "@embedded-postgres/linux-x64": "*"
