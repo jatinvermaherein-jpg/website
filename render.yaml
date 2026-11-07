@@ -1,0 +1,8 @@
+# Render — static website (dashboard) for the crew bus on Railway.
+services:
+  - type: web
+    name: jatin-crew-website
+    env: static
+    buildCommand: "true"
+    publishPath: apps/web
+    # no build step needed — pure HTML/JS/CSS
