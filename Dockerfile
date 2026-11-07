@@ -18,8 +18,11 @@ ENV PORT=8080
 
 # copy only what the bus needs
 COPY src/ ./src/
-COPY crew/ ./crew/
 COPY package.json ./
+
+# crew/board.json is created at runtime by the bus (atomic write, then
+# committed back to git via CREW_GIT_REMOTE). Nothing to copy at build time.
+RUN mkdir -p crew
 
 EXPOSE 8080
 
