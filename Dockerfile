@@ -18,6 +18,7 @@ ENV PORT=8080
 
 # copy only what the bus needs
 COPY src/ ./src/
+COPY apps/web/ ./apps/web/
 COPY package.json ./
 
 # crew/board.json is created at runtime by the bus (atomic write, then

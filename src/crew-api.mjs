@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 // CREW API — the bus your extension and website talk to.
 //
+//   One Railway service does everything: crew API + static website.
+//   No Netlify, no VPS, no always-on host beyond Railway.
+//
 //   Dependency-free: stdlib HTTP + crewcore.mjs only. No Prisma, no Supabase,
 //   no build step. `node src/crew-api.mjs` and it is up.
 //
@@ -16,7 +19,7 @@
 //   `X-Operator: 1` to bypass seat auth and read everything (requirement 8).
 
 import { createServer } from 'node:http';
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, createReadStream, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -34,7 +37,25 @@ import { ensureRepo, projectRepos, deptRepo, repoIsValid } from './github.mjs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..');
 const STATE_PATH = join(REPO_ROOT, 'crew', 'board.json');
+const STATIC_DIR = join(REPO_ROOT, 'apps', 'web');
 const PORT = Number(process.env.PORT || 8080);
+
+const CONTENT_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.eot': 'application/vnd.ms-fontobject',
+  '.txt': 'text/plain; charset=utf-8',
+};
 
 // ── persistence ────────────────────────────────────────────────────────────
 function loadState() {
@@ -96,12 +117,26 @@ const seatOf = (state, headers) => {
 const operator = (headers) => headers['x-operator'] === '1';
 const param = (url, name) => new URL(url, `http://localhost`).searchParams.get(name);
 
+// ── static file serving ────────────────────────────────────────────────────
+function serveStatic(reply, filePath) {
+  try {
+    const st = statSync(filePath);
+    const ext = join(filePath, 'x').slice(-4).toLowerCase(); // crude but works for common ext
+    const ct = CONTENT_TYPES['.' + filePath.split('.').pop()] || 'application/octet-stream';
+    reply.writeHead(200, { 'Content-Type': ct, 'Content-Length': st.size });
+    createReadStream(filePath).pipe(reply);
+  } catch {
+    reply.writeHead(404, { 'Content-Type': 'text/plain' });
+    reply.end('not found');
+  }
+}
+
 // ── router ─────────────────────────────────────────────────────────────────
 const handle = async (req, reply) => {
   const { method, url, headers } = req;
   const pathname = new URL(url, `http://localhost`).pathname;
 
-  // CORS so the Netlify site and the extension can call the Railway bus
+  // CORS so the extension can call the bus from any origin
   reply.setHeader('Access-Control-Allow-Origin', '*');
   reply.setHeader('Access-Control-Allow-Headers', 'content-type, x-seat-key, x-operator');
   reply.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -116,10 +151,9 @@ const handle = async (req, reply) => {
   const parse = () => { try { return body.length ? JSON.parse(body) : {}; } catch { throw new CrewError('invalid JSON body', 400); } };
 
   try {
-    // ────────── health ──────────
+    // ────────── API routes ──────────
     if (pathname === '/health' && method === 'GET') return json(reply, 200, { ok: true, projects: STATE.projects.length });
 
-    // ────────── 1. projects ──────────
     if (pathname === '/projects' && method === 'GET') {
       return json(reply, 200, STATE.projects.map((p) => ({ slug: p.slug, name: p.name, createdAt: p.createdAt, depts: p.departments.length, seats: p.seats.length })));
     }
@@ -321,6 +355,24 @@ const handle = async (req, reply) => {
       throw new CrewError(`no route ${method} ${pathname}`, 404);
     }
 
+    // ────────── static website (everything else) ──────────
+    if (method === 'GET') {
+      // strip leading slash, default to crew dashboard
+      let rel = pathname === '/' ? 'crew-dashboard.html' : pathname.slice(1);
+      // prevent directory traversal
+      if (rel.includes('..')) throw new CrewError('bad path', 400);
+      const filePath = join(STATIC_DIR, rel);
+      if (existsSync(filePath) && statSync(filePath).isFile()) {
+        return serveStatic(reply, filePath);
+      }
+      // fallback to dashboard for unknown routes
+      const dash = join(STATIC_DIR, 'crew-dashboard.html');
+      if (existsSync(dash)) return serveStatic(reply, dash);
+      reply.writeHead(404, { 'Content-Type': 'text/plain' });
+      reply.end('not found');
+      return;
+    }
+
     throw new CrewError(`no route ${method} ${pathname}`, 404);
   } catch (e) {
     err(reply, e);
@@ -331,4 +383,5 @@ const server = createServer(handle);
 server.listen(PORT, '0.0.0.0', () => {
   // eslint-disable-next-line no-console
   console.log(`crew bus listening on :${PORT} (state: ${STATE_PATH})`);
+  console.log(`static website from ${STATIC_DIR}`);
 });
