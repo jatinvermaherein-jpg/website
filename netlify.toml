@@ -1,16 +1,14 @@
-# Jatin — the WEBSITE on Netlify (free tier). The CREW bus runs on Railway.
+# Jatin — the WEBSITE on Netlify. The CREW bus runs on Railway.
 #
-# Deploy the bus on Railway first, then set CREW_URL below to its domain
-# (e.g. https://jatin-crew.up.railway.app). The dashboard talks to /api/*
-# same-origin; Netlify proxies it server-side to the Railway bus (no CORS,
-# SSE passes through as a plain stream).
+# Dashboard talks to /api/* same-origin; Netlify proxies it server-side
+# to the Railway bus (no CORS, SSE passes through as a plain stream).
 
 [build]
   publish = "apps/web"
 
 [[redirects]]
   from = "/api/*"
-  to = "https://PLACEHOLDER-RAILWAY-URL.up.railway.app/api/:splat"
+  to = "https://website-production-0c80.up.railway.app/api/:splat"
   status = 200
 
 [[headers]]
