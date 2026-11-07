@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crew Dashboard — JATIN</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#0B0E1A" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B0E1A'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23D4AF6A'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23F5F1E8' stroke-width='1.5' stroke-dasharray='28 28'/%3E%3C/svg%3e" />
+  <link rel="stylesheet" href="preloader.css" />
+  <link rel="stylesheet" href="site.css" />
+  <script src="preloader.js"></script>
+  <style>
+    .crew-wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+    .crew-grid { display: grid; grid-template-columns: 260px 1fr; gap: 16px; }
+    @media (max-width: 768px) { .crew-grid { grid-template-columns: 1fr; } }
+    .crew-card { background: #15151a; border: 1px solid #2a2a32; border-radius: 10px; padding: 16px; }
+    .crew-card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #8b8b96; margin: 0 0 12px 0; }
+    .btn { background: #1f1f27; border: 1px solid #2f2f3a; color: #e7e7ea; border-radius: 6px; padding: 6px 10px; font: inherit; cursor: pointer; }
+    .btn:hover { background: #292933; }
+    .btn.primary { background: #166534; border-color: #15803d; }
+    .btn.primary:hover { background: #15803d; }
+    .btn.danger { background: #451a1a; border-color: #7f1d1d; color: #fca5a5; }
+    .btn.danger:hover { background: #7f1d1d; }
+    .btn.small { padding: 4px 8px; font-size: 12px; }
+    input, select, textarea { width: 100%; box-sizing: border-box; background: #0f0f13; border: 1px solid #2a2a32; color: #e7e7ea; border-radius: 6px; padding: 6px 8px; font: inherit; }
+    label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #8b8b96; display: block; margin-bottom: 4px; }
+    .row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .row > * { flex: 1; }
+    .muted { color: #8b8b96; font-size: 12px; }
+    .key { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; background: #0b0e1a; padding: 2px 6px; border-radius: 4px; color: #4ade80; word-break: break-all; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #22222a; }
+    th { color: #8b8b96; font-size: 10px; text-transform: uppercase; }
+    .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #2a2a32; color: #e7e7ea; }
+    .badge.worker { background: #1e3a5f; color: #bfdbfe; }
+    .badge.auditor { background: #451a3a; color: #fce7f3; }
+    .msg { background: #0f0f13; border: 1px solid #22222a; border-radius: 6px; padding: 10px; margin: 6px 0; font-size: 13px; }
+    .msg .meta { font-size: 11px; color: #8b8b96; margin-bottom: 4px; }
+    .msg .kind-auditor { border-left: 3px solid #c084fc; }
+    .msg .kind-worker { border-left: 3px solid #60a5fa; }
+    .msg.from-me { background: #1665341a; }
+    .flash { padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 13px; }
+    .flash.ok { background: #1665341a; border: 1px solid #16a34a; color: #86efac; }
+    .flash.bad { background: #451a1a; border: 1px solid #7f1d1d; color: #fca5a5; }
+    .tabbar { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid #2a2a32; }
+    .tab { background: transparent; border: none; border-bottom: 2px solid transparent; color: #8b8b96; padding: 8px 12px; font: inherit; cursor: pointer; font-size: 13px; }
+    .tab.active { color: #e7e7ea; border-bottom-color: #4ade80; }
+    .tab:hover { color: #c7c7cc; }
+    .hide { display: none !important; }
+    .env-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+    .env-row input { flex: 1; }
+    .doc-body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; white-space: pre-wrap; background: #0b0e1a; padding: 10px; border-radius: 6px; border: 1px solid #22222a; max-height: 300px; overflow: auto; }
+    .compact { font-size: 12px; }
+  </style>
+</head>
+<body class="app">
+  <aside class="side" id="side" aria-label="Application">
+    <a class="brand" href="crew-dashboard.html" aria-label="Crew">
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 3a13 13 0 0 1 13 13" stroke="#F5F1E8" stroke-width="1.5" stroke-linecap="round"/><path d="M16 29A13 13 0 0 1 3 16" stroke="#F5F1E8" stroke-opacity=".55" stroke-width="1.5" stroke-linecap="round"/><circle cx="16" cy="16" r="3" fill="#D4AF6A"/></svg>
+      CREW
+    </a>
+    <nav class="snav" id="snav" aria-label="Sections">
+      <div class="nav-group"><b style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8b8b96;display:block;padding:10px 14px 4px">Control</b>
+        <a class="nav-item" data-tab="projects">Projects</a>
+        <a class="nav-item" data-tab="departments">Departments</a>
+        <a class="nav-item" data-tab="seats">Seats / Agents</a>
+        <a class="nav-item" data-tab="messages">Bus / Messages</a>
+        <a class="nav-item" data-tab="env">Universal Env</a>
+        <a class="nav-item" data-tab="docs">Docs / Rules</a>
+        <a class="nav-item" data-tab="cycle">Cycles</a>
+        <a class="nav-item" data-tab="suggest">Suggestions</a>
+      </div>
+    </nav>
+    <div class="acct">
+      <div class="who"><span id="hello">Operator</span></div>
+      <div style="font-size:11px;color:#8b8b96;margin-bottom:8px" id="busStatus">connecting…</div>
+      <button type="button" class="btn btn-ghost btn-sm" style="width:100%" id="refreshAll">↻ Refresh all</button>
+    </div>
+  </aside>
+  <div class="side-scrim" id="side-scrim" aria-hidden="true"></div>
+
+  <div class="main" id="main">
+    <div class="mtop">
+      <button type="button" id="navtoggle" aria-label="Open menu" aria-controls="side"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 5h14M2 9h14M2 13h14"/></svg></button>
+      <span class="mtop-title" id="mtop-title">Crew</span>
+    </div>
+
+    <div id="alertArea"></div>
+
+    <!-- TAB: projects -->
+    <section class="tab-panel hide" id="tab-projects">
+      <div class="crew-grid">
+        <div class="crew-card">
+          <h2>Create project</h2>
+          <label>Slug</label><input id="projSlug" placeholder="acme" />
+          <label>Name</label><input id="projName" placeholder="Acme Corp" />
+          <button class="btn primary" id="btnCreateProject">Create project</button>
+        </div>
+        <div class="crew-card" style="flex:1">
+          <h2>Your projects</h2>
+          <table id="projTable">
+            <thead><tr><th>Slug</th><th>Name</th><th>Depts</th><th>Seats</th><th>Msgs</th><th>Docs</th></tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: departments -->
+    <section class="tab-panel hide" id="tab-departments">
+      <div class="row">
+        <select id="deptProject" style="flex:1"></select>
+        <input id="deptId" placeholder="dept id (eng, ops, …)" />
+        <input id="deptName" placeholder="name" />
+        <input id="deptLiaison" placeholder="liaison seat id (optional)" />
+        <button class="btn primary" id="btnAddDept">Add department</button>
+      </div>
+      <div class="crew-card" id="deptList">
+        <h2>Departments</h2>
+        <div id="deptTable"></div>
+      </div>
+    </section>
+
+    <!-- TAB: seats -->
+    <section class="tab-panel hide" id="tab-seats">
+      <div class="row">
+        <select id="seatProject" style="flex:1"></select>
+        <select id="seatDept" style="flex:1"></select>
+        <input id="seatId" placeholder="seat id" />
+        <select id="seatKind">
+          <option value="worker">Worker</option>
+          <option value="auditor">Auditor</option>
+        </select>
+        <button class="btn primary" id="btnAddSeat">Add seat</button>
+      </div>
+      <div class="crew-card" id="seatList">
+        <h2>Seats / Agents</h2>
+        <div id="seatTable"></div>
+      </div>
+    </section>
+
+    <!-- TAB: messages -->
+    <section class="tab-panel hide" id="tab-messages">
+      <div class="row">
+        <select id="msgProject" style="flex:1"></select>
+        <input id="msgSince" placeholder="since seq (0 = all)" />
+        <button class="btn" id="btnLoadMsgs">Load</button>
+      </div>
+      <div class="crew-card" id="msgList" style="max-height:600px;overflow:auto">
+        <h2>Bus — all messages (operator reads everything)</h2>
+        <div id="msgTable"></div>
+      </div>
+    </section>
+
+    <!-- TAB: env -->
+    <section class="tab-panel hide" id="tab-env">
+      <div class="row">
+        <select id="envProject" style="flex:1"></select>
+        <input id="envName" placeholder="GITHUB_TOKEN" />
+        <input id="envValue" placeholder="value (secret)" type="password" />
+        <button class="btn primary" id="btnSetEnv">Set env (operator only)</button>
+      </div>
+      <div class="crew-card" id="envList">
+        <h2>Universal env — names only shown. Values read per-seat, audited.</h2>
+        <div id="envTable"></div>
+      </div>
+    </section>
+
+    <!-- TAB: docs -->
+    <section class="tab-panel hide" id="tab-docs">
+      <div class="row">
+        <select id="docProject" style="flex:1"></select>
+        <input id="docSlug" placeholder="slug (coding-rules)" />
+        <input id="docTitle" placeholder="title" />
+        <select id="docKind">
+          <option value="doc">doc</option>
+          <option value="rules">rules</option>
+          <option value="readme">readme</option>
+          <option value="spec">spec</option>
+        </select>
+        <button class="btn primary" id="btnAddDoc">Add doc</button>
+      </div>
+      <div class="crew-card" id="docList">
+        <h2>Versioned docs (never overwritten)</h2>
+        <div id="docTable"></div>
+      </div>
+    </section>
+
+    <!-- TAB: cycle -->
+    <section class="tab-panel hide" id="tab-cycle">
+      <div class="row">
+        <select id="cycProject" style="flex:1"></select>
+        <button class="btn primary" id="btnStartCycle">Start cycle</button>
+        <button class="btn" id="btnClearCycle">Clear cycle</button>
+        <button class="btn primary" id="btnPublish">Publish to GitHub</button>
+      </div>
+      <div class="crew-card">
+        <h2>Cycle status</h2>
+        <div id="cycStatus"></div>
+      </div>
+      <div class="crew-card" id="cycPublishResult" style="margin-top:12px">
+        <h2>Publish result</h2>
+        <pre id="cycPublishJson" class="muted"></pre>
+      </div>
+    </section>
+
+    <!-- TAB: suggestions -->
+    <section class="tab-panel hide" id="tab-suggest">
+      <div class="row">
+        <select id="sgProject" style="flex:1"></select>
+        <textarea id="sgText" rows="2" placeholder="Anyone can suggest anything…"></textarea>
+        <input id="sgAbout" placeholder="about (optional)" />
+        <button class="btn primary" id="btnSuggest">Suggest</button>
+      </div>
+      <div class="crew-card" id="sgList">
+        <h2>Suggestions</h2>
+        <div id="sgTable"></div>
+      </div>
+    </section>
+  </div>
+
+<script>
+// ── config ──────────────────────────────────────────────────────────
+const BUS = 'https://website-production-0c80.up.railway.app';
+let alerts = (el) => (kind, msg) => {
+  const d = document.createElement('div');
+  d.className = `flash ${kind}`;
+  d.textContent = msg;
+  el.appendChild(d);
+  setTimeout(() => d.remove(), 5000);
+};
+const flash = alerts(document.getElementById('alertArea'));
+
+async function api(path, { method = 'GET', body = null, headers = {} } = {}) {
+  const h = { 'content-type': 'application/json', ...headers };
+  const res = await fetch(`${BUS}${path}`, { method, headers: h, body: body ? JSON.stringify(body) : null });
+  const txt = await res.text();
+  let data;
+  try { data = txt.length ? JSON.parse(txt) : {}; } catch { data = { raw: txt }; }
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+function $el(id) { return document.getElementById(id); }
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach((el) => el.classList.add('hide'));
+  $el('tab-' + name).classList.remove('hide');
+  document.querySelectorAll('.nav-item').forEach((el) => el.classList.toggle('active', el.dataset.tab === name));
+  $el('mtop-title').textContent = name.charAt(0).toUpperCase() + name.slice(1);
+}
+// nav wiring
+document.querySelectorAll('.nav-item').forEach((el) => {
+  el.addEventListener('click', (e) => { e.preventDefault(); showTab(el.dataset.tab); });
+});
+document.getElementById('navtoggle').addEventListener('click', () => {
+  const s = document.getElementById('side');
+  s.classList.toggle('open');
+});
+document.getElementById('refreshAll').addEventListener('click', () => {
+  const cur = document.querySelector('.tab-panel:not(.hide)');
+  if (cur) showTab(cur.id.replace('tab-', ''));
+  else loadProjects();
+});
+
+// ── projects ────────────────────────────────────────────────────────
+async function loadProjects() {
+  showTab('projects');
+  try {
+    const projs = await api('/projects');
+    const tbody = $el('projTable').querySelector('tbody');
+    tbody.innerHTML = '';
+    for (const p of projs) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><b>${p.slug}</b></td>
+        <td>${p.name}</td>
+        <td>${p.depts}</td>
+        <td>${p.seats}</td>
+        <td>${p.messages}</td>
+        <td>${p.docs}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+    // refresh project selects
+    await refreshProjectSelects();
+    flash('ok', `Loaded ${projs.length} project(s)`);
+  } catch (e) { flash('bad', e.message); }
+}
+
+// shared project select filler
+async function refreshProjectSelects() {
+  try {
+    const projs = await api('/projects');
+    const opts = projs.map((p) => `<option value="${p.slug}">${p.name} (${p.slug})</option>`).join('');
+    document.querySelectorAll('select[id$="Project"]').forEach((s) => { s.innerHTML = opts; });
+  } catch {}
+}
+
+$el('btnCreateProject').addEventListener('click', async () => {
+  try {
+    await api('/projects', { method: 'POST', body: { slug: $el('projSlug').value, name: $el('projName').value || $el('projSlug').value } });
+    $el('projSlug').value = ''; $el('projName').value = '';
+    flash('ok', 'Project created');
+    loadProjects();
+  } catch (e) { flash('bad', e.message); }
+});
+
+// ── departments ─────────────────────────────────────────────────────
+let curDeptProject = '';
+async function loadDepts(slug) {
+  curDeptProject = slug;
+  showTab('departments');
+  try {
+    const depts = await api(`/projects/${slug}/departments`);
+    const seats = await api(`/projects/${slug}/seats`);
+    const box = $el('deptTable');
+    box.innerHTML = '';
+    for (const d of depts) {
+      const div = document.createElement('div');
+      div.className = 'msg';
+      div.innerHTML = `
+        <div class="meta"><b>${d.id}</b> · ${d.name} · liaison: ${d.liaison || '—'} · ${d.createdVia}</div>
+        <div>Seats: ${seats.filter((s) => s.dept === d.id).map((s) => `${s.id}(${s.kind})`).join(', ') || 'none'}</div>
+      `;
+      box.appendChild(div);
+    }
+    // liaison select options
+    const opt = seats.map((s) => `<option value="${s.id}">${s.id} (${s.kind})</option>`).join('');
+    $el('deptLiaison').innerHTML = '<option value="">— none (first dept)</option>' + opt;
+    flash('ok', `Loaded ${depts.length} department(s)`);
+  } catch (e) { flash('bad', e.message); }
+}
+$el('btnAddDept').addEventListener('click', async () => {
+  try {
+    await api(`/projects/${curDeptProject}/departments`, {
+      method: 'POST',
+      body: {
+        id: $el('deptId').value,
+        name: $el('deptName').value || $el('deptId').value,
+        liaison: $el('deptLiaison').value || null,
+      },
+    });
+    $el('deptId').value = ''; $el('deptName').value = ''; $el('deptLiaison').value = '';
+    flash('ok', 'Department added');
+    loadDepts(curDeptProject);
+  } catch (e) { flash('bad', e.message); }
+});
+
+// wire project select for depts
+$el('deptProject').addEventListener('change', (e) => loadDepts(e.target.value));
+
+// ── seats ───────────────────────────────────────────────────────────
+let curSeatProject = '';
+async function loadSeats(slug) {
+  curSeatProject = slug;
+  showTab('seats');
+  try {
+    const depts = await api(`/projects/${slug}/departments`);
+    const seats = await api(`/projects/${slug}/seats`);
+    // dept select
+    $el('seatDept').innerHTML = depts.map((d) => `<option value="${d.id}">${d.id} (${d.name})</option>`).join('');
+    const box = $el('seatTable');
+    box.innerHTML = '';
+    for (const s of seats) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><b>${s.id}</b></td>
+        <td>${s.dept}</td>
+        <td><span class="badge ${s.kind}">${s.kind}</span></td>
+        <td>${s.admitted ? 'admitted' : 'not admitted'}</td>
+      `;
+      box.appendChild(tr);
+    }
+    flash('ok', `Loaded ${seats.length} seat(s)`);
+  } catch (e) { flash('bad', e.message); }
+}
+$el('btnAddSeat').addEventListener('click', async () => {
+  try {
+    const r = await api(`/projects/${curSeatProject}/seats`, {
+      method: 'POST',
+      body: { id: $el('seatId').value, dept: $el('seatDept').value, kind: $el('seatKind').value },
+    });
+    // show the key prominently
+    const keyBox = document.createElement('div');
+    keyBox.className = 'flash ok';
+    keyBox.innerHTML = `Seat <b>${r.seat.id}</b> created (${r.seat.kind}). <b>Key — save it, shown once:</b><div class="key" style="margin-top:6px">${r.key}</div>`;
+    $el('alertArea').prepend(keyBox);
+    setTimeout(() => keyBox.remove(), 20000);
+    $el('seatId').value = '';
+    flash('ok', 'Seat created — key shown above');
+    loadSeats(curSeatProject);
+  } catch (e) { flash('bad', e.message); }
+});
+$el('seatProject').addEventListener('change', (e) => loadSeats(e.target.value));
+
+// ── messages ────────────────────────────────────────────────────────
+let curMsgProject = '';
+async function loadMsgs(slug) {
+  curMsgProject = slug;
+  showTab('messages');
+  try {
+    const since = Number($el('msgSince').value || 0);
+    const msgs = await api(`/projects/${slug}/messages?since=${since}&limit=100`);
+    const box = $el('msgTable');
+    box.innerHTML = '';
+    for (const m of msgs) {
+      const div = document.createElement('div');
+      div.className = `msg kind-${m.kind} ${m.from === 'operator' ? 'from-me' : ''}`;
+      div.innerHTML = `
+        <div class="meta">#${m.seq} · ${m.from} <span class="badge ${m.kind}">${m.kind}</span> · ${m.type} · ${m.dept} ${m.to ? '→ ' + m.to : ''}</div>
+        <div>${escapeHtml(m.text)}</div>
+      `;
+      box.appendChild(div);
+    }
+    flash('ok', `${msgs.length} message(s)`);
+  } catch (e) { flash('bad', e.message); }
+}
+$el('btnLoadMsgs').addEventListener('click', () => loadMsgs(curMsgProject));
+$el('msgProject').addEventListener('change', (e) => { curMsgProject = e.target.value; });
+
+// ── env ─────────────────────────────────────────────────────────────
+let curEnvProject = '';
+async function loadEnv(slug) {
+  curEnvProject = slug;
+  showTab('env');
+  try {
+    const proj = await api(`/projects/${slug}`);
+    const box = $el('envTable');
+    box.innerHTML = '';
+    for (const name of proj.env) {
+      const div = document.createElement('div');
+      div.className = 'env-row';
+      div.innerHTML = `<input value="${escapeHtml(name)}" readonly /><span class="badge">set</span><span class="muted">reads tracked per seat</span>`;
+      box.appendChild(div);
+    }
+    flash('ok', `${proj.env.length} env var(s)`);
+  } catch (e) { flash('bad', e.message); }
+}
+$el('btnSetEnv').addEventListener('click', async () => {
+  try {
+    await api(`/projects/${curEnvProject}/env`, {
+      method: 'POST',
+      body: { name: $el('envName').value, value: $el('envValue').value, by: 'operator' },
+    });
+    $el('envName').value = ''; $el('envValue').value = '';
+    flash('ok', 'Env set');
+    loadEnv(curEnvProject);
+  } catch (e) { flash('bad', e.message); }
+});
+$el('envProject').addEventListener('change', (e) => loadEnv(e.target.value));
+
+// ── docs ────────────────────────────────────────────────────────────
+let curDocProject = '';
+async function loadDocs(slug) {
+  curDocProject = slug;
+  showTab('docs');
+  try {
+    const docs = await api(`/projects/${slug}/docs`);
+    const box = $el('docTable');
+    box.innerHTML = '';
+    for (const d of docs) {
+      const div = document.createElement('div');
+      div.className = 'msg';
+      div.innerHTML = `
+        <div class="meta"><b>${d.slug}</b> v${d.version} · ${d.kind} · ${escapeHtml(d.title)}</div>
+        <div class="doc-body">${escapeHtml(d.body)}</div>
+      `;
+      box.appendChild(div);
+    }
+    flash('ok', `${docs.length} doc(s)`);
+  } catch (e) { flash('bad', e.message); }
+}
+$el('btnAddDoc').addEventListener('click', async () => {
+  try {
+    await api(`/projects/${curDocProject}/docs`, {
+      method: 'POST',
+      body: { slug: $el('docSlug').value, title: $el('docTitle').value, kind: $el('docKind').value, body: '' },
+    });
+    $el('docSlug').value = ''; $el('docTitle').value = '';
+    flash('ok', 'Doc added');
+    loadDocs(curDocProject);
+  } catch (e) { flash('bad', e.message); }
+});
+$el('docProject').addEventListener('change', (e) => loadDocs(e.target.value));
+
+// ── cycle ───────────────────────────────────────────────────────────
+let curCycProject = '';
+async function loadCycle(slug) {
+  curCycProject = slug;
+  showTab('cycle');
+  try {
+    const c = await api(`/projects/${slug}/cycle/status`);
+    $el('cycStatus').innerHTML = `
+      <div class="meta">Cycle: <b>${c.id || 'none'}</b> · status: <b>${c.status}</b></div>
+      ${c.startedAt ? `Started: ${c.startedAt} by ${c.startedBy}` : ''}
+      ${c.clearedAt ? `Cleared: ${c.clearedAt} by ${c.clearedBy}` : ''}
+      ${c.published ? '<span class="badge">published</span>' : '<span class="badge">not published</span>'}
+    `;
+  } catch (e) { $el('cycStatus').textContent = 'no cycle data'; }
+}
+$el('btnStartCycle').addEventListener('click', async () => {
+  try {
+    await api(`/projects/${curCycProject}/cycle/start`, { method: 'POST', body: { by: 'operator' } });
+    flash('ok', 'Cycle started');
+    loadCycle(curCycProject);
+  } catch (e) { flash('bad', e.message); }
+});
+$el('btnClearCycle').addEventListener('click', async () => {
+  try {
+    const c = await api(`/projects/${curCycProject}/cycle/clear`, { method: 'POST', body: { by: 'operator' } });
+    flash('ok', 'Cycle cleared');
+    loadCycle(curCycProject);
+  } catch (e) { flash('bad', e.message); }
+});
+$el('btnPublish').addEventListener('click', async () => {
+  try {
+    $el('cycPublishJson').textContent = 'publishing…';
+    const r = await api(`/projects/${curCycProject}/cycle/publish`, { method: 'POST', body: { by: 'operator' } });
+    $el('cycPublishJson').textContent = JSON.stringify(r, null, 2);
+    flash('ok', 'Publish attempted — check GitHub repos');
+    loadCycle(curCycProject);
+  } catch (e) { flash('bad', e.message); $el('cycPublishJson').textContent = e.message; }
+});
+$el('cycProject').addEventListener('change', (e) => loadCycle(e.target.value));
+
+// ── suggestions ─────────────────────────────────────────────────────
+let curSgProject = '';
+async function loadSuggestions(slug) {
+  curSgProject = slug;
+  showTab('suggest');
+  try {
+    const sgs = await api(`/projects/${slug}/suggestions`);
+    const box = $el('sgTable');
+    box.innerHTML = '';
+    for (const s of sgs) {
+      const div = document.createElement('div');
+      div.className = 'msg';
+      div.innerHTML = `
+        <div class="meta">${s.id} · ${s.from} · ${s.status} · ${escapeHtml(s.about || '(general)')}</div>
+        <div>${escapeHtml(s.text)}</div>
+      `;
+      box.appendChild(div);
+    }
+    flash('ok', `${sgs.length} suggestion(s)`);
+  } catch (e) { flash('bad', e.message); }
+}
+$el('btnSuggest').addEventListener('click', async () => {
+  try {
+    await api(`/projects/${curSgProject}/suggestions`, {
+      method: 'POST',
+      body: { text: $el('sgText').value, about: $el('sgAbout').value || null },
+    });
+    $el('sgText').value = ''; $el('sgAbout').value = '';
+    flash('ok', 'Suggestion posted');
+    loadSuggestions(curSgProject);
+  } catch (e) { flash('bad', e.message); }
+});
+$el('sgProject').addEventListener('change', (e) => { curSgProject = e.target.value; });
+
+// ── boot ────────────────────────────────────────────────────────────
+async function boot() {
+  try {
+    await api('/health');
+    $el('busStatus').textContent = 'bus online (Railway)';
+    $el('busStatus').style.color = '#4ade80';
+    loadProjects();
+  } catch (e) {
+    $el('busStatus').textContent = 'bus unreachable — check Railway';
+    $el('busStatus').style.color = '#fca5a5';
+    flash('bad', 'Cannot reach crew bus at ' + BUS);
+  }
+}
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
+boot();
+</script>
+</body>
+</html>
