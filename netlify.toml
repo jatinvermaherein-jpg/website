@@ -1,7 +1,6 @@
-# Jatin — the WEBSITE on Netlify. The CREW bus runs on Railway.
-#
-# Dashboard talks to /api/* same-origin; Netlify proxies it server-side
-# to the Railway bus (no CORS, SSE passes through as a plain stream).
+# Jatin — CREW dashboard website on Netlify
+# Site: https://portico-gateway.netlify.app
+# API: proxies to Railway crew bus at website-production-0c80.up.railway.app
 
 [build]
   publish = "apps/web"
